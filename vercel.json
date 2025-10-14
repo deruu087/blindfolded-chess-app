@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "name": "blindfold-chess",
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "functions": {
+    "api/save-game.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/get-games.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/delete-game.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}

@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - Blind Chess Training</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+
+        .navbar {
+            background-color: #2c3e50;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            color: #ecf0f1;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .logo:hover {
+            color: #3498db;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-links a:hover {
+            background-color: #34495e;
+        }
+
+        /* Profile Dropdown Styles */
+        .profile-dropdown {
+            position: relative;
+        }
+
+        .profile-icon {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .profile-icon:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .profile-avatar {
+            font-size: 1.2rem;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .profile-avatar img {
+            border-radius: 50%;
+            background: white;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            border: 1px solid #e9ecef;
+        }
+
+        .profile-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f8f9fa;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: transparent !important;
+            color: #1a1a1a !important;
+            transform: translateX(2px);
+        }
+
+        .dropdown-icon {
+            font-size: 1rem;
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .dropdown-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .nav-links a.active {
+            background-color: #3498db;
+            color: #ffffff;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            min-height: calc(100vh - 60px);
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .faq-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .faq-title {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .faq-subtitle {
+            font-size: 1.15rem;
+            color: #7f8c8d;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .faq-container {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 3rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .faq-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #3498db;
+        }
+
+        .faq-item {
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .faq-question {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: #e9ecef;
+        }
+
+        .faq-question.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .faq-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-question.active .faq-icon {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .faq-answer.active {
+            padding: 1.5rem;
+            max-height: 500px;
+        }
+
+        .faq-answer p {
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+
+        .faq-answer p:last-child {
+            margin-bottom: 0;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .code {
+            background: #f8f9fa;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+        }
+
+        .contact-section {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .contact-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-text {
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
+        }
+
+        .contact-button {
+            display: inline-block;
+            background: white;
+            color: #3498db;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .contact-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .faq-title {
+                font-size: 2rem;
+            }
+
+            .faq-container {
+                padding: 2rem 1rem;
+            }
+
+            .faq-question {
+                padding: 1rem;
+            }
+
+            .faq-answer.active {
+                padding: 1rem;
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .account-info {
+            padding: 1rem 0;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item label {
+            font-weight: 600;
+            color: #2c3e50;
+            min-width: 100px;
+        }
+
+        .info-item span {
+            color: #7f8c8d;
+            text-align: right;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .register-link a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        /* Logout Confirmation Modal */
+        .logout-confirm-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .logout-confirm-content {
+            background-color: #ffffff;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+            text-align: center;
+        }
+
+        .logout-confirm-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .logout-confirm-header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .logout-confirm-message {
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .logout-confirm-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-logout-confirm {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .btn-logout-yes {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-logout-yes:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-logout-no {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-logout-no:hover {
+            background-color: #7f8c8d;
+        }
+
+        .google-signup {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .btn-google {
+            background-color: #ffffff;
+            color: #333;
+            border: 1px solid #dadce0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn-google:hover {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+            background: url('images/google.png') no-repeat center;
+            background-size: contain;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <div class="logo-icon">♟️</div>
+            <span>Blind Chess</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="games.html">Games</a></li>
+            <li><a href="puzzles.html">Puzzles</a></li>
+            <li><a href="faq.html" class="active">FAQ</a></li>
+            <li><a href="subscription.html">Subscription</a></li>
+                    <li class="profile-dropdown">
+                        <a href="#" id="profileLink" class="profile-icon">
+                            <span class="profile-avatar">
+                                <img src="images/user.png" alt="User" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            </span>
+                        </a>
+            <div class="dropdown-menu" id="profileDropdown">
+                <a href="profile.html" class="dropdown-item" id="profileMenuItem">
+                    <span class="dropdown-text">My Profile</span>
+                </a>
+                <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
+                    <span class="dropdown-text">Account Information</span>
+                </a>
+                <a href="#" class="dropdown-item" id="signInMenuItem">
+                    <span class="dropdown-text">Sign In</span>
+                </a>
+                <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
+                    <span class="dropdown-text">Logout</span>
+                </a>
+            </div>
+                    </li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="faq-header">
+            <h1 class="faq-title">Frequently Asked Questions</h1>
+            <p class="faq-subtitle">Find answers to common questions about our blindfold chess training platform</p>
+        </div>
+
+        <div class="faq-container">
+            <div class="faq-section">
+                <h2 class="section-title">Getting Started</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What is blindfold chess training?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Blindfold chess training is a method of practicing chess without looking at the board. You visualize the position in your mind and make moves based on chess notation (like e4, Nf3, etc.). This improves your spatial reasoning, memory, and calculation skills, making you a stronger chess player.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How do I use the coordinate system on the board?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>The chess board uses standard algebraic notation. Files are labeled <span class="highlight">a-h</span> (left to right) and ranks are numbered <span class="highlight">1-8</span> (bottom to top). Each square has a unique coordinate like <span class="code">e4</span> or <span class="code">d7</span>. The letters below the board and numbers to the right help you identify any square quickly.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What's the difference between Games and Puzzles?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p><strong>Games:</strong> Complete chess games you can play through move by move, learning from real master games and opening theory.</p>
+                        <p><strong>Puzzles:</strong> Tactical positions where you need to find the best move or sequence of moves. These start from a specific position and test your calculation skills.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Visual Modes</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What are the different visual modes?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p><strong>Normal:</strong> Standard chess board with all pieces visible and colored normally.</p>
+                        <p><strong>Grey:</strong> All pieces appear in grey, reducing visual cues and forcing you to rely more on piece shapes and positions.</p>
+                        <p><strong>Checkers:</strong> Pieces are simplified to basic shapes, making it harder to distinguish piece types at a glance.</p>
+                        <p><strong>Empty:</strong> Pieces become completely invisible, forcing pure mental visualization - the ultimate blindfold training.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What is the Test mode in Puzzles?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Test mode is the ultimate blindfold challenge. Pieces become slightly visible (30% opacity) but you must solve the puzzle without being able to clearly see the pieces. This mode starts from a specific position (marked with a horizontal line in the moves list) and tests your ability to calculate and visualize moves mentally.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Navigation & Controls</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How do I navigate through moves in a game?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Use the control buttons below the board:</p>
+                        <p>• <span class="highlight">⏮</span> Go to initial position</p>
+                        <p>• <span class="highlight">◀</span> Previous move</p>
+                        <p>• <span class="highlight">▶</span> Next move</p>
+                        <p>• <span class="highlight">⏭</span> Go to final position</p>
+                        <p>You can also click on any move in the moves list to jump directly to that position.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How do I flip the board perspective?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Click the <span class="highlight">🔄</span> flip button in the move controls. This rotates the board 180 degrees so you can practice from Black's perspective. The coordinate notation (letters and numbers) will also flip to match the new perspective.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What does the auto-play feature do in Puzzles?</span>
+                        <span class="highlight">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>After you make a move in puzzle mode, the system automatically plays the next move in the sequence after a short delay (0.2 seconds). This creates a more dynamic puzzle-solving experience and helps you see the complete tactical sequence unfold.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Technical Issues</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Why can't I see the board or pieces?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>This could be due to several reasons:</p>
+                        <p>• Check if you're in <span class="highlight">Empty</span> visual mode - pieces are intentionally invisible</p>
+                        <p>• Try refreshing the page (Ctrl+F5 or Cmd+Shift+R)</p>
+                        <p>• Make sure JavaScript is enabled in your browser</p>
+                        <p>• Check your internet connection if games aren't loading</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Why aren't the games loading?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>If games aren't loading:</p>
+                        <p>• Check your internet connection</p>
+                        <p>• Try refreshing the page</p>
+                        <p>• Make sure the server is running (if running locally)</p>
+                        <p>• Check the browser console for error messages (F12 → Console tab)</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Can I use this app on mobile devices?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! The app is fully responsive and works on mobile devices. The board and controls will automatically adjust to smaller screens. Touch controls work for piece movement and navigation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Training Tips</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How should I start with blindfold chess training?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Start with these steps:</p>
+                        <p>1. Begin with <span class="highlight">Normal</span> mode to get familiar with the interface</p>
+                        <p>2. Progress to <span class="highlight">Grey</span> mode to reduce visual dependency</p>
+                        <p>3. Try <span class="highlight">Checkers</span> mode for more challenge</p>
+                        <p>4. Eventually work up to <span class="highlight">Empty</span> mode for true blindfold practice</p>
+                        <p>5. Use the coordinate system to help visualize positions</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What's the best way to improve my blindfold skills?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>• Practice regularly, even just 10-15 minutes daily</p>
+                        <p>• Start with simple positions and gradually increase complexity</p>
+                        <p>• Use the coordinate system to build spatial awareness</p>
+                        <p>• Practice both games (for pattern recognition) and puzzles (for calculation)</p>
+                        <p>• Don't rush - accuracy is more important than speed initially</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-section">
+                <h3 class="contact-title">Still have questions?</h3>
+                <p class="contact-text">Can't find what you're looking for? We're here to help!</p>
+                <a href="mailto:support@blindchess.com" class="contact-button">Contact Support</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Check login status and update navigation
+        function updateNavigation() {
+            const profileLink = document.getElementById('profileLink');
+            const profileMenuItem = document.getElementById('profileMenuItem');
+            const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
+            const signInMenuItem = document.getElementById('signInMenuItem');
+            const logoutMenuItem = document.getElementById('logoutMenuItem');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (isLoggedIn) {
+                // User is logged in - show profile, account info, and logout options
+                profileMenuItem.style.display = 'flex';
+                accountInfoMenuItem.style.display = 'flex';
+                logoutMenuItem.style.display = 'flex';
+                signInMenuItem.style.display = 'none';
+                profileMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = 'profile.html';
+                };
+                
+                accountInfoMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    showAccountInfoModal();
+                };
+                
+                logoutMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    logout();
+                };
+                
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = 'profile.html';
+                };
+            } else {
+                // User is not logged in - show sign in option
+                profileMenuItem.style.display = 'none';
+                accountInfoMenuItem.style.display = 'none';
+                logoutMenuItem.style.display = 'none';
+                signInMenuItem.style.display = 'flex';
+                signInMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
+            }
+        }
+
+        // Show account information modal
+        function showAccountInfoModal() {
+            const userName = localStorage.getItem('userName') || 'User';
+            const userEmail = localStorage.getItem('userEmail') || 'No email provided';
+            const subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            
+            // Format subscription display
+            let subscriptionDisplay = 'Free Account';
+            if (subscriptionPlan === 'monthly') {
+                subscriptionDisplay = 'Premium Monthly';
+            } else if (subscriptionPlan === 'quarterly') {
+                subscriptionDisplay = 'Premium Quarterly';
+            } else if (subscriptionPlan === 'monthly_cancelled') {
+                subscriptionDisplay = 'Premium Monthly (Cancelled)';
+            } else if (subscriptionPlan === 'quarterly_cancelled') {
+                subscriptionDisplay = 'Premium Quarterly (Cancelled)';
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Account Information</h2>
+                        <span class="close" onclick="closeModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="account-info">
+                            <div class="info-item">
+                                <label>Name:</label>
+                                <span>${userName}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Email:</label>
+                                <span>${userEmail}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Subscription:</label>
+                                <span>${subscriptionDisplay}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        }
+
+        // Logout function - shows confirmation modal
+        function logout() {
+            document.getElementById('logoutConfirmModal').style.display = 'block';
+        }
+
+        // Confirm logout function
+        function confirmLogout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('subscriptionPlan');
+            localStorage.removeItem('hasActiveSubscription');
+            updateNavigation();
+            
+            // Hide modal
+            document.getElementById('logoutConfirmModal').style.display = 'none';
+            
+            // Redirect to home page
+            window.location.href = 'index.html';
+        }
+
+        // Cancel logout function
+        function cancelLogout() {
+            document.getElementById('logoutConfirmModal').style.display = 'none';
+        }
+
+        // Super quick sign-up process
+        function showSignUpModal() {
+            // Sign-up functionality removed
+        }
+
+        // Modal functions
+        function showSignInModal() {
+            document.getElementById('signInModal').style.display = 'block';
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        function showRegisterModal() {
+            document.getElementById('registerModal').style.display = 'block';
+            document.getElementById('signInModal').style.display = 'none';
+        }
+
+        function closeModal() {
+            document.getElementById('signInModal').style.display = 'none';
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        // Sign in handler
+        function handleSignIn(event) {
+            event.preventDefault();
+            const email = document.getElementById('signInEmail').value;
+            const password = document.getElementById('signInPassword').value;
+            
+            // Check credentials against localStorage
+            const storedEmail = localStorage.getItem('userEmail');
+            const storedPassword = localStorage.getItem('userPassword');
+            
+            if (email === storedEmail && password === storedPassword) {
+                localStorage.setItem('isLoggedIn', 'true');
+                updateNavigation();
+                closeModal();
+                window.location.href = 'profile.html';
+            }
+        }
+
+        // Register handler
+        function handleRegister(event) {
+            event.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const name = document.getElementById('registerName').value;
+            
+            // Check if email already exists
+            const existingEmail = localStorage.getItem('userEmail');
+            if (existingEmail === email) {
+                showSignInModal();
+                return;
+            }
+            
+            // Create new account
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userName', name);
+            localStorage.setItem('userPassword', password);
+            updateNavigation();
+            closeModal();
+            window.location.href = 'profile.html';
+        }
+
+        // Google sign-in handler
+        function signInWithGoogle() {
+            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
+            const mockGoogleUser = {
+                email: 'user@gmail.com',
+                name: 'Google User',
+                id: 'google_' + Math.random().toString(36).substr(2, 9)
+            };
+            
+            // Check if user exists in localStorage
+            const storedEmail = localStorage.getItem('userEmail');
+            const storedPassword = localStorage.getItem('userPassword');
+            
+            if (storedEmail === mockGoogleUser.email && storedPassword === mockGoogleUser.id) {
+                // User exists, sign them in
+                localStorage.setItem('isLoggedIn', 'true');
+                updateNavigation();
+                closeModal();
+                window.location.href = 'profile.html';
+            } else {
+                // User doesn't exist, create account
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userEmail', mockGoogleUser.email);
+                localStorage.setItem('userName', mockGoogleUser.name);
+                localStorage.setItem('userPassword', mockGoogleUser.id);
+                localStorage.setItem('authProvider', 'google');
+                updateNavigation();
+                closeModal();
+                window.location.href = 'profile.html';
+            }
+        }
+
+        // Google registration handler
+        function registerWithGoogle() {
+            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
+            const mockGoogleUser = {
+                email: 'user@gmail.com',
+                name: 'Google User',
+                id: 'google_' + Math.random().toString(36).substr(2, 9)
+            };
+            
+            // Check if user already exists
+            const existingEmail = localStorage.getItem('userEmail');
+            if (existingEmail === mockGoogleUser.email) {
+                showSignInModal();
+                return;
+            }
+            
+            // Create account with Google data
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userEmail', mockGoogleUser.email);
+            localStorage.setItem('userName', mockGoogleUser.name);
+            localStorage.setItem('userPassword', mockGoogleUser.id); // Use Google ID as password
+            localStorage.setItem('authProvider', 'google');
+            updateNavigation();
+            closeModal();
+            window.location.href = 'profile.html';
+        }
+
+        // FAQ accordion functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up modal event listeners
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', closeModal);
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                const signInModal = document.getElementById('signInModal');
+                const registerModal = document.getElementById('registerModal');
+                const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+                if (event.target === signInModal) {
+                    closeModal();
+                }
+                if (event.target === registerModal) {
+                    closeModal();
+                }
+                if (event.target === logoutConfirmModal) {
+                    closeModal();
+                }
+            });
+            
+            const faqQuestions = document.querySelectorAll('.faq-question');
+            
+            faqQuestions.forEach(question => {
+                question.addEventListener('click', function() {
+                    const answer = this.nextElementSibling;
+                    const icon = this.querySelector('.faq-icon');
+                    
+                    // Close all other FAQ items
+                    faqQuestions.forEach(otherQuestion => {
+                        if (otherQuestion !== this) {
+                            otherQuestion.classList.remove('active');
+                            otherQuestion.nextElementSibling.classList.remove('active');
+                        }
+                    });
+                    
+                    // Toggle current FAQ item
+                    this.classList.toggle('active');
+                    answer.classList.toggle('active');
+                });
+            });
+            
+            // Initialize navigation
+            updateNavigation();
+        });
+    </script>
+
+    <!-- Sign In Modal -->
+    <div id="signInModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Sign In</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="signInForm" onsubmit="handleSignIn(event)">
+                <div class="form-group">
+                    <label class="form-label" for="signInEmail">Email</label>
+                    <input type="email" id="signInEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="signInPassword">Password</label>
+                    <input type="password" id="signInPassword" class="form-input" placeholder="Enter your password" required>
+                </div>
+            <div class="modal-buttons">
+                <button type="submit" class="btn-modal btn-primary">Sign In</button>
+                <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+        <div class="google-signup">
+            <button type="button" class="btn-modal btn-google" onclick="signInWithGoogle()">
+                <div class="google-icon"></div>
+                Sign in with Google
+            </button>
+        </div>
+        <div class="register-link">
+            <p>Don't have an account yet? <a href="#" onclick="showRegisterModal()">Register here</a></p>
+        </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Account</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label" for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" class="form-input" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerName">Full Name</label>
+                    <input type="text" id="registerName" class="form-input" placeholder="Enter your full name" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-modal btn-primary">Create Account</button>
+                    <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+            <div class="google-signup">
+                <button type="button" class="btn-modal btn-google" onclick="registerWithGoogle()">
+                    <div class="google-icon"></div>
+                    Register with Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="logout-confirm-modal">
+        <div class="logout-confirm-content">
+            <div class="logout-confirm-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="logout-confirm-message">
+                Are you sure you want to log out? You'll need to sign in again to access your account.
+            </div>
+            <div class="logout-confirm-buttons">
+                <button class="btn-logout-confirm btn-logout-yes" onclick="confirmLogout()">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no" onclick="cancelLogout()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

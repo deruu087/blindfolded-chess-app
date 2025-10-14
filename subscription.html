@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Academy - Subscription</title>
+    <script>
+        // Check subscription status immediately to prevent flashing
+        (function() {
+            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
+            if (hasActiveSubscription) {
+                // Add CSS to hide subscription tab for subscribers
+                const style = document.createElement('style');
+                style.textContent = '.subscription-tab-li { display: none !important; }';
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+
+        .navbar {
+            background-color: #2c3e50;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            color: #ecf0f1;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .logo:hover {
+            color: #3498db;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-links a:hover {
+            background-color: #34495e;
+        }
+
+        /* Profile Dropdown Styles */
+        .profile-dropdown {
+            position: relative;
+        }
+
+        .profile-icon {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .profile-icon:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .profile-avatar {
+            font-size: 1.2rem;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .profile-avatar img {
+            border-radius: 50%;
+            background: white;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            border: 1px solid #e9ecef;
+        }
+
+        .profile-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f8f9fa;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: transparent !important;
+            color: #1a1a1a !important;
+            transform: translateX(2px);
+        }
+        
+        /* Initially hide subscription tab only for users with active subscription */
+        .subscription-tab-li {
+            display: block; /* Show by default for free users */
+        }
+        
+        /* Hide only if user has active subscription (set by JavaScript) */
+        .subscription-tab-li.hidden-for-subscriber {
+            display: none;
+        }
+
+        .dropdown-icon {
+            font-size: 1rem;
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .dropdown-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .nav-links a.active {
+            background-color: #3498db;
+            color: #ffffff;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3rem 2rem;
+            min-height: calc(100vh - 60px);
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .subscription-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .subscription-title {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .subscription-subtitle {
+            font-size: 1.15rem;
+            color: #7f8c8d;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .pricing-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .pricing-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .pricing-card.featured {
+            border: 2px solid #3498db;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured::before {
+            content: "Most Popular";
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3498db;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-price {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-period {
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .plan-features li {
+            padding: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .plan-features li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .subscribe-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+
+        .subscribe-btn:hover {
+            background: #2980b9;
+        }
+
+        .subscribe-btn.secondary {
+            background: #95a5a6;
+        }
+
+        .subscribe-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .free-features {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+            max-width: 600px;
+        }
+
+        .free-features h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .free-features ul {
+            list-style: none;
+        }
+
+        .free-features li {
+            padding: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .free-features li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .pricing-card.featured {
+                transform: none;
+            }
+            
+            .subscription-title {
+                font-size: 2rem;
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .account-info {
+            padding: 1rem 0;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item label {
+            font-weight: 600;
+            color: #2c3e50 !important;
+            min-width: 100px;
+        }
+
+        .info-item span {
+            color: #7f8c8d !important;
+            text-align: right;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .register-link a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        /* Logout Confirmation Modal */
+        .logout-confirm-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .logout-confirm-content {
+            background-color: #ffffff;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+            text-align: center;
+        }
+
+        .logout-confirm-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .logout-confirm-header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .logout-confirm-message {
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .logout-confirm-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-logout-confirm {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .btn-logout-yes {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-logout-yes:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-logout-no {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-logout-no:hover {
+            background-color: #7f8c8d;
+        }
+
+        .google-signup {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .btn-google {
+            background-color: #ffffff;
+            color: #333;
+            border: 1px solid #dadce0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn-google:hover {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+            background: url('images/google.png') no-repeat center;
+            background-size: contain;
+        }
+
+        /* Payment Modal Styles */
+        .payment-details {
+            text-align: left;
+        }
+
+        .plan-info {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .plan-info h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .plan-info .price {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .payment-form {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin: 0;
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .checkbox-label a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .checkbox-label a:hover {
+            text-decoration: underline;
+        }
+
+        .payment-methods {
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-payment-method {
+            width: 200px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            background-color: #ffffff;
+            color: #333;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-payment-method:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-color: #4285f4;
+        }
+
+        .payment-icon {
+            width: 20px;
+            height: 20px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .google-pay-icon {
+            background-image: url('images/google.png');
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <div class="logo-icon">♔</div>
+            Chess Academy
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="games.html">Games</a></li>
+            <li><a href="puzzles.html">Puzzles</a></li>
+            <li class="subscription-tab-li"><a href="#" class="active" id="subscriptionTab">Subscription</a></li>
+                    <li class="profile-dropdown">
+                        <a href="#" id="profileLink" class="profile-icon">
+                            <span class="profile-avatar">
+                                <img src="images/user.png" alt="User" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            </span>
+                        </a>
+            <div class="dropdown-menu" id="profileDropdown">
+                <a href="profile.html" class="dropdown-item" id="profileMenuItem">
+                    <span class="dropdown-text">My Profile</span>
+                </a>
+                <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
+                    <span class="dropdown-text">Account Information</span>
+                </a>
+                <a href="#" class="dropdown-item" id="signInMenuItem">
+                    <span class="dropdown-text">Sign In</span>
+                </a>
+                <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
+                    <span class="dropdown-text">Logout</span>
+                </a>
+            </div>
+                    </li>
+        </ul>
+    </nav>
+
+    <div class="main-content">
+        <div class="subscription-header">
+            <h1 class="subscription-title">Unlock All Chess Content</h1>
+            <p class="subscription-subtitle">
+                Get unlimited access to our complete library of chess games, puzzles, and training materials. 
+                Perfect your blindfold chess skills with premium content.
+            </p>
+        </div>
+
+        <div class="pricing-container">
+            <div class="pricing-card">
+                <h3 class="plan-name">Monthly</h3>
+                <div class="plan-price">$4.99</div>
+                <div class="plan-period">per month</div>
+                <ul class="plan-features">
+                    <li>Unlimited access to all games</li>
+                    <li>Unlimited access to all puzzles</li>
+                    <li>Advanced training modes</li>
+                    <li>Progress tracking</li>
+                    <li>Priority support</li>
+                </ul>
+                <button class="subscribe-btn" onclick="subscribe('monthly')">
+                    Subscribe Monthly
+                </button>
+            </div>
+
+            <div class="pricing-card featured">
+                <h3 class="plan-name">3 Months</h3>
+                <div class="plan-price">$12.99</div>
+                <div class="plan-period">per 3 months (Save 13%)</div>
+                <ul class="plan-features">
+                    <li>Everything in Monthly</li>
+                    <li>Save $2 per 3 months</li>
+                    <li>Exclusive quarterly content</li>
+                    <li>Priority feature requests</li>
+                    <li>Advanced analytics</li>
+                </ul>
+                <button class="subscribe-btn" onclick="subscribe('quarterly')">
+                    Subscribe 3 Months
+                </button>
+            </div>
+        </div>
+
+        <div class="free-features">
+            <h3>Free Tier Includes</h3>
+            <ul>
+                <li>3 Classic Chess Games (Fool's Mate, Scholar's Mate, Légal Trap)</li>
+                <li>2 Tactical Puzzles</li>
+                <li>Basic training modes</li>
+                <li>Community access</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Simple subscription logic (replace with actual Stripe integration)
+        function subscribe(plan) {
+            // Check if user is authenticated
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (!isLoggedIn) {
+                // Store the selected plan and show sign-in modal
+                localStorage.setItem('pendingSubscription', plan);
+                showSignInModal();
+                return;
+            }
+            
+            // User is authenticated, proceed with payment
+            showPaymentModal(plan);
+        }
+
+        // Show payment modal after authentication
+        function showPaymentModal(plan) {
+            const modal = document.getElementById('paymentModal');
+            const planName = plan === 'monthly' ? 'Monthly' : '3-Month';
+            const price = plan === 'monthly' ? '$4.99/month' : '$12.99/3 months';
+            
+            document.getElementById('paymentPlanName').textContent = planName;
+            document.getElementById('paymentPrice').textContent = price;
+            modal.style.display = 'block';
+        }
+
+        // Close payment modal
+        function closePaymentModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        // Process payment (simulated)
+        function processPayment(event) {
+            if (event) {
+                event.preventDefault();
+            }
+            
+            // Check if terms are agreed to
+            const agreeTerms = document.getElementById('agreeTerms').checked;
+            if (!agreeTerms) {
+                return;
+            }
+            
+            const plan = localStorage.getItem('pendingSubscription') || 'monthly';
+            const planName = plan === 'monthly' ? 'Monthly' : '3-Month';
+            
+            // Unlock all games by setting subscription status
+            localStorage.setItem('hasActiveSubscription', 'true');
+            localStorage.setItem('subscriptionPlan', plan);
+            localStorage.setItem('subscriptionDate', new Date().toISOString());
+            
+            // Clear pending subscription
+            localStorage.removeItem('pendingSubscription');
+            
+            // Close modal and redirect to profile
+            closePaymentModal();
+            window.location.href = 'profile.html';
+        }
+
+        // Show terms of service
+        function showTerms() {
+            // Terms functionality removed
+        }
+
+        // Show privacy policy
+        function showPrivacy() {
+            // Privacy policy functionality removed
+        }
+
+        // Process Google Pay
+        function processGooglePay() {
+            const plan = localStorage.getItem('pendingSubscription') || 'monthly';
+            const planName = plan === 'monthly' ? 'Monthly' : '3-Month';
+            
+            // Unlock all games by setting subscription status
+            localStorage.setItem('hasActiveSubscription', 'true');
+            localStorage.setItem('subscriptionPlan', plan);
+            localStorage.setItem('subscriptionDate', new Date().toISOString());
+            
+            // Clear pending subscription
+            localStorage.removeItem('pendingSubscription');
+            
+            // Close modal and redirect to profile
+            closePaymentModal();
+            window.location.href = 'profile.html';
+        }
+
+
+        // Check login status and update navigation
+        function updateNavigation() {
+            const profileLink = document.getElementById('profileLink');
+            const profileMenuItem = document.getElementById('profileMenuItem');
+            const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
+            const signInMenuItem = document.getElementById('signInMenuItem');
+            const logoutMenuItem = document.getElementById('logoutMenuItem');
+            const subscriptionTab = document.getElementById('subscriptionTab');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
+            
+            // Show/hide subscription tab based on subscription status
+            const subscriptionLi = document.querySelector('.subscription-tab-li');
+            if (hasActiveSubscription) {
+                subscriptionLi.classList.add('hidden-for-subscriber');
+            } else {
+                subscriptionLi.classList.remove('hidden-for-subscriber');
+            }
+            
+            if (isLoggedIn) {
+                // User is logged in - show profile, account info, and logout options
+                profileMenuItem.style.display = 'flex';
+                accountInfoMenuItem.style.display = 'flex';
+                logoutMenuItem.style.display = 'flex';
+                signInMenuItem.style.display = 'none';
+                profileMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = 'profile.html';
+                };
+                
+                accountInfoMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    showAccountInfoModal();
+                };
+                
+                logoutMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    logout();
+                };
+                
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = 'profile.html';
+                };
+            } else {
+                // User is not logged in - show sign in option
+                profileMenuItem.style.display = 'none';
+                accountInfoMenuItem.style.display = 'none';
+                logoutMenuItem.style.display = 'none';
+                signInMenuItem.style.display = 'flex';
+                signInMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
+            }
+        }
+
+        // Show account information modal
+        function showAccountInfoModal() {
+            const userName = localStorage.getItem('userName') || 'User';
+            const userEmail = localStorage.getItem('userEmail') || 'No email provided';
+            const subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            
+            // Format subscription display
+            let subscriptionDisplay = 'Free Account';
+            if (subscriptionPlan === 'monthly') {
+                subscriptionDisplay = 'Premium Monthly';
+            } else if (subscriptionPlan === 'quarterly') {
+                subscriptionDisplay = 'Premium Quarterly';
+            } else if (subscriptionPlan === 'monthly_cancelled') {
+                subscriptionDisplay = 'Premium Monthly (Cancelled)';
+            } else if (subscriptionPlan === 'quarterly_cancelled') {
+                subscriptionDisplay = 'Premium Quarterly (Cancelled)';
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Account Information</h2>
+                        <span class="close" onclick="closeModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="account-info">
+                            <div class="info-item">
+                                <label>Name:</label>
+                                <span>${userName}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Email:</label>
+                                <span>${userEmail}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Subscription:</label>
+                                <span>${subscriptionDisplay}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        }
+
+        // Logout function - shows confirmation modal
+        function logout() {
+            document.getElementById('logoutConfirmModal').style.display = 'block';
+        }
+
+        // Confirm logout function
+        function confirmLogout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('subscriptionPlan');
+            localStorage.removeItem('hasActiveSubscription');
+            updateNavigation();
+            
+            // Hide modal
+            document.getElementById('logoutConfirmModal').style.display = 'none';
+            
+            // Redirect to home page
+            window.location.href = 'index.html';
+        }
+
+        // Cancel logout function
+        function cancelLogout() {
+            document.getElementById('logoutConfirmModal').style.display = 'none';
+        }
+
+        // Super quick sign-up process
+        function showSignUpModal() {
+            // Sign-up functionality removed
+        }
+
+        // Check if user came from a locked game
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromGame = urlParams.get('from');
+        if (fromGame) {
+            console.log('User came from locked game:', fromGame);
+            // You can highlight the relevant plan or show a message
+        }
+
+        // Modal functions
+        function showSignInModal() {
+            document.getElementById('signInModal').style.display = 'block';
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        function showRegisterModal() {
+            document.getElementById('registerModal').style.display = 'block';
+            document.getElementById('signInModal').style.display = 'none';
+        }
+
+        function closeModal() {
+            // Close static modals
+            const signInModal = document.getElementById('signInModal');
+            const registerModal = document.getElementById('registerModal');
+            const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+            if (signInModal) signInModal.style.display = 'none';
+            if (registerModal) registerModal.style.display = 'none';
+            if (logoutConfirmModal) logoutConfirmModal.style.display = 'none';
+            
+            // Close dynamically created modals
+            const dynamicModals = document.querySelectorAll('.modal');
+            dynamicModals.forEach(modal => {
+                if (modal.id !== 'signInModal' && modal.id !== 'registerModal') {
+                    modal.remove();
+                }
+            });
+        }
+
+        // Sign in handler
+        function handleSignIn(event) {
+            event.preventDefault();
+            const email = document.getElementById('signInEmail').value;
+            const password = document.getElementById('signInPassword').value;
+            
+            // Check credentials against localStorage
+            const storedEmail = localStorage.getItem('userEmail');
+            const storedPassword = localStorage.getItem('userPassword');
+            
+            if (email === storedEmail && password === storedPassword) {
+                localStorage.setItem('isLoggedIn', 'true');
+                updateNavigation();
+                closeModal();
+                
+                // Check if there's a pending subscription
+                const pendingPlan = localStorage.getItem('pendingSubscription');
+                if (pendingPlan) {
+                    showPaymentModal(pendingPlan);
+                } else {
+                    window.location.href = 'profile.html';
+                }
+            }
+        }
+
+        // Register handler
+        function handleRegister(event) {
+            event.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const name = document.getElementById('registerName').value;
+            
+            // Check if email already exists
+            const existingEmail = localStorage.getItem('userEmail');
+            if (existingEmail === email) {
+                showSignInModal();
+                return;
+            }
+            
+            // Create new account
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userName', name);
+            localStorage.setItem('userPassword', password);
+            updateNavigation();
+            closeModal();
+            
+            // Check if there's a pending subscription
+            const pendingPlan = localStorage.getItem('pendingSubscription');
+            if (pendingPlan) {
+                showPaymentModal(pendingPlan);
+            } else {
+                window.location.href = 'profile.html';
+            }
+        }
+
+        // Google sign-in handler
+        function signInWithGoogle() {
+            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
+            const mockGoogleUser = {
+                email: 'user@gmail.com',
+                name: 'Google User',
+                id: 'google_' + Math.random().toString(36).substr(2, 9)
+            };
+            
+            // Check if user exists in localStorage
+            const storedEmail = localStorage.getItem('userEmail');
+            const storedPassword = localStorage.getItem('userPassword');
+            
+            if (storedEmail === mockGoogleUser.email && storedPassword === mockGoogleUser.id) {
+                // User exists, sign them in
+                localStorage.setItem('isLoggedIn', 'true');
+                updateNavigation();
+                closeModal();
+                
+                // Check if there's a pending subscription
+                const pendingPlan = localStorage.getItem('pendingSubscription');
+                if (pendingPlan) {
+                    showPaymentModal(pendingPlan);
+                } else {
+                    window.location.href = 'profile.html';
+                }
+            } else {
+                // User doesn't exist, create account
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userEmail', mockGoogleUser.email);
+                localStorage.setItem('userName', mockGoogleUser.name);
+                localStorage.setItem('userPassword', mockGoogleUser.id);
+                localStorage.setItem('authProvider', 'google');
+                updateNavigation();
+                closeModal();
+                
+                // Check if there's a pending subscription
+                const pendingPlan = localStorage.getItem('pendingSubscription');
+                if (pendingPlan) {
+                    showPaymentModal(pendingPlan);
+                } else {
+                    window.location.href = 'profile.html';
+                }
+            }
+        }
+
+        // Google registration handler
+        function registerWithGoogle() {
+            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
+            const mockGoogleUser = {
+                email: 'user@gmail.com',
+                name: 'Google User',
+                id: 'google_' + Math.random().toString(36).substr(2, 9)
+            };
+            
+            // Check if user already exists
+            const existingEmail = localStorage.getItem('userEmail');
+            if (existingEmail === mockGoogleUser.email) {
+                showSignInModal();
+                return;
+            }
+            
+            // Create account with Google data
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userEmail', mockGoogleUser.email);
+            localStorage.setItem('userName', mockGoogleUser.name);
+            localStorage.setItem('userPassword', mockGoogleUser.id); // Use Google ID as password
+            localStorage.setItem('authProvider', 'google');
+            updateNavigation();
+            closeModal();
+            
+            // Check if there's a pending subscription
+            const pendingPlan = localStorage.getItem('pendingSubscription');
+            if (pendingPlan) {
+                showPaymentModal(pendingPlan);
+            } else {
+                window.location.href = 'profile.html';
+            }
+        }
+
+        // Initialize navigation when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNavigation();
+            
+            // Set up modal event listeners
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', closeModal);
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                const signInModal = document.getElementById('signInModal');
+                const registerModal = document.getElementById('registerModal');
+                const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+                if (event.target === signInModal) {
+                    closeModal();
+                }
+                if (event.target === registerModal) {
+                    closeModal();
+                }
+                if (event.target === logoutConfirmModal) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+
+    <!-- Sign In Modal -->
+    <div id="signInModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Sign In</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="signInForm" onsubmit="handleSignIn(event)">
+                <div class="form-group">
+                    <label class="form-label" for="signInEmail">Email</label>
+                    <input type="email" id="signInEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="signInPassword">Password</label>
+                    <input type="password" id="signInPassword" class="form-input" placeholder="Enter your password" required>
+                </div>
+            <div class="modal-buttons">
+                <button type="submit" class="btn-modal btn-primary">Sign In</button>
+                <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+        <div class="google-signup">
+            <button type="button" class="btn-modal btn-google" onclick="signInWithGoogle()">
+                <div class="google-icon"></div>
+                Sign in with Google
+            </button>
+        </div>
+        <div class="register-link">
+            <p>Don't have an account yet? <a href="#" onclick="showRegisterModal()">Register here</a></p>
+        </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Account</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label" for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" class="form-input" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerName">Full Name</label>
+                    <input type="text" id="registerName" class="form-input" placeholder="Enter your full name" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-modal btn-primary">Create Account</button>
+                    <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+            <div class="google-signup">
+                <button type="button" class="btn-modal btn-google" onclick="registerWithGoogle()">
+                    <div class="google-icon"></div>
+                    Register with Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Complete Payment</h2>
+                <span class="close" onclick="closePaymentModal()">&times;</span>
+            </div>
+            <div class="plan-info">
+                <h3 id="paymentPlanName">Monthly Plan</h3>
+                <p class="price" id="paymentPrice">$4.99/month</p>
+            </div>
+            <form id="paymentForm" onsubmit="processPayment(event)">
+                <div class="form-group">
+                    <label class="form-label" for="cardNumber">Card Number</label>
+                    <input type="text" id="cardNumber" class="form-input" placeholder="1234 5678 9012 3456" maxlength="19" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="expiryDate">Expiry Date</label>
+                        <input type="text" id="expiryDate" class="form-input" placeholder="MM/YY" maxlength="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="cvv">CVV</label>
+                        <input type="text" id="cvv" class="form-input" placeholder="123" maxlength="3" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="cardholderName">Cardholder Name</label>
+                    <input type="text" id="cardholderName" class="form-input" placeholder="John Doe" required>
+                </div>
+
+                <div class="payment-methods">
+                    <button type="button" class="btn-payment-method" onclick="processGooglePay()">
+                        <div class="payment-icon google-pay-icon"></div>
+                        Google Pay
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <span class="checkmark"></span>
+                        I agree to the <a href="#" onclick="showTerms()">Terms of Service</a>
+                    </label>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-modal btn-primary">Complete Payment</button>
+                    <button type="button" class="btn-modal btn-secondary" onclick="closePaymentModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="logout-confirm-modal">
+        <div class="logout-confirm-content">
+            <div class="logout-confirm-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="logout-confirm-message">
+                Are you sure you want to log out? You'll need to sign in again to access your account.
+            </div>
+            <div class="logout-confirm-buttons">
+                <button class="btn-logout-confirm btn-logout-yes" onclick="confirmLogout()">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no" onclick="cancelLogout()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
