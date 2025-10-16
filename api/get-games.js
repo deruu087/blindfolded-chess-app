@@ -1,8 +1,6 @@
 // Vercel API function for getting games
-// Note: This uses in-memory storage. For production, consider using a database like Supabase
-
-// In-memory storage (resets on each deployment)
-let games = [];
+import fs from 'fs';
+import path from 'path';
 
 export default function handler(req, res) {
     // Enable CORS
@@ -17,7 +15,17 @@ export default function handler(req, res) {
     
     if (req.method === 'GET') {
         try {
-            res.status(200).json({ games: games });
+            // Read from custom-games.json file
+            const filePath = path.join(process.cwd(), 'custom-games.json');
+            
+            if (fs.existsSync(filePath)) {
+                const fileContent = fs.readFileSync(filePath, 'utf8');
+                const data = JSON.parse(fileContent);
+                res.status(200).json({ games: data.games || [] });
+            } else {
+                // Return empty array if file doesn't exist
+                res.status(200).json({ games: [] });
+            }
         } catch (error) {
             console.error('Error getting games:', error);
             res.status(500).json({ 

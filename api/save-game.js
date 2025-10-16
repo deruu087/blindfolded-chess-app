@@ -1,8 +1,6 @@
 // Vercel API function for saving games
-// Note: This uses in-memory storage. For production, consider using a database like Supabase
-
-// In-memory storage (resets on each deployment)
-let games = [];
+import fs from 'fs';
+import path from 'path';
 
 export default function handler(req, res) {
     // Enable CORS
@@ -24,8 +22,22 @@ export default function handler(req, res) {
                 gameData.timestamp = new Date().toISOString();
             }
             
-            // Add to in-memory storage
+            // Read existing games from file
+            const filePath = path.join(process.cwd(), 'custom-games.json');
+            let games = [];
+            
+            if (fs.existsSync(filePath)) {
+                const fileContent = fs.readFileSync(filePath, 'utf8');
+                const data = JSON.parse(fileContent);
+                games = data.games || [];
+            }
+            
+            // Add new game
             games.push(gameData);
+            
+            // Write back to file
+            const updatedData = { games: games };
+            fs.writeFileSync(filePath, JSON.stringify(updatedData, null, 2));
             
             console.log('✅ Game saved:', gameData.id);
             console.log('Total games now:', games.length);

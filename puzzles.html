@@ -3415,7 +3415,7 @@
                     // Update comment section with current move info
                     const move = currentGame.moves_detailed[currentMoveIndex - 1];
                     const moveNotation = move.white || move.black;
-                    showMoveCommentary(move.commentary, moveNotation, move);
+                    showMoveCommentary(move.description, moveNotation, move);
                     
                     checkChallengeProgress();
                     
@@ -3588,7 +3588,7 @@
                      // Update comment section with current move info
                      const move = currentGame.moves_detailed[currentMoveIndex - 1];
                      const moveNotation = move.white || move.black;
-                     showMoveCommentary(move.commentary, moveNotation, move);
+                     showMoveCommentary(move.description, moveNotation, move);
                      
                      // Check challenge progress
                      checkChallengeProgress();
@@ -3770,12 +3770,13 @@
                 const player = moveData.white ? 'White' : 'Black';
                 const evaluation = moveData.evaluation || 'N/A';
                 const annotation = moveData.annotation || '';
-                const description = moveData.description || '';
+                // Use description first, fallback to commentary if description is empty
+                const description = moveData.description || moveData.commentary || '';
                 
                 let content = `<strong>Move ${moveNumber} (${player}):</strong> ${convertToChessSymbols(move)} ${annotation}<br>`;
                 content += `<strong>Evaluation:</strong> ${evaluation}`;
-                if (commentary) {
-                    content += `<br>${commentary}`;
+                if (description) {
+                    content += `<br>${description}`;
                 }
                 
                 commentContent.innerHTML = content;
@@ -3900,7 +3901,7 @@
                         // Show commentary if available
                         const whiteMoveData = game.moves_detailed.find(m => m.white === group.white && m.move_number == moveNumber);
                         if (whiteMoveData) {
-                            showMoveCommentary(whiteMoveData.commentary, group.white, whiteMoveData);
+                            showMoveCommentary(whiteMoveData.description, group.white, whiteMoveData);
                         }
                     }
                 });
@@ -3960,7 +3961,7 @@
                         // Show commentary if available
                         const blackMoveData = game.moves_detailed.find(m => m.black === group.black && m.move_number == moveNumber);
                         if (blackMoveData) {
-                            showMoveCommentary(blackMoveData.commentary, group.black, blackMoveData);
+                            showMoveCommentary(blackMoveData.description, group.black, blackMoveData);
                         }
                     }
                 });
@@ -4228,21 +4229,8 @@
             document.getElementById('detail-opening').textContent = game.opening;
             document.getElementById('detail-difficulty').textContent = game.difficulty;
             
-            // Generate interesting facts based on the game
-            let facts = '';
-            if (game.id === 'fools-mate') {
-                facts = 'This is the fastest possible checkmate in chess, occurring in just 2 moves. It requires White to make two very weak moves (f3 and g4) that weaken the king\'s position. This pattern is rarely seen in actual games as it requires White to make such poor moves.';
-            } else if (game.id === 'scholars-mate') {
-                facts = 'Also known as the "Four-Move Checkmate", this is one of the most famous quick checkmate patterns. It targets the f7 square, which is only defended by the king in the starting position. This pattern is commonly attempted by beginners but is easily defended against by experienced players.';
-            } else if (game.id === 'legals-mate') {
-                facts = 'This famous trap was played by Legall de Kermeur in 1750. It demonstrates the power of tactical sacrifices - White sacrifices the queen to set up a devastating checkmate. The game shows how seemingly good moves (like capturing the queen) can lead to immediate defeat.';
-            } else if (game.id === 'Kostic-nn-1910') {
-                facts = 'Blackburne Shilling Gambit: a fruitful source of income for Manchester(England)-born Joseph Henry Blackburne (1841-1924) when playing café visitors, the usual stake being one shilling. Black\'s third move may not be good enough for master chess but it is not an outright error and cannot be refuted by violence.';
-            } else if (game.id === 'legal-trap') {
-                facts = 'The Légal Trap is one of the most famous tactical combinations in chess history, named after Legall de Kermeur who played it in 1750. This trap demonstrates the power of piece coordination and tactical vision. The key insight is that material advantage (having a queen) is less important than having a winning position. This game is studied by chess players of all levels as a perfect example of how to recognize and execute tactical combinations.';
-            } else if (game.id === 'englund-gambit-trap') {
-                facts = 'The Englund Gambit Trap is named after Swedish player Fritz Englund (1871-1933). This famous trap punishes White for playing the "natural" Bf4 move, which looks like good development but actually falls into Black\'s tactical web. The trap has defeated many strong players and teaches important lessons about the dangers of automatic play.';
-            }
+            // Use facts from JSON data (single source of truth)
+            const facts = game.facts || 'No interesting facts available for this game.';
             document.getElementById('detail-facts').textContent = facts;
         }
 
@@ -4504,7 +4492,7 @@
                         // Show commentary for the move we just went back to
                         const move = currentGame.moves_detailed[currentMoveIndex - 1];
                         const moveNotation = move.white || move.black;
-                        showMoveCommentary(move.commentary, moveNotation, move);
+                        showMoveCommentary(move.description, moveNotation, move);
                     }
                 }
             }
@@ -4603,7 +4591,7 @@
                     // Update comment section with current move info only if moves are visible
                     const movesList = document.getElementById('moves-list');
                     if (move && movesList.style.display !== 'none') {
-                        showMoveCommentary(move.commentary, moveNotation, move);
+                        showMoveCommentary(move.description, moveNotation, move);
                 }
             }
         }

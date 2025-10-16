@@ -1,3 +1,46 @@
 {
-  "games": []
+  "games": [
+    {
+      "id": "custom-game-1760658668669",
+      "name": "acas",
+      "white_player": "White",
+      "black_player": "Black",
+      "description": "Custom chess game created by user",
+      "moves": 2,
+      "result": "In progress",
+      "opening": "Custom Opening",
+      "date": "2025-10-16",
+      "difficulty": "Custom",
+      "moves_notation": [
+        "f4",
+        "f5"
+      ],
+      "moves_detailed": [
+        {
+          "move_number": 1,
+          "white": "f4",
+          "black": null,
+          "description": "P from f2 to f4",
+          "white_from": "f2",
+          "white_to": "f4",
+          "black_from": null,
+          "black_to": null,
+          "annotation": "",
+          "commentary": ""
+        },
+        {
+          "move_number": 1,
+          "white": null,
+          "black": "f5",
+          "description": "p from f7 to f5",
+          "white_from": null,
+          "white_to": null,
+          "black_from": "f7",
+          "black_to": "f5",
+          "annotation": "",
+          "commentary": ""
+        }
+      ]
+    }
+  ]
 }
