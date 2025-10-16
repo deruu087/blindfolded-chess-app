@@ -1,6 +1,9 @@
 // Vercel API function for deleting games
-import fs from 'fs';
-import path from 'path';
+// Note: Vercel serverless functions have read-only file system
+// This uses in-memory storage for now. For production, use a database like Supabase
+
+// In-memory storage (resets on each deployment)
+let games = [];
 
 export default function handler(req, res) {
     // Enable CORS
@@ -25,16 +28,6 @@ export default function handler(req, res) {
                 return;
             }
             
-            // Read existing games from file
-            const filePath = path.join(process.cwd(), 'custom-games.json');
-            let games = [];
-            
-            if (fs.existsSync(filePath)) {
-                const fileContent = fs.readFileSync(filePath, 'utf8');
-                const data = JSON.parse(fileContent);
-                games = data.games || [];
-            }
-            
             // Find the game index
             const gameIndex = games.findIndex(game => game.id === id);
             
@@ -48,11 +41,6 @@ export default function handler(req, res) {
             
             // Remove the game
             const deletedGame = games.splice(gameIndex, 1)[0];
-            
-            // Write back to file
-            const updatedData = { games: games };
-            fs.writeFileSync(filePath, JSON.stringify(updatedData, null, 2));
-            
             console.log('✅ Game deleted:', deletedGame.id);
             console.log('Total games now:', games.length);
             
