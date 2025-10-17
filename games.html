@@ -2335,7 +2335,7 @@
                     console.log('Loading games from files...');
                     
                     // Load both games.json and custom games from API
-                    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+                    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
                     const customApiUrl = isProduction ? '/api/get-games' : 'http://localhost:3001/get-games';
                     const [gamesResponse, customGamesResponse] = await Promise.all([
                         fetch(`games/games.json?t=${Date.now()}`),
@@ -2952,7 +2952,7 @@
             
             try {
                 console.log('🗑️ Deleting custom game:', gameId);
-                const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+                const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
                 const apiUrl = isProduction ? `/api/delete-game?id=${gameId}` : `http://localhost:3001/delete-game/${gameId}`;
                 const response = await fetch(apiUrl, {
                     method: 'DELETE',

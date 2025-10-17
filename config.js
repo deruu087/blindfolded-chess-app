@@ -1,7 +1,7 @@
 // Configuration for API endpoints
 // This will automatically detect if we're running locally or on Vercel
 
-const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
 
 export const API_BASE_URL = isProduction 
     ? '' // Use relative URLs in production (Vercel)

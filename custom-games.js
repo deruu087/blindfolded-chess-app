@@ -1572,7 +1572,7 @@ function saveCustomGame() {
 // Function to save game to server
 async function saveGameToServer(gameData) {
     try {
-        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
         const apiUrl = isProduction ? '/api/save-game' : 'http://localhost:3001/save-game';
         
         const response = await fetch(apiUrl, {

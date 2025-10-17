@@ -347,7 +347,7 @@ class GameLoader {
         // Load custom games from API (always try to load, regardless of main games)
         try {
             console.log('=== LOADING CUSTOM GAMES ===');
-            const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
             const customApiUrl = isProduction ? '/api/get-games' : 'http://localhost:3001/get-games';
             console.log('Attempting to load custom games from API:', customApiUrl);
             const customResponse = await fetch(customApiUrl + '?t=' + Date.now());

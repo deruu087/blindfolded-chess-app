@@ -2862,7 +2862,7 @@
             
             try {
                 console.log('🗑️ Deleting custom game:', gameId);
-                const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+                    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
                 const apiUrl = isProduction ? `/api/delete-game?id=${gameId}` : `http://localhost:3001/delete-game/${gameId}`;
                 const response = await fetch(apiUrl, {
                     method: 'DELETE',
