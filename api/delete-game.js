@@ -1,8 +1,16 @@
 // Vercel API function for deleting games
 // Note: Vercel serverless functions have read-only file system
-// This uses shared storage for now. For production, use a database like Supabase
+// This uses a simple in-memory storage for now
 
-import { customGames } from './shared-storage.js';
+// Simple in-memory storage (resets on each deployment)
+let games = [];
+
+// Try to load existing games from a global variable
+if (typeof global !== 'undefined' && global.customGames) {
+    games = global.customGames;
+} else if (typeof global !== 'undefined') {
+    global.customGames = games;
+}
 
 export default function handler(req, res) {
     // Enable CORS
@@ -28,7 +36,7 @@ export default function handler(req, res) {
             }
             
             // Find the game index
-            const gameIndex = customGames.findIndex(game => game.id === id);
+            const gameIndex = games.findIndex(game => game.id === id);
             
             if (gameIndex === -1) {
                 res.status(404).json({ 
@@ -39,9 +47,15 @@ export default function handler(req, res) {
             }
             
             // Remove the game
-            const deletedGame = customGames.splice(gameIndex, 1)[0];
+            const deletedGame = games.splice(gameIndex, 1)[0];
+            
+            // Update global variable
+            if (typeof global !== 'undefined') {
+                global.customGames = games;
+            }
+            
             console.log('✅ Game deleted:', deletedGame.id);
-            console.log('Total games now:', customGames.length);
+            console.log('Total games now:', games.length);
             
             res.status(200).json({ 
                 success: true, 

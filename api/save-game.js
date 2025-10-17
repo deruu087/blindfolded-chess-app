@@ -1,8 +1,16 @@
 // Vercel API function for saving games
 // Note: Vercel serverless functions have read-only file system
-// This uses shared storage for now. For production, use a database like Supabase
+// This uses a simple in-memory storage for now
 
-import { customGames } from './shared-storage.js';
+// Simple in-memory storage (resets on each deployment)
+let games = [];
+
+// Try to load existing games from a global variable
+if (typeof global !== 'undefined' && global.customGames) {
+    games = global.customGames;
+} else if (typeof global !== 'undefined') {
+    global.customGames = games;
+}
 
 export default function handler(req, res) {
     // Enable CORS
@@ -24,11 +32,16 @@ export default function handler(req, res) {
                 gameData.timestamp = new Date().toISOString();
             }
             
-            // Add to shared storage
-            customGames.push(gameData);
+            // Add to storage
+            games.push(gameData);
+            
+            // Update global variable
+            if (typeof global !== 'undefined') {
+                global.customGames = games;
+            }
             
             console.log('✅ Game saved:', gameData.id);
-            console.log('Total games now:', customGames.length);
+            console.log('Total games now:', games.length);
             
             res.status(200).json({ 
                 success: true, 

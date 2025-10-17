@@ -1,8 +1,16 @@
 // Vercel API function for getting games
 // Note: Vercel serverless functions have read-only file system
-// This uses shared storage for now. For production, use a database like Supabase
+// This uses a simple in-memory storage for now
 
-import { customGames } from './shared-storage.js';
+// Simple in-memory storage (resets on each deployment)
+let games = [];
+
+// Try to load existing games from a global variable
+if (typeof global !== 'undefined' && global.customGames) {
+    games = global.customGames;
+} else if (typeof global !== 'undefined') {
+    global.customGames = games;
+}
 
 export default function handler(req, res) {
     // Enable CORS
@@ -17,7 +25,8 @@ export default function handler(req, res) {
     
     if (req.method === 'GET') {
         try {
-            res.status(200).json({ games: customGames });
+            console.log('📋 Getting games, total:', games.length);
+            res.status(200).json({ games: games });
         } catch (error) {
             console.error('Error getting games:', error);
             res.status(500).json({ 
