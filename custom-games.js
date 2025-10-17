@@ -1575,6 +1575,10 @@ async function saveGameToServer(gameData) {
         const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
         const apiUrl = isProduction ? '/api/save-game' : 'http://localhost:3001/save-game';
         
+        console.log('🌐 Hostname:', window.location.hostname);
+        console.log('🏭 Is production:', isProduction);
+        console.log('🔗 API URL:', apiUrl);
+        
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -1586,7 +1590,7 @@ async function saveGameToServer(gameData) {
         const result = await response.json();
         
         if (result.success) {
-            console.log('✅ Game saved to games/custom-games.json via server');
+            console.log('✅ Game saved via', isProduction ? 'Vercel API' : 'local server');
             
             // Show success message
             const saveButton = document.getElementById('custom-save-btn');
