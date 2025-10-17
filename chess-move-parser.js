@@ -350,7 +350,7 @@ class GameLoader {
             const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
             const customApiUrl = isProduction ? '/api/get-games' : 'http://localhost:3001/get-games';
             console.log('Attempting to load custom games from API:', customApiUrl);
-            const customResponse = await fetch(customApiUrl);
+            const customResponse = await fetch(customApiUrl + '?t=' + Date.now());
             console.log('Custom games response status:', customResponse.status);
             console.log('Custom games response ok:', customResponse.ok);
             
