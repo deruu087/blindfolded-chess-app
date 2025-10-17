@@ -1562,7 +1562,7 @@ function saveCustomGame() {
         }, 2000);
     }
     
-    console.log('Custom game saved to games/custom-games.json:', gameData);
+    console.log('Custom game saved:', gameData);
     console.log('Total custom games:', customGamesData.games.length);
     
     // Reset the custom game mode after saving
