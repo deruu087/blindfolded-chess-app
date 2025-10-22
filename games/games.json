@@ -1,4 +1,5 @@
 {
+  "_note": "Custom games created by users will appear in the 'My Games' tab, not in the 'By Difficulty' tab. This file contains the standard game collection organized by difficulty.",
   "games": [
     {
       "id": "fools-mate",

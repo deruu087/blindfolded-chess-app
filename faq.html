@@ -76,6 +76,23 @@
             background-color: #34495e;
         }
 
+        /* Profile Button Styles */
+        .profile-button {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .profile-button:hover {
+            background-color: #34495e;
+        }
+
         /* Profile Dropdown Styles */
         .profile-dropdown {
             position: relative;
@@ -653,15 +670,11 @@
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
             <li><a href="games.html">Games</a></li>
-            <li><a href="puzzles.html">Puzzles</a></li>
+            <li><a href="leaderboard.html">Leaderboard</a></li>
             <li><a href="faq.html" class="active">FAQ</a></li>
             <li><a href="subscription.html">Subscription</a></li>
                     <li class="profile-dropdown">
-                        <a href="#" id="profileLink" class="profile-icon">
-                            <span class="profile-avatar">
-                                <img src="images/user.png" alt="User" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                            </span>
-                        </a>
+                        <a href="#" id="profileLink" class="profile-button">Profile</a>
             <div class="dropdown-menu" id="profileDropdown">
                 <a href="profile.html" class="dropdown-item" id="profileMenuItem">
                     <span class="dropdown-text">My Profile</span>
@@ -710,16 +723,6 @@
                     </div>
                 </div>
 
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>What's the difference between Games and Puzzles?</span>
-                        <span class="faq-icon">▼</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p><strong>Games:</strong> Complete chess games you can play through move by move, learning from real master games and opening theory.</p>
-                        <p><strong>Puzzles:</strong> Tactical positions where you need to find the best move or sequence of moves. These start from a specific position and test your calculation skills.</p>
-                    </div>
-                </div>
             </div>
 
             <div class="faq-section">
@@ -738,15 +741,6 @@
                     </div>
                 </div>
 
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>What is the Test mode in Puzzles?</span>
-                        <span class="faq-icon">▼</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>Test mode is the ultimate blindfold challenge. Pieces become slightly visible (30% opacity) but you must solve the puzzle without being able to clearly see the pieces. This mode starts from a specific position (marked with a horizontal line in the moves list) and tests your ability to calculate and visualize moves mentally.</p>
-                    </div>
-                </div>
             </div>
 
             <div class="faq-section">
@@ -777,15 +771,6 @@
                     </div>
                 </div>
 
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>What does the auto-play feature do in Puzzles?</span>
-                        <span class="highlight">▼</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>After you make a move in puzzle mode, the system automatically plays the next move in the sequence after a short delay (0.2 seconds). This creates a more dynamic puzzle-solving experience and helps you see the complete tactical sequence unfold.</p>
-                    </div>
-                </div>
             </div>
 
             <div class="faq-section">
@@ -857,7 +842,7 @@
                         <p>• Practice regularly, even just 10-15 minutes daily</p>
                         <p>• Start with simple positions and gradually increase complexity</p>
                         <p>• Use the coordinate system to build spatial awareness</p>
-                        <p>• Practice both games (for pattern recognition) and puzzles (for calculation)</p>
+                        <p>• Practice games for pattern recognition</p>
                         <p>• Don't rush - accuracy is more important than speed initially</p>
                     </div>
                 </div>

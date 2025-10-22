@@ -88,6 +88,23 @@
             background-color: #34495e;
         }
 
+        /* Profile Button Styles */
+        .profile-button {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .profile-button:hover {
+            background-color: #34495e;
+        }
+
         /* Profile Dropdown Styles */
         .profile-dropdown {
             position: relative;
@@ -510,6 +527,85 @@
             text-align: center;
         }
 
+        /* Leaderboard Widget Styles */
+        .leaderboard-widget {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .leaderboard-widget .progress-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            margin: -1rem -1rem 1rem -1rem;
+            padding: 1rem;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .leaderboard-widget .progress-title {
+            color: white;
+            font-weight: 600;
+        }
+
+        .leaderboard-widget .progress-count {
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .leaderboard-content {
+            padding: 0 1rem 1rem 1rem;
+        }
+
+        .ranking-info {
+            text-align: center;
+        }
+
+        .rank-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .percentile-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .percentile-fill {
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .next-milestone {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .percentile-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .percentile-badge.top-1 { background: linear-gradient(135deg, #f1c40f, #f39c12); }
+        .percentile-badge.top-5 { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
+        .percentile-badge.top-10 { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+        .percentile-badge.top-25 { background: linear-gradient(135deg, #3498db, #2980b9); }
+
 
         .recent-games {
             list-style: none;
@@ -923,28 +1019,24 @@
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
                 <li><a href="games.html">Games</a></li>
-                <li><a href="puzzles.html">Puzzles</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
                 <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
                     <li class="profile-dropdown">
-                        <a href="#" id="profileLink" class="profile-icon">
-                            <span class="profile-avatar">
-                                <img src="images/user.png" alt="User" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                            </span>
-                        </a>
-                        <div class="dropdown-menu" id="profileDropdown">
-                            <a href="profile.html" class="dropdown-item" id="profileMenuItem">
-                                <span class="dropdown-text">My Profile</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
-                                <span class="dropdown-text">Account Information</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="signInMenuItem">
-                                <span class="dropdown-text">Sign In</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
-                                <span class="dropdown-text">Logout</span>
-                            </a>
-                        </div>
+                        <a href="#" id="profileLink" class="profile-button">Profile</a>
+            <div class="dropdown-menu" id="profileDropdown">
+                <a href="profile.html" class="dropdown-item" id="profileMenuItem">
+                    <span class="dropdown-text">My Profile</span>
+                </a>
+                <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
+                    <span class="dropdown-text">Account Information</span>
+                </a>
+                <a href="#" class="dropdown-item" id="signInMenuItem">
+                    <span class="dropdown-text">Sign In</span>
+                </a>
+                <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
+                    <span class="dropdown-text">Logout</span>
+                </a>
+            </div>
                     </li>
         </ul>
     </nav>
@@ -992,8 +1084,6 @@
                         <span class="stat-value" id="gamesPlayed">0</span>
                     </li>
                     <li>
-                        <span class="stat-label">Puzzles Solved</span>
-                        <span class="stat-value" id="puzzlesSolved">0</span>
                     </li>
                     <li>
                         <span class="stat-label">Training Time</span>
@@ -1021,16 +1111,23 @@
                             <div class="progress-goal" id="gamesProgressGoal">Goal: Complete all available games</div>
                         </div>
                         
-                        <div class="progress-item">
+                        <!-- Leaderboard Widget -->
+                        <div class="progress-item leaderboard-widget">
                             <div class="progress-header">
-                                <div class="progress-title">Puzzles Solved</div>
-                                <div class="progress-count" id="puzzlesProgressCount">0</div>
+                                <div class="progress-title">🏆 Your Ranking</div>
+                                <div class="progress-count" id="userPercentile">Calculating...</div>
                             </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar" id="puzzlesProgressBar" style="width: 0%"></div>
+                            <div class="leaderboard-content">
+                                <div class="ranking-info" id="rankingInfo">
+                                    <div class="rank-text" id="rankText">Loading your position...</div>
+                                    <div class="percentile-bar">
+                                        <div class="percentile-fill" id="percentileFill" style="width: 0%"></div>
+                                    </div>
+                                    <div class="next-milestone" id="nextMilestone">Complete more games to improve your ranking!</div>
+                                </div>
                             </div>
-                            <div class="progress-goal" id="puzzlesProgressGoal">Goal: Master all puzzle challenges</div>
                         </div>
+                        
                     </div>
                 </div>
 
@@ -1049,7 +1146,6 @@
             email: localStorage.getItem('userEmail') || "guest@example.com",
             subscription: localStorage.getItem('subscriptionPlan') || "free", // "free", "monthly", "quarterly"
             gamesPlayed: 0,
-            puzzlesSolved: 0,
             trainingHours: 0,
             currentStreak: 0
         };
@@ -1183,13 +1279,11 @@
             const progress = progressTracker.getProgressSummary();
             const trainingTime = progressTracker.getDetailedTrainingTime();
             
-            // Count completed games and puzzles from the actual completed lists
+            // Count completed games from the actual completed lists
             const completedGames = progressTracker.userProgress.completedGames.length;
-            const completedPuzzles = progressTracker.userProgress.completedPuzzles.length;
             
             // Update the display with actual completed counts
             document.getElementById('gamesPlayed').textContent = completedGames;
-            document.getElementById('puzzlesSolved').textContent = completedPuzzles;
             
             // Update training time with detailed breakdown
             const trainingTimeElement = document.getElementById('trainingHours');
@@ -1205,17 +1299,18 @@
             document.getElementById('currentStreak').textContent = progress.currentStreak + ' days';
             
             // Update progress bars
-            updateProgressBars(completedGames, completedPuzzles);
+            updateProgressBars(completedGames);
+            
+            // Update leaderboard widget
+            updateLeaderboardWidget(completedGames);
             
             // Update userData to match progress tracker
             userData.gamesPlayed = completedGames;
-            userData.puzzlesSolved = completedPuzzles;
             userData.trainingHours = progress.totalHours;
             userData.currentStreak = progress.currentStreak;
             
             console.log('Profile stats updated:', {
                 completedGames: completedGames,
-                completedPuzzles: completedPuzzles,
                 totalTime: trainingTime.total,
                 currentSession: trainingTime.currentSession,
                 isActive: trainingTime.isActive,
@@ -1223,42 +1318,122 @@
             });
         }
 
+        // Update leaderboard widget
+        function updateLeaderboardWidget(completedGames) {
+            // Generate mock data for percentile calculation
+            const mockUsers = generateMockUserData();
+            
+            // Calculate user's percentile
+            const userPercentile = calculateUserPercentile(completedGames, mockUsers);
+            
+            // Update the display
+            updatePercentileDisplay(userPercentile, completedGames);
+        }
+
+        // Generate mock user data for percentile calculation
+        function generateMockUserData() {
+            const users = [];
+            for (let i = 0; i < 1000; i++) {
+                users.push({
+                    gamesCompleted: Math.floor(Math.random() * 50) + 1,
+                    trainingHours: Math.random() * 100,
+                    currentStreak: Math.floor(Math.random() * 30)
+                });
+            }
+            return users.sort((a, b) => b.gamesCompleted - a.gamesCompleted);
+        }
+
+        // Calculate user's percentile ranking
+        function calculateUserPercentile(userGames, allUsers) {
+            let betterUsers = 0;
+            for (let user of allUsers) {
+                if (user.gamesCompleted > userGames) {
+                    betterUsers++;
+                }
+            }
+            
+            const percentile = Math.round((betterUsers / allUsers.length) * 100);
+            const rank = betterUsers + 1;
+            const totalUsers = allUsers.length + 1;
+            
+            return {
+                percentile: 100 - percentile, // Invert to show "top X%"
+                rank,
+                totalUsers,
+                betterUsers
+            };
+        }
+
+        // Update percentile display
+        function updatePercentileDisplay(percentileData, completedGames) {
+            const userPercentile = document.getElementById('userPercentile');
+            const rankText = document.getElementById('rankText');
+            const percentileFill = document.getElementById('percentileFill');
+            const nextMilestone = document.getElementById('nextMilestone');
+            
+            // Update percentile display
+            let percentileText = `Top ${percentileData.percentile}%`;
+            if (percentileData.percentile <= 1) {
+                percentileText = 'Top 1% 🏆';
+            } else if (percentileData.percentile <= 5) {
+                percentileText = 'Top 5% 🥇';
+            } else if (percentileData.percentile <= 10) {
+                percentileText = 'Top 10% 🥈';
+            } else if (percentileData.percentile <= 25) {
+                percentileText = 'Top 25% 🥉';
+            }
+            
+            userPercentile.textContent = percentileText;
+            
+            // Update rank text
+            rankText.innerHTML = `You're ranked #${percentileData.rank} out of ${percentileData.totalUsers} players`;
+            
+            // Update percentile bar (inverted - higher percentile = more filled)
+            const fillPercentage = Math.min(100, Math.max(0, percentileData.percentile));
+            percentileFill.style.width = `${fillPercentage}%`;
+            
+            // Update next milestone
+            if (percentileData.percentile <= 1) {
+                nextMilestone.textContent = '🏆 You are in the top 1%! Amazing achievement!';
+            } else if (percentileData.percentile <= 5) {
+                nextMilestone.textContent = '🥇 Excellent! You are in the top 5% of players!';
+            } else if (percentileData.percentile <= 10) {
+                nextMilestone.textContent = '🥈 Great job! You are in the top 10% of players!';
+            } else if (percentileData.percentile <= 25) {
+                nextMilestone.textContent = '🥉 Good progress! You are in the top 25% of players!';
+            } else {
+                const gamesToTop25 = Math.ceil((100 - percentileData.percentile) / 4);
+                nextMilestone.textContent = `Complete ${gamesToTop25} more games to reach the top 25%!`;
+            }
+        }
+
         // Update progress bars with current completion counts
-        async function updateProgressBars(completedGames, completedPuzzles) {
+        async function updateProgressBars(completedGames) {
             try {
-                // Get total available games and puzzles
+                // Get total available games
                 const response = await fetch(`/games/games.json?t=${Date.now()}`);
                 const data = await response.json();
                 
                 if (data && data.games) {
                     const totalGames = data.games.filter(game => game.type === 'game').length;
-                    const totalPuzzles = data.games.filter(game => game.type === 'puzzle').length;
                     
                     console.log('Progress bar debug:');
                     console.log('All games:', data.games.map(g => ({ name: g.name, type: g.type })));
                     console.log('Games (type=game):', data.games.filter(game => game.type === 'game').map(g => g.name));
-                    console.log('Puzzles (type=puzzle):', data.games.filter(game => game.type === 'puzzle').map(g => g.name));
-                    console.log('Total games:', totalGames, 'Total puzzles:', totalPuzzles);
+                    console.log('Total games:', totalGames);
                     
-                    // Calculate progress percentages
+                    // Calculate progress percentage
                     const gamesProgress = totalGames > 0 ? (completedGames / totalGames) * 100 : 0;
-                    const puzzlesProgress = totalPuzzles > 0 ? (completedPuzzles / totalPuzzles) * 100 : 0;
                     
                     // Update games progress
                     document.getElementById('gamesProgressCount').textContent = `${completedGames}/${totalGames}`;
                     document.getElementById('gamesProgressBar').style.width = `${Math.min(gamesProgress, 100)}%`;
                     document.getElementById('gamesProgressGoal').textContent = `Goal: Complete all ${totalGames} available games`;
-                    
-                    // Update puzzles progress
-                    document.getElementById('puzzlesProgressCount').textContent = `${completedPuzzles}/${totalPuzzles}`;
-                    document.getElementById('puzzlesProgressBar').style.width = `${Math.min(puzzlesProgress, 100)}%`;
-                    document.getElementById('puzzlesProgressGoal').textContent = `Goal: Master all ${totalPuzzles} puzzle challenges`;
                 }
             } catch (error) {
                 console.error('Error updating progress bars:', error);
                 // Fallback to basic display
                 document.getElementById('gamesProgressCount').textContent = completedGames;
-                document.getElementById('puzzlesProgressCount').textContent = completedPuzzles;
             }
         }
 

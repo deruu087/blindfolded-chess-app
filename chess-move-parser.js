@@ -77,11 +77,27 @@ class ChessMoveParser {
             source = this.findPawnSource(target, isWhite);
         }
         
+        // Check if this is an en passant capture
+        let isEnPassant = false;
+        if (isCapture) {
+            const sourceRank = parseInt(source[1]);
+            const targetRank = parseInt(target[1]);
+            
+            // En passant conditions:
+            // White: pawn on rank 5 captures to rank 6
+            // Black: pawn on rank 4 captures to rank 3
+            if ((isWhite && sourceRank === 5 && targetRank === 6) ||
+                (!isWhite && sourceRank === 4 && targetRank === 3)) {
+                isEnPassant = true;
+            }
+        }
+
         return {
             piece: 'P',
             source: source,
             target: target,
             isCapture: isCapture,
+            isEnPassant: isEnPassant,
             isWhite: isWhite
         };
     }
@@ -94,11 +110,14 @@ class ChessMoveParser {
         if (isWhite) {
             // White pawns capture diagonally up-right or up-left
             // For cxd5, the c-pawn moves from c4 to d5
-            const sourceRank = targetRank - 1; // d5 -> c4
+            // For en passant cxd6, the c-pawn moves from c5 to d6
+            const sourceRank = targetRank - 1; // d5 -> c4, d6 -> c5
             return file + sourceRank;
         } else {
             // Black pawns capture diagonally down-right or down-left
-            const sourceRank = targetRank + 1;
+            // For cxd4, the c-pawn moves from c5 to d4
+            // For en passant cxd3, the c-pawn moves from c4 to d3
+            const sourceRank = targetRank + 1; // d4 -> c5, d3 -> c4
             return file + sourceRank;
         }
     }

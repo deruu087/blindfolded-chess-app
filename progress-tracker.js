@@ -9,7 +9,7 @@ class ProgressTracker {
             endTime: null,
             totalTime: 0,
             isActive: false,
-            type: null, // 'game' or 'puzzle'
+            type: null, // 'game'
             isIdle: false,
             idleTimer: null,
             idleTimeout: 10 * 1000 // 10 seconds in milliseconds
@@ -38,7 +38,6 @@ class ProgressTracker {
         const defaultProgress = {
             // Basic Stats
             totalGamesPlayed: 0,
-            totalPuzzlesSolved: 0,
             totalTrainingHours: 0,
             currentStreak: 0,
             longestStreak: 0,
@@ -46,9 +45,7 @@ class ProgressTracker {
             
             // Detailed Progress
             gamesByDifficulty: { beginner: 0, intermediate: 0, advanced: 0 },
-            puzzlesByDifficulty: { easy: 0, medium: 0, hard: 0 },
             averageGameTime: 0,
-            averagePuzzleTime: 0,
             
             // Session Data
             totalActiveTime: 0,
@@ -61,9 +58,8 @@ class ProgressTracker {
             unlockedAchievements: [],
             achievementProgress: {},
             
-            // Completed games and puzzles tracking
+            // Completed games tracking
             completedGames: [],
-            completedPuzzles: [],
             
             // Skill Metrics
             accuracy: 0,
@@ -88,7 +84,7 @@ class ProgressTracker {
         localStorage.setItem('chessProgress', JSON.stringify(this.userProgress));
     }
 
-    // Start training timer when user clicks on games/puzzles pages
+    // Start training timer when user clicks on games pages
     startTrainingTimer() {
         if (!this.trainingTimer.isRunning) {
             this.trainingTimer.isRunning = true;
@@ -208,33 +204,6 @@ class ProgressTracker {
             },
 
             // Puzzle Achievements
-            firstPuzzle: {
-                id: 'first-puzzle',
-                name: 'Puzzle Solver',
-                description: 'Solve your first puzzle',
-                icon: '🧩',
-                category: 'puzzles',
-                requirement: { puzzlesSolved: 1 },
-                unlocked: false
-            },
-            twentyFivePuzzles: {
-                id: 'twenty-five-puzzles',
-                name: 'Tactical Thinker',
-                description: 'Solve 25 puzzles',
-                icon: '🎯',
-                category: 'puzzles',
-                requirement: { puzzlesSolved: 25 },
-                unlocked: false
-            },
-            hundredPuzzles: {
-                id: 'hundred-puzzles',
-                name: 'Puzzle Master',
-                description: 'Solve 100 puzzles',
-                icon: '🧠',
-                category: 'puzzles',
-                requirement: { puzzlesSolved: 100 },
-                unlocked: false
-            },
 
             // Time Achievements
             oneHour: {
@@ -427,22 +396,6 @@ class ProgressTracker {
         this.checkForNewAchievements();
     }
 
-    // Record a puzzle completion
-    recordPuzzleCompletion(difficulty = 'medium', puzzleId = null) {
-        this.userProgress.totalPuzzlesSolved++;
-        this.userProgress.puzzlesByDifficulty[difficulty]++;
-        
-        // Add to completed puzzles list if puzzleId provided
-        if (puzzleId && !this.userProgress.completedPuzzles.includes(puzzleId)) {
-            this.userProgress.completedPuzzles.push(puzzleId);
-            console.log('Added puzzle to completed list:', puzzleId);
-            console.log('Completed puzzles now:', this.userProgress.completedPuzzles);
-        }
-        
-        // Streak is now only updated on daily login, not on puzzle completion
-        this.saveUserProgress();
-        this.checkForNewAchievements();
-    }
 
     // Update user streak based on daily login
     updateStreak() {
@@ -491,7 +444,6 @@ class ProgressTracker {
     getProgressSummary() {
         return {
             totalGames: this.userProgress.totalGamesPlayed,
-            totalPuzzles: this.userProgress.totalPuzzlesSolved,
             totalHours: Math.round(this.userProgress.totalTrainingHours * 10) / 10,
             currentStreak: this.userProgress.currentStreak,
             longestStreak: this.userProgress.longestStreak,
@@ -507,15 +459,9 @@ class ProgressTracker {
         return new Set(this.userProgress.completedGames);
     }
     
-    // Get completed puzzles as a Set
-    getCompletedPuzzlesSet() {
-        console.log('Getting completed puzzles set:', this.userProgress.completedPuzzles);
-        return new Set(this.userProgress.completedPuzzles);
-    }
-    
-    // Get all completed challenges (games + puzzles) as a Set
+    // Get all completed challenges (games) as a Set
     getAllCompletedChallengesSet() {
-        const allCompleted = [...this.userProgress.completedGames, ...this.userProgress.completedPuzzles];
+        const allCompleted = [...this.userProgress.completedGames];
         console.log('Getting all completed challenges set:', allCompleted);
         return new Set(allCompleted);
     }

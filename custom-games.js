@@ -7,6 +7,99 @@ let customGameMoves = [];
 let customGamePosition = {};
 let customMoveIndex = 0; // Track current position in custom game moves
 
+// Helper: parse algebraic square like "e5" -> {file: 'e', rank: 5}
+function parseSquare(sq) {
+    return { file: sq[0], rank: parseInt(sq[1], 10) };
+}
+
+// Helper to convert file letter -> 0-based index
+function fileIndex(fileChar) {
+    return fileChar.charCodeAt(0) - 'a'.charCodeAt(0);
+}
+
+// Convert algebraic square to 0-based coordinates [rank, file]
+function squareToCoords(square) {
+    const file = square[0].charCodeAt(0) - 'a'.charCodeAt(0); // 0-7
+    const rank = 8 - parseInt(square[1]); // 0-7 (0 = rank 8, 7 = rank 1)
+    return [rank, file];
+}
+
+// Convert 0-based coordinates to algebraic square
+function coordsToSquare(coords) {
+    const [rank, file] = coords;
+    const fileChar = String.fromCharCode('a'.charCodeAt(0) + file);
+    const rankNum = 8 - rank;
+    return fileChar + rankNum;
+}
+
+// Simplified en passant detection function
+function checkEnPassantAvailable(pawnPos, targetPos, lastMoveFrom, lastMoveTo, lastMovePiece, lastMoveColor, currentColor) {
+    console.log('=== CHECKING EN PASSANT ===');
+    console.log('Pawn pos:', pawnPos);
+    console.log('Target pos:', targetPos);
+    console.log('Last move from:', lastMoveFrom);
+    console.log('Last move to:', lastMoveTo);
+    console.log('Last move piece:', lastMovePiece);
+    console.log('Last move color:', lastMoveColor);
+    console.log('Current color:', currentColor);
+    
+    // Check if last move was a double pawn move (2 squares)
+    const lastMoveRankDiff = Math.abs(lastMoveTo[0] - lastMoveFrom[0]);
+    const lastMoveFileDiff = Math.abs(lastMoveTo[1] - lastMoveFrom[1]);
+    
+    console.log('Last move rank diff:', lastMoveRankDiff, 'file diff:', lastMoveFileDiff);
+    
+    if (!lastMovePiece || lastMovePiece.toLowerCase() !== 'p' || lastMoveRankDiff !== 2 || lastMoveFileDiff !== 0) {
+        console.log('FAIL: Last move was not a double pawn move');
+        return { isEnPassantAvailable: false };
+    }
+    
+    // Check if current move is diagonal (en passant capture)
+    const currentMoveRankDiff = Math.abs(targetPos[0] - pawnPos[0]);
+    const currentMoveFileDiff = Math.abs(targetPos[1] - pawnPos[1]);
+    
+    console.log('Current move rank diff:', currentMoveRankDiff, 'file diff:', currentMoveFileDiff);
+    
+    if (currentMoveRankDiff !== 1 || currentMoveFileDiff !== 1) {
+        console.log('FAIL: Current move is not diagonal');
+        return { isEnPassantAvailable: false };
+    }
+    
+    // Check if the capturing pawn is on the same rank as the opponent's pawn after the double move
+    const [pawnRank, pawnFile] = pawnPos;
+    const [lastMoveToRank, lastMoveToFile] = lastMoveTo;
+    
+    console.log('Pawn rank:', pawnRank, 'file:', pawnFile);
+    console.log('Last move to rank:', lastMoveToRank, 'file:', lastMoveToFile);
+    console.log('Same rank?', lastMoveToRank === pawnRank);
+    console.log('File diff:', Math.abs(lastMoveToFile - pawnFile));
+    
+    if (lastMoveToRank !== pawnRank || Math.abs(lastMoveToFile - pawnFile) !== 1) {
+        console.log('FAIL: Capturing pawn not adjacent to opponent pawn');
+        return { isEnPassantAvailable: false };
+    }
+    
+    // Check if the target square is the "passed-through" square
+    const passedThroughRank = (lastMoveFrom[0] + lastMoveTo[0]) / 2;
+    const passedThroughFile = lastMoveTo[1];
+    
+    console.log('Target rank:', targetPos[0], 'file:', targetPos[1]);
+    console.log('Passed through rank:', passedThroughRank, 'file:', passedThroughFile);
+    console.log('Target matches passed through?', targetPos[0] === passedThroughRank && targetPos[1] === passedThroughFile);
+    
+    if (targetPos[0] !== passedThroughRank || targetPos[1] !== passedThroughFile) {
+        console.log('FAIL: Not moving to passed-through square');
+        return { isEnPassantAvailable: false };
+    }
+    
+    // All conditions met - en passant is available
+    console.log('SUCCESS: En passant conditions met!');
+    return {
+        isEnPassantAvailable: true,
+        captured: lastMoveTo // The square containing the pawn to be removed
+    };
+}
+
 // Function to initialize custom game mode
 function initializeCustomGameMode() {
     console.log('Initializing custom game mode...');
@@ -326,6 +419,63 @@ function isValidMove(fromSquare, toSquare, pieceType) {
             return true;
         }
         
+        // Check for en passant capture (diagonal move to empty square)
+        if (fileDiff === 1 && toRank === fromRank + direction && !targetPiece && customGameMoves.length > 0) {
+            console.log('=== CHECKING EN PASSANT IN isValidMove ===');
+            console.log('From:', fromSquare, 'To:', toSquare);
+            console.log('Current turn:', currentTurn);
+            
+            const lastMove = customGameMoves[customGameMoves.length - 1];
+            console.log('Last move:', lastMove);
+            
+            // Convert to coordinates
+            const fromCoords = squareToCoords(fromSquare);
+            const toCoords = squareToCoords(toSquare);
+            const lastMoveFrom = squareToCoords(lastMove.from);
+            const lastMoveTo = squareToCoords(lastMove.to);
+            
+            console.log('From coords:', fromCoords, 'To coords:', toCoords);
+            console.log('Last move from:', lastMoveFrom, 'Last move to:', lastMoveTo);
+            
+            // Check if last move was a double pawn move
+            const lastMoveRankDiff = Math.abs(lastMoveTo[0] - lastMoveFrom[0]);
+            const lastMoveFileDiff = Math.abs(lastMoveTo[1] - lastMoveFrom[1]);
+            
+            console.log('Last move rank diff:', lastMoveRankDiff, 'file diff:', lastMoveFileDiff);
+            
+            if (lastMove.piece && lastMove.piece.toLowerCase() === 'p' && lastMoveRankDiff === 2 && lastMoveFileDiff === 0) {
+                console.log('Last move was a double pawn move!');
+                
+                // Check if the capturing pawn is on the same rank as the opponent's pawn after the double move
+                const [pawnRank, pawnFile] = fromCoords;
+                const [lastMoveToRank, lastMoveToFile] = lastMoveTo;
+                
+                console.log('Pawn rank:', pawnRank, 'file:', pawnFile);
+                console.log('Last move to rank:', lastMoveToRank, 'file:', lastMoveToFile);
+                console.log('Same rank?', lastMoveToRank === pawnRank);
+                console.log('File diff:', Math.abs(lastMoveToFile - pawnFile));
+                
+                if (lastMoveToRank === pawnRank && Math.abs(lastMoveToFile - pawnFile) === 1) {
+                    console.log('Capturing pawn is adjacent to opponent pawn!');
+                    
+                    // Check if the target square is the "passed-through" square
+                    const passedThroughRank = (lastMoveFrom[0] + lastMoveTo[0]) / 2;
+                    const passedThroughFile = lastMoveTo[1];
+                    
+                    console.log('Target rank:', toCoords[0], 'file:', toCoords[1]);
+                    console.log('Passed through rank:', passedThroughRank, 'file:', passedThroughFile);
+                    console.log('Target matches passed through?', toCoords[0] === passedThroughRank && toCoords[1] === passedThroughFile);
+                    
+                    if (toCoords[0] === passedThroughRank && toCoords[1] === passedThroughFile) {
+                        console.log('✅ EN PASSANT IS VALID!');
+                        return true;
+                    }
+                }
+            }
+            
+            console.log('En passant not valid');
+        }
+        
         return false;
     }
     
@@ -406,6 +556,63 @@ function makeCustomMove(fromSquare, toSquare, pieceType) {
     const destinationPiece = toSquareElement.querySelector('.piece');
     const isCapture = destinationPiece !== null;
     
+    // Check for en passant capture using proper chess rules
+    let isEnPassant = false;
+    let enPassantCapturedSquare = null;
+
+    console.log('=== EN PASSANT DEBUG ===');
+    console.log('Piece type:', pieceType);
+    console.log('Is capture:', isCapture);
+    console.log('Custom game moves length:', customGameMoves.length);
+    console.log('Current turn:', currentTurn);
+
+    if (pieceType.toLowerCase() === 'p' && !isCapture && customGameMoves.length > 0) {
+        const lastMove = customGameMoves[customGameMoves.length - 1];
+        console.log('Last move:', lastMove);
+        
+        // Convert algebraic notation to 0-based coordinates
+        const fromCoords = squareToCoords(fromSquare);
+        const toCoords = squareToCoords(toSquare);
+        const lastMoveFrom = squareToCoords(lastMove.from);
+        const lastMoveTo = squareToCoords(lastMove.to);
+        
+        console.log('From coords:', fromCoords, 'To coords:', toCoords);
+        console.log('Last move from:', lastMoveFrom, 'Last move to:', lastMoveTo);
+        
+        // Only check for en passant if the current move is diagonal (potential en passant capture)
+        const currentMoveRankDiff = Math.abs(toCoords[0] - fromCoords[0]);
+        const currentMoveFileDiff = Math.abs(toCoords[1] - fromCoords[1]);
+        
+        console.log('Current move rank diff:', currentMoveRankDiff, 'file diff:', currentMoveFileDiff);
+        
+        if (currentMoveRankDiff === 1 && currentMoveFileDiff === 1) {
+            console.log('Diagonal move detected - checking for en passant');
+            
+            // Check if en passant is available
+            const enPassantResult = checkEnPassantAvailable(
+                fromCoords, 
+                toCoords, 
+                lastMoveFrom, 
+                lastMoveTo, 
+                lastMove.piece, 
+                lastMove.turn, 
+                currentTurn
+            );
+            
+            console.log('En passant result:', enPassantResult);
+            
+            if (enPassantResult.isEnPassantAvailable) {
+                isEnPassant = true;
+                enPassantCapturedSquare = coordsToSquare(enPassantResult.captured);
+                console.log('En passant detected! Capturing pawn on', enPassantCapturedSquare);
+            }
+        } else {
+            console.log('Not a diagonal move - skipping en passant check');
+        }
+    } else {
+        console.log('En passant check skipped - not a pawn move or no previous moves');
+    }
+    
     // Move the piece visually
     console.log('Moving piece from', fromSquare, 'to', toSquare);
     
@@ -421,6 +628,15 @@ function makeCustomMove(fromSquare, toSquare, pieceType) {
     // Clear the source square
     fromSquareElement.innerHTML = '';
     
+    // Handle en passant capture
+    if (isEnPassant && enPassantCapturedSquare) {
+        const enPassantElement = document.querySelector(`[data-square="${enPassantCapturedSquare}"]`);
+        if (enPassantElement) {
+            enPassantElement.innerHTML = '';
+            console.log('En passant: Removed captured pawn from', enPassantCapturedSquare);
+        }
+    }
+    
     console.log('Piece moved successfully');
     
     // Record the move
@@ -433,6 +649,9 @@ function makeCustomMove(fromSquare, toSquare, pieceType) {
         // For pawns
         if (isCapture) {
             // Capture notation: e.g., exd5 (pawn from e4 captures on d5)
+            moveNotation = `${fromSquare[0]}x${toSquare}`;
+        } else if (isEnPassant) {
+            // En passant notation: e.g., exd6 (pawn from e5 captures en passant on d6)
             moveNotation = `${fromSquare[0]}x${toSquare}`;
         } else {
             // Regular pawn move: just destination square
@@ -456,8 +675,11 @@ function makeCustomMove(fromSquare, toSquare, pieceType) {
         piece: pieceType,
         turn: currentTurn,
         notation: moveNotation,
-        isCapture: isCapture,
-        capturedPiece: isCapture ? (destinationPiece ? destinationPiece.dataset.piece : null) : null,
+        isCapture: isCapture || isEnPassant,
+        capturedPiece: isCapture ? (destinationPiece ? destinationPiece.dataset.piece : null) : 
+                      (isEnPassant ? 'p' : null),
+        isEnPassant: isEnPassant,
+        enPassantCapturedSquare: enPassantCapturedSquare,
         commentary: '' // Initialize empty commentary
     };
     
@@ -1479,14 +1701,21 @@ function saveCustomGame() {
             Object.keys(movesByNumber).sort((a, b) => parseInt(a) - parseInt(b)).forEach(moveNumber => {
                 const moveData = movesByNumber[moveNumber];
                 
-                // Add white move if it exists (separate entry)
-                if (moveData.white) {
-                    const captureText = moveData.white.isCapture ? ` (captures ${moveData.white.capturedPiece})` : '';
-                    // Create description with commentary if present
-                    let description = `${moveData.white.piece} from ${moveData.white.from} to ${moveData.white.to}${captureText}`;
-                    if (moveData.white.commentary && moveData.white.commentary.trim() !== '') {
-                        description += ` - ${moveData.white.commentary.trim()}`;
+            // Add white move if it exists (separate entry)
+            if (moveData.white) {
+                let captureText = '';
+                if (moveData.white.isCapture) {
+                    if (moveData.white.isEnPassant) {
+                        captureText = ` (en passant captures ${moveData.white.capturedPiece} on ${moveData.white.enPassantCapturedSquare})`;
+                    } else {
+                        captureText = ` (captures ${moveData.white.capturedPiece})`;
                     }
+                }
+                // Create description with commentary if present
+                let description = `${moveData.white.piece} from ${moveData.white.from} to ${moveData.white.to}${captureText}`;
+                if (moveData.white.commentary && moveData.white.commentary.trim() !== '') {
+                    description += ` - ${moveData.white.commentary.trim()}`;
+                }
                     
                     detailedMoves.push({
                         move_number: parseInt(moveNumber),
@@ -1502,14 +1731,21 @@ function saveCustomGame() {
                     });
                 }
                 
-                // Add black move if it exists (separate entry)
-                if (moveData.black) {
-                    const captureText = moveData.black.isCapture ? ` (captures ${moveData.black.capturedPiece})` : '';
-                    // Create description with commentary if present
-                    let description = `${moveData.black.piece} from ${moveData.black.from} to ${moveData.black.to}${captureText}`;
-                    if (moveData.black.commentary && moveData.black.commentary.trim() !== '') {
-                        description += ` - ${moveData.black.commentary.trim()}`;
+            // Add black move if it exists (separate entry)
+            if (moveData.black) {
+                let captureText = '';
+                if (moveData.black.isCapture) {
+                    if (moveData.black.isEnPassant) {
+                        captureText = ` (en passant captures ${moveData.black.capturedPiece} on ${moveData.black.enPassantCapturedSquare})`;
+                    } else {
+                        captureText = ` (captures ${moveData.black.capturedPiece})`;
                     }
+                }
+                // Create description with commentary if present
+                let description = `${moveData.black.piece} from ${moveData.black.from} to ${moveData.black.to}${captureText}`;
+                if (moveData.black.commentary && moveData.black.commentary.trim() !== '') {
+                    description += ` - ${moveData.black.commentary.trim()}`;
+                }
                     
                     detailedMoves.push({
                         move_number: parseInt(moveNumber),
@@ -1564,6 +1800,18 @@ function saveCustomGame() {
     
     console.log('Custom game saved:', gameData);
     console.log('Total custom games:', customGamesData.games.length);
+    
+    // Reload games data to include the new custom game
+    console.log('Attempting to reload games data...');
+    if (typeof reloadGamesData === 'function') {
+        console.log('reloadGamesData function found, calling it...');
+        reloadGamesData();
+    } else if (typeof window.reloadGamesData === 'function') {
+        console.log('window.reloadGamesData function found, calling it...');
+        window.reloadGamesData();
+    } else {
+        console.error('reloadGamesData function not found!');
+    }
     
     // Reset the custom game mode after saving
     resetCustomGameMode();

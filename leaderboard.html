@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Academy - Leaderboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+
+        .navbar {
+            background-color: #2c3e50;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            color: #ecf0f1;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .logo:hover {
+            color: #3498db;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-links a:hover {
+            background-color: #34495e;
+        }
+
+        .nav-links a.active {
+            background-color: #3498db;
+            color: #ffffff;
+        }
+
+        /* Profile Button Styles */
+        .profile-button {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .profile-button:hover {
+            background-color: #34495e;
+        }
+
+        /* Profile Dropdown Styles */
+        .profile-dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            border: 1px solid #e9ecef;
+        }
+
+        .profile-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f8f9fa;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: transparent !important;
+            color: #1a1a1a !important;
+            transform: translateX(2px);
+        }
+
+        .dropdown-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .main-content {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .leaderboard-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .leaderboard-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .leaderboard-subtitle {
+            font-size: 1.15rem;
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+        }
+
+        .user-stats {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        .user-rank {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .user-progress {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.3);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            background: white;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #7f8c8d;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .tab:hover {
+            color: #3498db;
+        }
+
+        .leaderboard-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard-table th {
+            background: #f8f9fa;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .leaderboard-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .rank {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #3498db;
+            text-align: center;
+            width: 60px;
+        }
+
+        .rank-1 { color: #f39c12; }
+        .rank-2 { color: #95a5a6; }
+        .rank-3 { color: #cd7f32; }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .player-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .player-stats {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-top: 0.25rem;
+        }
+
+        .current-user {
+            background: linear-gradient(135deg, #e8f4fd, #d1ecf1);
+            border-left: 4px solid #3498db;
+        }
+
+        .medal {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .leaderboard-title {
+                font-size: 2rem;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .player-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: flex-start;
+            }
+            
+            .leaderboard-table th,
+            .leaderboard-table td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <div class="logo-icon">♟️</div>
+            <span>Blind Chess</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="games.html">Games</a></li>
+            <li><a href="leaderboard.html" class="active">Leaderboard</a></li>
+            <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
+            <li class="profile-dropdown">
+                <a href="#" id="profileLink" class="profile-button">Profile</a>
+                <div class="dropdown-menu" id="profileDropdown">
+                    <a href="profile.html" class="dropdown-item" id="profileMenuItem">
+                        <span class="dropdown-text">My Profile</span>
+                    </a>
+                    <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
+                        <span class="dropdown-text">Account Information</span>
+                    </a>
+                    <a href="#" class="dropdown-item" id="signInMenuItem">
+                        <span class="dropdown-text">Sign In</span>
+                    </a>
+                    <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
+                        <span class="dropdown-text">Logout</span>
+                    </a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="leaderboard-header">
+            <h1 class="leaderboard-title">🏆 Leaderboard</h1>
+            <p class="leaderboard-subtitle">Compete with players worldwide and track your progress</p>
+        </div>
+
+        <!-- User Stats Section -->
+        <div class="user-stats" id="userStats">
+            <div class="user-rank" id="userRank">Loading...</div>
+            <div class="user-progress" id="userProgress">Calculating your position...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div id="nextRankInfo">Complete more games to climb the leaderboard!</div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" data-tab="global">Global Rankings</div>
+            <div class="tab" data-tab="recent">Recent Achievers</div>
+            <div class="tab" data-tab="streaks">Streak Leaders</div>
+        </div>
+
+        <!-- Leaderboard Container -->
+        <div class="leaderboard-container">
+            <div id="leaderboardContent">
+                <div class="loading">Loading leaderboard data...</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="progress-tracker.js"></script>
+    <script>
+        // Initialize progress tracker
+        let progressTracker = new ProgressTracker();
+        let currentTab = 'global';
+        let leaderboardData = {
+            global: [],
+            recent: [],
+            streaks: []
+        };
+
+        // Initialize leaderboard page
+        function initLeaderboard() {
+            updateNavigation();
+            loadLeaderboardData();
+            setupTabs();
+        }
+
+        // Load leaderboard data
+        async function loadLeaderboardData() {
+            try {
+                // Generate mock leaderboard data for demonstration
+                leaderboardData = generateMockLeaderboardData();
+                
+                // Get current user data
+                const userProgress = progressTracker.getProgressSummary();
+                const userData = {
+                    name: localStorage.getItem('userName') || 'Guest User',
+                    gamesCompleted: userProgress.totalGames,
+                    trainingHours: userProgress.totalHours,
+                    currentStreak: userProgress.currentStreak,
+                    longestStreak: userProgress.longestStreak
+                };
+
+                // Calculate user's rank and position
+                const userRank = calculateUserRank(userData);
+                updateUserStats(userRank, userData);
+                
+                // Display current tab
+                displayLeaderboard(currentTab);
+                
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                document.getElementById('leaderboardContent').innerHTML = 
+                    '<div class="empty-state"><h3>Unable to load leaderboard</h3><p>Please try again later.</p></div>';
+            }
+        }
+
+        // Generate mock leaderboard data
+        function generateMockLeaderboardData() {
+            const names = [
+                'ChessMaster2024', 'BlindfoldPro', 'TacticalGenius', 'MindChess', 'VisualizerKing',
+                'ChessWizard', 'BlindfoldChamp', 'TacticalAce', 'MindGamer', 'ChessVision',
+                'BlindfoldHero', 'TacticalMaster', 'ChessMind', 'VisualPro', 'BlindfoldAce',
+                'TacticalWizard', 'ChessGenius', 'MindMaster', 'BlindfoldKing', 'TacticalHero',
+                'ChessAce', 'VisualWizard', 'BlindfoldMind', 'TacticalVision', 'ChessPro',
+                'MindHero', 'BlindfoldWizard', 'TacticalMind', 'ChessVision', 'VisualMaster'
+            ];
+
+            const global = [];
+            const recent = [];
+            const streaks = [];
+
+            // Generate global rankings
+            for (let i = 0; i < 50; i++) {
+                const gamesCompleted = Math.max(0, 50 - i + Math.floor(Math.random() * 10));
+                const trainingHours = Math.round((gamesCompleted * 0.5 + Math.random() * 20) * 10) / 10;
+                const currentStreak = Math.floor(Math.random() * 30);
+                const longestStreak = Math.max(currentStreak, Math.floor(Math.random() * 50));
+
+                global.push({
+                    rank: i + 1,
+                    name: names[i % names.length],
+                    gamesCompleted,
+                    trainingHours,
+                    currentStreak,
+                    longestStreak,
+                    isCurrentUser: false
+                });
+            }
+
+            // Generate recent achievers (last 7 days)
+            for (let i = 0; i < 20; i++) {
+                const gamesCompleted = Math.floor(Math.random() * 30) + 1;
+                const trainingHours = Math.round((gamesCompleted * 0.5 + Math.random() * 10) * 10) / 10;
+                const currentStreak = Math.floor(Math.random() * 15);
+                const longestStreak = Math.max(currentStreak, Math.floor(Math.random() * 25));
+
+                recent.push({
+                    rank: i + 1,
+                    name: names[i % names.length],
+                    gamesCompleted,
+                    trainingHours,
+                    currentStreak,
+                    longestStreak,
+                    isCurrentUser: false
+                });
+            }
+
+            // Generate streak leaders
+            for (let i = 0; i < 20; i++) {
+                const currentStreak = Math.max(1, 20 - i + Math.floor(Math.random() * 10));
+                const gamesCompleted = Math.floor(Math.random() * 40) + 1;
+                const trainingHours = Math.round((gamesCompleted * 0.5 + Math.random() * 15) * 10) / 10;
+                const longestStreak = Math.max(currentStreak, Math.floor(Math.random() * 40));
+
+                streaks.push({
+                    rank: i + 1,
+                    name: names[i % names.length],
+                    gamesCompleted,
+                    trainingHours,
+                    currentStreak,
+                    longestStreak,
+                    isCurrentUser: false
+                });
+            }
+
+            return { global, recent, streaks };
+        }
+
+        // Calculate user's rank
+        function calculateUserRank(userData) {
+            const globalData = leaderboardData.global;
+            const userGames = userData.gamesCompleted;
+            
+            // Find user's position in global rankings
+            let rank = 1;
+            for (let i = 0; i < globalData.length; i++) {
+                if (userGames >= globalData[i].gamesCompleted) {
+                    rank = i + 1;
+                    break;
+                }
+                rank = i + 2;
+            }
+
+            // Calculate progress to next rank
+            let progressToNext = 0;
+            let gamesToNext = 0;
+            
+            if (rank > 1) {
+                const nextRankData = globalData[rank - 2];
+                const currentRankData = globalData[rank - 1];
+                const totalGap = nextRankData.gamesCompleted - currentRankData.gamesCompleted;
+                const userGap = nextRankData.gamesCompleted - userGames;
+                progressToNext = Math.max(0, Math.min(100, ((totalGap - userGap) / totalGap) * 100));
+                gamesToNext = Math.max(0, nextRankData.gamesCompleted - userGames);
+            }
+
+            return {
+                rank,
+                totalPlayers: globalData.length + 1,
+                progressToNext,
+                gamesToNext,
+                nextRankGames: rank > 1 ? globalData[rank - 2].gamesCompleted : 0
+            };
+        }
+
+        // Update user stats display
+        function updateUserStats(userRank, userData) {
+            const rankElement = document.getElementById('userRank');
+            const progressElement = document.getElementById('userProgress');
+            const progressFill = document.getElementById('progressFill');
+            const nextRankInfo = document.getElementById('nextRankInfo');
+
+            if (userRank.rank <= 3) {
+                const medals = ['🥇', '🥈', '🥉'];
+                rankElement.innerHTML = `${medals[userRank.rank - 1]} You are #${userRank.rank} out of ${userRank.totalPlayers} players!`;
+            } else {
+                rankElement.innerHTML = `You are #${userRank.rank} out of ${userRank.totalPlayers} players`;
+            }
+
+            progressElement.innerHTML = `Completed ${userData.gamesCompleted} games • ${userData.trainingHours} hours trained • ${userData.currentStreak} day streak`;
+            
+            progressFill.style.width = `${userRank.progressToNext}%`;
+            
+            if (userRank.gamesToNext > 0) {
+                nextRankInfo.innerHTML = `Complete ${userRank.gamesToNext} more games to reach #${userRank.rank - 1}`;
+            } else if (userRank.rank === 1) {
+                nextRankInfo.innerHTML = '🏆 You are the #1 player! Keep it up!';
+            } else {
+                nextRankInfo.innerHTML = 'Great progress! Keep completing games to climb higher!';
+            }
+        }
+
+        // Setup tab functionality
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+                    // Update current tab and display
+                    currentTab = tab.dataset.tab;
+                    displayLeaderboard(currentTab);
+                });
+            });
+        }
+
+        // Display leaderboard based on current tab
+        function displayLeaderboard(tab) {
+            const data = leaderboardData[tab];
+            const container = document.getElementById('leaderboardContent');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No data available</h3><p>Check back later for leaderboard updates.</p></div>';
+                return;
+            }
+
+            let html = '<table class="leaderboard-table">';
+            
+            // Table headers based on tab
+            if (tab === 'global') {
+                html += '<thead><tr><th>Rank</th><th>Player</th><th>Games</th><th>Hours</th><th>Streak</th></tr></thead>';
+            } else if (tab === 'recent') {
+                html += '<thead><tr><th>Rank</th><th>Player</th><th>Games</th><th>Hours</th><th>Streak</th></tr></thead>';
+            } else if (tab === 'streaks') {
+                html += '<thead><tr><th>Rank</th><th>Player</th><th>Current Streak</th><th>Longest Streak</th><th>Games</th></tr></thead>';
+            }
+            
+            html += '<tbody>';
+            
+            data.forEach((player, index) => {
+                const isCurrentUser = player.isCurrentUser;
+                const rowClass = isCurrentUser ? 'current-user' : '';
+                
+                html += `<tr class="${rowClass}">`;
+                
+                // Rank with medal
+                let rankDisplay = player.rank;
+                if (player.rank === 1) rankDisplay = '<span class="medal">🥇</span>1';
+                else if (player.rank === 2) rankDisplay = '<span class="medal">🥈</span>2';
+                else if (player.rank === 3) rankDisplay = '<span class="medal">🥉</span>3';
+                
+                html += `<td class="rank rank-${player.rank}">${rankDisplay}</td>`;
+                
+                // Player info
+                const initials = player.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                html += `<td>
+                    <div class="player-info">
+                        <div class="player-avatar">${initials}</div>
+                        <div class="player-name">${player.name}</div>
+                    </div>
+                </td>`;
+                
+                // Stats based on tab
+                if (tab === 'global' || tab === 'recent') {
+                    html += `<td class="stat"><div class="stat-value">${player.gamesCompleted}</div><div class="stat-label">Games</div></td>`;
+                    html += `<td class="stat"><div class="stat-value">${player.trainingHours}</div><div class="stat-label">Hours</div></td>`;
+                    html += `<td class="stat"><div class="stat-value">${player.currentStreak}</div><div class="stat-label">Days</div></td>`;
+                } else if (tab === 'streaks') {
+                    html += `<td class="stat"><div class="stat-value">${player.currentStreak}</div><div class="stat-label">Current</div></td>`;
+                    html += `<td class="stat"><div class="stat-value">${player.longestStreak}</div><div class="stat-label">Longest</div></td>`;
+                    html += `<td class="stat"><div class="stat-value">${player.gamesCompleted}</div><div class="stat-label">Games</div></td>`;
+                }
+                
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Check login status and update navigation
+        function updateNavigation() {
+            const profileLink = document.getElementById('profileLink');
+            const profileMenuItem = document.getElementById('profileMenuItem');
+            const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
+            const signInMenuItem = document.getElementById('signInMenuItem');
+            const logoutMenuItem = document.getElementById('logoutMenuItem');
+            const subscriptionTab = document.getElementById('subscriptionTab');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
+            
+            // Show/hide subscription tab based on subscription status
+            const subscriptionLi = document.querySelector('.subscription-tab-li');
+            if (hasActiveSubscription) {
+                subscriptionLi.classList.add('hidden-for-subscriber');
+            } else {
+                subscriptionLi.classList.remove('hidden-for-subscriber');
+            }
+            
+            if (isLoggedIn) {
+                // User is logged in - show profile, account info, and logout options
+                profileMenuItem.style.display = 'flex';
+                accountInfoMenuItem.style.display = 'flex';
+                logoutMenuItem.style.display = 'flex';
+                signInMenuItem.style.display = 'none';
+                
+                // Set up profile menu item
+                profileMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = 'profile.html';
+                };
+                
+                // Set up account info menu item
+                accountInfoMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    showAccountInfoModal();
+                };
+                
+                // Set up logout menu item
+                logoutMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    logout();
+                };
+                
+                // Profile icon click - go to profile
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = 'profile.html';
+                };
+            } else {
+                // User is not logged in - show sign in option
+                profileMenuItem.style.display = 'none';
+                accountInfoMenuItem.style.display = 'none';
+                logoutMenuItem.style.display = 'none';
+                signInMenuItem.style.display = 'flex';
+                
+                // Set up sign in menu item
+                signInMenuItem.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
+                
+                // Profile icon click - show sign in modal
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
+            }
+        }
+
+        // Show account information modal
+        function showAccountInfoModal() {
+            const userName = localStorage.getItem('userName') || 'User';
+            const userEmail = localStorage.getItem('userEmail') || 'No email provided';
+            const subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            
+            // Format subscription display
+            let subscriptionDisplay = 'Free Account';
+            if (subscriptionPlan === 'monthly') {
+                subscriptionDisplay = 'Premium Monthly';
+            } else if (subscriptionPlan === 'quarterly') {
+                subscriptionDisplay = 'Premium Quarterly';
+            } else if (subscriptionPlan === 'monthly_cancelled') {
+                subscriptionDisplay = 'Premium Monthly (Cancelled)';
+            } else if (subscriptionPlan === 'quarterly_cancelled') {
+                subscriptionDisplay = 'Premium Quarterly (Cancelled)';
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Account Information</h2>
+                        <span class="close" onclick="closeModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="account-info">
+                            <div class="info-item">
+                                <label>Name:</label>
+                                <span>${userName}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Email:</label>
+                                <span>${userEmail}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Subscription:</label>
+                                <span>${subscriptionDisplay}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        }
+
+        // Logout function
+        function logout() {
+            // Clear user data and localStorage
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('subscriptionPlan');
+            localStorage.removeItem('hasActiveSubscription');
+            
+            // Update navigation
+            updateNavigation();
+            
+            // Redirect to home page
+            window.location.href = 'index.html';
+        }
+
+        // Show sign in modal
+        function showSignInModal() {
+            window.location.href = 'index.html#signin';
+        }
+
+        // Close modal
+        function closeModal() {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => modal.remove());
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initLeaderboard();
+        });
+    </script>
+</body>
+</html>
