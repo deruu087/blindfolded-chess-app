@@ -3639,6 +3639,9 @@
                 categoryElement.appendChild(gameButton);
             });
             
+            // Update completion badges after creating game buttons
+            updateGameListBadges();
+            
             // Add "Add Game" button to short games submenu
             
             // Add "Add Game" button to my games submenu
@@ -5246,6 +5249,9 @@
                     hideCustomSaveMessage();
                 }
             }
+
+            // Update completion badges to reflect current state
+            updateGameListBadges();
 
             // Populate game details
             populateGameDetails(game);

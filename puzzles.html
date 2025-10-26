@@ -473,16 +473,7 @@
             margin-left: 25px;
         }
         
-        /* Hide left panel for Weekly tab */
-        .tab-panel.active ~ .bottom-section .left-panel {
-            display: none;
-        }
-        
-        /* Adjust right panel when left panel is hidden */
-        .tab-panel.active ~ .bottom-section .right-panel {
-            flex: 1;
-            max-width: none;
-        }
+        /* Weekly tab now shows left panel like difficulty tab */
 
         .right-panel {
             flex: 1;
@@ -971,12 +962,16 @@
             flex-direction: column;
             gap: 0.5rem;
             margin-top: 0.5rem;
-            padding-left: 1rem;
+            padding-left: 1.625rem;
             animation: slideDown 0.3s ease-out;
         }
 
         .submenu.show {
             display: flex;
+        }
+        
+        #weekly-puzzle-submenu {
+            margin-left: -15px;
         }
 
         .submenu-button {
@@ -2545,7 +2540,14 @@
 
         <!-- Weekly Tab -->
         <div class="tab-panel" id="gm-games-panel">
-            <!-- Left panel is hidden for Weekly - puzzle loads directly -->
+            <!-- Left panel with puzzle submenu directly -->
+            <div class="game-buttons">
+                <div class="game-button-container">
+                    <div class="submenu show" id="weekly-puzzle-submenu">
+                        <!-- Puzzle will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
         </div>
         </div>
         </div>
@@ -3128,18 +3130,9 @@
                         console.error('Panel not found:', `${tabId}-panel`);
                     }
                     
-                    // Special handling for Weekly tab - load puzzle #2 directly
-                    if (tabId === 'gm-games' && puzzlesData && puzzlesData.puzzles) {
-                        const puzzle2 = puzzlesData.puzzles.find(p => p.id === 'puzzle-002');
-                        if (puzzle2) {
-                            console.log('Loading puzzle #2 for Weekly tab:', puzzle2);
-                            displayGame(puzzle2.id);
-                        } else {
-                            console.error('Puzzle #2 not found');
-                        }
-                    } else {
-                        // All other tabs use the same game functionality
-                        // Games are loaded automatically by updateGameButtons()
+                    // Special handling for Weekly tab - all puzzles are already populated during initialization
+                    if (tabId === 'gm-games') {
+                        console.log('Weekly tab activated - puzzles already loaded');
                     }
                 });
             });
@@ -3199,6 +3192,12 @@
                     // Update epic puzzles (epic-games-submenu maps to epic)
                     updateGameCategory(prefix + 'epic-games-submenu', epicPuzzles);
                 });
+                
+                // Update Weekly puzzle
+                const weeklyPuzzle = puzzlesData.puzzles.find(p => p.id === 'puzzle-002');
+                if (weeklyPuzzle) {
+                    updateGameCategory('weekly-puzzle-submenu', [weeklyPuzzle]);
+                }
             } catch (error) {
                 console.error('Error loading puzzles:', error);
                 puzzlesData = { puzzles: [] };
@@ -3550,6 +3549,9 @@
                 
                 categoryElement.appendChild(puzzleButton);
             });
+            
+            // Update completion badges after creating puzzle buttons
+            updateGameListBadges();
             
             // No custom game functionality in puzzles
         }
@@ -5095,6 +5097,9 @@
                  deleteGameSection.style.display = 'none';
              }
              
+             // Update completion badges to reflect current state
+             updateGameListBadges();
+             
              // Visual mode placeholder - no effects applied yet
         }
 
@@ -6352,17 +6357,17 @@
 
             // Set up submenu toggles for all tabs
             const gameButtonIds = [
-                'short-games-btn', 'gm-games-short-games-btn',
-                'medium-games-btn', 'gm-games-medium-games-btn',
-                'long-games-btn', 'gm-games-long-games-btn',
-                'epic-games-btn', 'gm-games-epic-games-btn'
+                'short-games-btn', 
+                'medium-games-btn', 
+                'long-games-btn', 
+                'epic-games-btn'
             ];
             
             const submenuIds = [
-                'short-games-submenu', 'gm-games-short-games-submenu',
-                'medium-games-submenu', 'gm-games-medium-games-submenu',
-                'long-games-submenu', 'gm-games-long-games-submenu',
-                'epic-games-submenu', 'gm-games-epic-games-submenu'
+                'short-games-submenu', 
+                'medium-games-submenu', 
+                'long-games-submenu', 
+                'epic-games-submenu'
             ];
             
             gameButtonIds.forEach((buttonId, index) => {
