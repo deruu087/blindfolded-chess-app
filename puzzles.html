@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blind Chess - Puzzles</title>
+    <title>Memo Chess - Puzzles</title>
     <script>
         // Check subscription status immediately to prevent flashing
         (function() {
@@ -29,7 +29,7 @@
         }
 
         .navbar {
-            background-color: #2c3e50;
+            background-color: #f5f5f5;
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
@@ -40,7 +40,7 @@
         .logo {
             display: flex;
             align-items: center;
-            color: #ecf0f1;
+            color: #1e3a8a;
             font-size: 1.5rem;
             font-weight: bold;
             text-decoration: none;
@@ -48,19 +48,15 @@
         }
         
         .logo:hover {
-            color: #3498db;
+            color: #1e3a8a;
         }
 
         .logo-icon {
             width: 40px;
             height: 40px;
             margin-right: 10px;
-            background-color: #ecf0f1;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+            object-fit: cover;
         }
 
         .nav-links {
@@ -71,7 +67,7 @@
         }
 
         .nav-links a {
-            color: #ecf0f1;
+            color: #1e3a8a;
             text-decoration: none;
             font-weight: 500;
             font-size: 1.1rem;
@@ -83,7 +79,7 @@
         }
 
         .nav-links a:hover {
-            background-color: #34495e;
+            background-color: #e5e7eb;
         }
 
         /* Profile Button Styles */
@@ -211,7 +207,7 @@
         }
 
         .nav-links a.active {
-            background-color: #3498db;
+            background-color: #1e3a8a;
             color: #ffffff;
         }
 
@@ -247,12 +243,12 @@
         }
 
         .games-tabs .tab.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
+            color: #1e3a8a;
+            border-bottom-color: #1e3a8a;
         }
 
         .games-tabs .tab:hover {
-            color: #3498db;
+            color: #1e3a8a;
         }
 
         /* Tab Content Styles */
@@ -311,7 +307,7 @@
         .stat-card .stat-number {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #3498db;
+            color: #1e3a8a;
             margin-bottom: 0.25rem;
         }
 
@@ -343,7 +339,7 @@
             color: #2c3e50;
             margin-bottom: 0.5rem;
             padding-bottom: 0.25rem;
-            border-bottom: 1px solid #3498db;
+            border-bottom: 1px solid #1e3a8a;
         }
 
         .gm-list {
@@ -365,7 +361,7 @@
         }
 
         .gm-item:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
         }
 
         .gm-name {
@@ -399,7 +395,7 @@
         }
 
         .game-item:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
         }
 
         .game-title {
@@ -476,6 +472,17 @@
             margin-top: 30px;
             margin-left: 25px;
         }
+        
+        /* Hide left panel for Weekly tab */
+        .tab-panel.active ~ .bottom-section .left-panel {
+            display: none;
+        }
+        
+        /* Adjust right panel when left panel is hidden */
+        .tab-panel.active ~ .bottom-section .right-panel {
+            flex: 1;
+            max-width: none;
+        }
 
         .right-panel {
             flex: 1;
@@ -522,7 +529,7 @@
         }
 
         .game-button:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
             background-color: #f8f9fa;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -596,7 +603,7 @@
 
         .form-input:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
@@ -618,12 +625,12 @@
         }
 
         .btn-primary {
-            background-color: #3498db;
+            background-color: #1e3a8a;
             color: white;
         }
 
         .btn-primary:hover {
-            background-color: #2980b9;
+            background-color: #1e40af;
         }
 
         .btn-secondary {
@@ -668,7 +675,7 @@
         }
 
         .register-link a {
-            color: #3498db;
+            color: #1e3a8a;
             text-decoration: none;
         }
 
@@ -860,7 +867,7 @@
         }
 
         .btn-subscription-yes {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
         }
 
@@ -913,9 +920,9 @@
         }
 
         .game-button.active {
-            border-color: #3498db;
-            background-color: #e3f2fd;
-            color: #2980b9;
+            border-color: #1e3a8a;
+            background-color: #e0e7ff;
+            color: #1e40af;
         }
 
         .game-button .description {
@@ -947,16 +954,16 @@
         }
 
         .game-button-container .game-button:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
             background-color: #f8f9fa;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         .game-button-container .game-button.active {
-            border-color: #3498db;
-            background-color: #e3f2fd;
-            color: #2980b9;
+            border-color: #1e3a8a;
+            background-color: #e0e7ff;
+            color: #1e40af;
         }
 
         .submenu {
@@ -999,16 +1006,16 @@
 
         .submenu-button.selected {
             transform: translateX(6px) !important;
-            background-color: #e3f2fd !important;
-            border: 1px solid #2196f3 !important;
+            background-color: #e0e7ff !important;
+            border: 1px solid #1e3a8a !important;
             box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2) !important;
             font-weight: normal !important;
-            color: #1976d2 !important;
+            color: #1e3a8a !important;
         }
 
         .submenu-button.selected:hover {
-            background-color: #e3f2fd !important;
-            border-color: #2196f3 !important;
+            background-color: #e0e7ff !important;
+            border-color: #1e3a8a !important;
             transform: translateX(6px) !important;
             box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2) !important;
         }
@@ -1021,6 +1028,12 @@
             opacity: 0;
             transition: all 0.15s ease;
             z-index: 10;
+        }
+
+        .game-completion-badge img {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
 
         .game-completion-badge.show {
@@ -1131,13 +1144,13 @@
         }
 
         .mode-option.active {
-            background-color: #3498db;
-            border-color: #2980b9;
+            background-color: #1e3a8a;
+            border-color: #1e40af;
             color: white;
         }
 
         .mode-option.active:hover {
-            background-color: #2980b9;
+            background-color: #1e40af;
             transform: translateY(-1px);
         }
 
@@ -1166,7 +1179,7 @@
             position: relative;
             border-radius: 4px;
         }
-        
+
         .chess-board.dragging .chess-square {
             transition: none !important;
         }
@@ -1223,7 +1236,7 @@
             color: #000000;
             box-sizing: border-box;
         }
-
+        
         .coordinate-labels-bottom {
             grid-area: bottom;
             display: grid;
@@ -1300,7 +1313,7 @@
             outline: 3px solid #32CD32;
             outline-offset: -3px;
         }
-
+        
         .chess-square.valid-move:hover {
             background-color: rgba(152, 251, 152, 0.4) !important;
         }
@@ -1481,6 +1494,33 @@
             justify-content: center;
             align-items: center;
             position: relative;
+        }
+
+        .moves-toggle-icon {
+            padding: 0;
+            background: transparent;
+            border: none;
+        }
+
+        .moves-toggle-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .toggle-icon {
+            width: 20px;
+            height: 20px;
+            transition: opacity 0.2s ease;
+        }
+
+        .toggle-icon:hover {
+            background: #f0f0f0;
         }
 
         .move-btn {
@@ -1708,8 +1748,8 @@
           }
 
           .completion-badge .badge-close {
-              background: linear-gradient(135deg, #3498db, #2980b9);
-              border: 2px solid #3498db;
+              background: linear-gradient(135deg, #1e3a8a, #1e40af);
+              border: 2px solid #1e3a8a;
               color: white;
               padding: 0.75rem 2rem;
               border-radius: 8px;
@@ -1722,8 +1762,8 @@
           }
 
           .completion-badge .badge-close:hover {
-              background: linear-gradient(135deg, #2980b9, #21618c);
-              border-color: #2980b9;
+              background: linear-gradient(135deg, #1e40af, #1e3a8a);
+              border-color: #1e40af;
               transform: translateY(-1px);
               box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
           }
@@ -1842,13 +1882,13 @@
         }
 
         .white-moves.clicked .clickable-move {
-            background-color: #e3f2fd;
-            color: #1976d2;
+            background-color: #e0e7ff;
+            color: #1e3a8a;
         }
 
         .black-moves.clicked .clickable-move {
-            background-color: #e3f2fd;
-            color: #1976d2;
+            background-color: #e0e7ff;
+            color: #1e3a8a;
         }
 
         .clickable-move.active-move {
@@ -2078,11 +2118,6 @@
             background: transparent;
         }
 
-        .moves-toggle-icon {
-            padding: 0;
-            background: transparent;
-            border: none;
-        }
 
         .toggle-icon {
             width: 36px;
@@ -2098,14 +2133,6 @@
             background: #f0f0f0;
         }
 
-        .moves-toggle-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            flex-shrink: 0;
-        }
 
         /* Confetti styles */
         .confetti {
@@ -2296,7 +2323,7 @@
 
         .custom-game-info-section #custom-game-title-input:focus {
             background: rgba(255, 255, 255, 0.8);
-            border: 1px solid #3498db;
+            border: 1px solid #1e3a8a;
             border-radius: 4px;
             padding: 2px 6px;
         }
@@ -2326,7 +2353,7 @@
 
         .custom-detail-input:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
@@ -2352,7 +2379,7 @@
 
         .custom-detail-select:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
@@ -2429,8 +2456,8 @@
 <body>
     <nav class="navbar">
         <a href="index.html" class="logo">
-            <div class="logo-icon">♟️</div>
-            <span>Blind Chess</span>
+            <img src="images/chess-board.png" alt="Memo Chess" class="logo-icon">
+            <span>Memo Chess</span>
         </a>
                 <ul class="nav-links">
                     <li><a href="index.html">Home</a></li>
@@ -2463,7 +2490,7 @@
         <div class="top-section">
         <div class="games-tabs">
             <div class="tab active" data-tab="difficulty">By Difficulty</div>
-            <div class="tab" data-tab="gm-games">By GMs</div>
+            <div class="tab" data-tab="gm-games">Weekly</div>
         </div>
         </div>
 
@@ -2475,11 +2502,11 @@
                 <div class="tab-content">
                 <!-- Puzzles by Difficulty Tab -->
                 <div class="tab-panel active" id="difficulty-panel">
-                    <div class="game-buttons">
+        <div class="game-buttons">
             <div class="game-button-container">
                 <a href="#short-games" class="game-button active" id="short-games-btn">
-                    <div>Easy Puzzles</div>
-                    <div class="description">Essential chess patterns</div>
+                    <div>Easy</div>
+                    <div class="description">Visualizing basic shapes</div>
                 </a>
                 <div class="submenu" id="short-games-submenu">
                     <!-- Games will be populated dynamically -->
@@ -2487,8 +2514,8 @@
             </div>
             <div class="game-button-container">
                 <a href="#medium-games" class="game-button" id="medium-games-btn">
-                    <div>Intermediate Puzzles</div>
-                    <div class="description">Combinations and tactics</div>
+                    <div>Intermediate</div>
+                    <div class="description">Tracking relationships</div>
                 </a>
                 <div class="submenu" id="medium-games-submenu">
                     <!-- Games will be populated dynamically -->
@@ -2496,8 +2523,8 @@
             </div>
             <div class="game-button-container">
                 <a href="#long-games" class="game-button" id="long-games-btn">
-                <div>Advanced Puzzles</div>
-                <div class="description">Positional mastery</div>
+                    <div>Advanced</div>
+                    <div class="description">Maintaining full board image</div>
             </a>
                 <div class="submenu" id="long-games-submenu">
                     <!-- Games will be populated dynamically -->
@@ -2505,64 +2532,27 @@
             </div>
             <div class="game-button-container">
                 <a href="#epic-games" class="game-button" id="epic-games-btn">
-                    <div>Epic Puzzles</div>
-                    <div class="description">Legendary masterpieces</div>
+                    <div>Epic</div>
+                    <div class="description">Deep calculation under load</div>
                 </a>
                 <div class="submenu" id="epic-games-submenu">
                     <!-- Games will be populated dynamically -->
                 </div>
-            </div>
+                </div>
             </div>
         </div>
 
 
-        <!-- Puzzles by GM Tab -->
+        <!-- Weekly Tab -->
         <div class="tab-panel" id="gm-games-panel">
-            <div class="game-buttons">
-            <div class="game-button-container">
-                <a href="#short-games" class="game-button active" id="gm-games-short-games-btn">
-                    <div>Easy Puzzles</div>
-                    <div class="description">Essential chess patterns</div>
-                </a>
-                <div class="submenu" id="gm-games-short-games-submenu">
-                    <!-- Games will be populated dynamically -->
-                </div>
-            </div>
-            <div class="game-button-container">
-                <a href="#medium-games" class="game-button" id="gm-games-medium-games-btn">
-                    <div>Intermediate Puzzles</div>
-                    <div class="description">Combinations and tactics</div>
-                </a>
-                <div class="submenu" id="gm-games-medium-games-submenu">
-                    <!-- Games will be populated dynamically -->
-                </div>
-            </div>
-            <div class="game-button-container">
-                <a href="#long-games" class="game-button" id="gm-games-long-games-btn">
-                <div>Advanced Puzzles</div>
-                <div class="description">Positional mastery</div>
-            </a>
-                <div class="submenu" id="gm-games-long-games-submenu">
-                    <!-- Games will be populated dynamically -->
-                </div>
-            </div>
-            <div class="game-button-container">
-                <a href="#epic-games" class="game-button" id="gm-games-epic-games-btn">
-                    <div>Epic Puzzles</div>
-                    <div class="description">Legendary masterpieces</div>
-                </a>
-                <div class="submenu" id="gm-games-epic-games-submenu">
-                    <!-- Games will be populated dynamically -->
-                </div>
-            </div>
-            </div>
+            <!-- Left panel is hidden for Weekly - puzzle loads directly -->
         </div>
         </div>
         </div>
 
             <!-- Right Side: Board and Moves -->
             <div class="right-panel">
-            <main class="main-content">
+        <main class="main-content">
             <div class="game-display" id="game-display">
                 <div class="game-content">
                     <div class="board-section">
@@ -2606,9 +2596,17 @@
                          </div>
                      </div>
                     <div class="moves-panel" id="moves-panel">
-                        <div class="game-header" id="game-header" style="display: none;">
-                            <div class="game-title-line" id="game-title-line">Select a Game</div>
+                        <!-- Puzzle Position Info -->
+                        <div id="puzzle-position-info" style="display: none; margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px; font-size: 16px;">Puzzle Position</div>
+                            <div id="puzzle-pieces-info" style="font-size: 16px; color: #34495e; line-height: 1.4; font-weight: 500;">
+                                <!-- Position info will be populated dynamically -->
+                            </div>
+                            <div id="puzzle-turn-info" style="font-size: 15px; color: #2c3e50; font-weight: 500; margin-top: 6px;">
+                                <!-- Turn info will be populated dynamically -->
+                            </div>
                         </div>
+                        
                         <div class="game-details" id="game-details">
                             <div class="detail-item">
                                 <span class="detail-label">Description:</span>
@@ -2688,38 +2686,14 @@
                             <div class="move-icon" id="btn-final" title="Go to final position"><img src="images/fast-forward.png" alt="Last" style="width: 20px; height: 20px;"></div>
                             <div class="moves-toggle-icon" id="moves-toggle" style="display: none;">
                                 <img src="images/hide.png" class="toggle-icon" id="moves-toggle-img" alt="Toggle moves visibility" title="Toggle moves visibility">
-                        </div>
-                        </div>
-                        
-                        <!-- Play Color Selection -->
-                        <div id="play-color-section" style="display: none; margin: 10px 0; padding: 10px 0; text-align: center;">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 14px; color: #34495e;">
-                                <span style="font-weight: 500;">Play for:</span>
-                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                                    <input type="radio" name="play-color" value="white" style="margin: 0;">
-                                    <span>White</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                                    <input type="radio" name="play-color" value="black" style="margin: 0;">
-                                    <span>Black</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                                    <input type="radio" name="play-color" value="both" checked style="margin: 0;">
-                                    <span>Both</span>
-                                </label>
                             </div>
                         </div>
+                        
                         
                         <div id="moves-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; background: #fff;">
                             <p style="text-align: center; color: #7f8c8d;">Select a game to view moves</p>
                         </div>
                         
-                        <!-- Comment Section -->
-                        <div id="comment-section" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #3498db;">
-                            <div id="comment-content" style="color: #34495e; line-height: 1.4; font-size: 13px; text-align: left;">
-                                Click on any move to see detailed commentary
-                            </div>
-                        </div>
                         
                     <!-- Delete Game Button (only for custom games) -->
                     <div id="delete-game-section" style="display: none; margin-top: 15px; text-align: center;">
@@ -2740,7 +2714,7 @@
     <!-- Completion Badge -->
     <div class="badge-overlay" id="badge-overlay"></div>
     <div class="completion-badge" id="completion-badge">
-        <div class="badge-icon"><img src="images/check.png" alt="Complete" style="width: 56px; height: 56px;"></div>
+        <div class="badge-icon"><img src="images/checklist.png" alt="Complete" style="width: 56px; height: 56px;"></div>
         <div class="badge-title">Challenge Complete!</div>
         <div class="badge-subtitle">You successfully completed the memory challenge</div>
         <button class="badge-close" onclick="hideBadge()">Continue</button>
@@ -2751,50 +2725,34 @@
     <script src="progress-tracker.js"></script>
     <script>
         // GameLoader class to handle loading games from files
-        class GameLoader {
-            static async loadGamesFromFiles() {
+        class PuzzleLoader {
+            static async loadPuzzlesFromFiles() {
                 try {
-                    console.log('Loading games from files...');
+                    console.log('Loading puzzles from files...');
                     
-                    // Load both games.json and custom games from API
-                    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
-                    const customApiUrl = isProduction ? '/api/get-games' : 'http://localhost:3001/get-games';
-                    const [gamesResponse, customGamesResponse] = await Promise.all([
-                        fetch(`games/games.json?t=${Date.now()}`),
-                        fetch(customApiUrl)
-                    ]);
+                    // Load puzzles from puzzles.json
+                    const puzzlesResponse = await fetch(`games/puzzles.json?t=${Date.now()}&v=2`);
                     
-                    let allGames = [];
+                    let allPuzzles = [];
                     
-                    // Load main games
-                    if (gamesResponse.ok) {
-                        const gamesData = await gamesResponse.json();
-                        if (gamesData.games && Array.isArray(gamesData.games)) {
-                            allGames = allGames.concat(gamesData.games);
-                            console.log(`Loaded ${gamesData.games.length} games from games.json`);
+                    // Load main puzzles
+                    if (puzzlesResponse.ok) {
+                        const puzzlesData = await puzzlesResponse.json();
+                        if (puzzlesData.puzzles && Array.isArray(puzzlesData.puzzles)) {
+                            allPuzzles = allPuzzles.concat(puzzlesData.puzzles);
+                            console.log(`Loaded ${puzzlesData.puzzles.length} puzzles from puzzles.json`);
                         }
                     } else {
-                        console.warn('Could not load games.json:', gamesResponse.status);
+                        console.warn('Could not load puzzles.json:', puzzlesResponse.status);
                     }
                     
-                    // Load custom games
-                    if (customGamesResponse.ok) {
-                        const customGamesData = await customGamesResponse.json();
-                        if (customGamesData.games && Array.isArray(customGamesData.games)) {
-                            allGames = allGames.concat(customGamesData.games);
-                            console.log(`Loaded ${customGamesData.games.length} custom games from custom-games.json`);
-                        }
-                    } else {
-                        console.warn('Could not load custom-games.json:', customGamesResponse.status);
-                    }
-                    
-                    console.log(`Total games loaded: ${allGames.length}`);
-                    console.log('Games with locked status:', allGames.map(g => ({ name: g.name, locked: g.locked })));
-                    return { games: allGames };
+                    console.log(`Total puzzles loaded: ${allPuzzles.length}`);
+                    console.log('Puzzles with difficulty:', allPuzzles.map(p => ({ name: p.name, difficulty: p.difficulty })));
+                    return { puzzles: allPuzzles };
                     
                 } catch (error) {
-                    console.error('Error loading games:', error);
-                    return { games: [] };
+                    console.error('Error loading puzzles:', error);
+                    return { puzzles: [] };
                 }
             }
         }
@@ -2803,13 +2761,14 @@
         // Global variables for move navigation
         let currentGame = null;
          let currentMoveIndex = 0;
-         let currentVisualMode = 'normal';
+         let currentVisualMode = 'empty';
          let boardFlipped = false;
          let draggedPiece = null;
          let draggedFromSquare = null;
          let validMoves = [];
          let isChallengeMode = false;
          let completedChallenges = new Set(); // Track completed challenges
+         let puzzlesData = null; // Store puzzles data
          
          // Load completed challenges from progress tracker
          function loadCompletedChallenges() {
@@ -3169,8 +3128,19 @@
                         console.error('Panel not found:', `${tabId}-panel`);
                     }
                     
-                    // All tabs now use the same game functionality
-                    // Games are loaded automatically by updateGameButtons()
+                    // Special handling for Weekly tab - load puzzle #2 directly
+                    if (tabId === 'gm-games' && puzzlesData && puzzlesData.puzzles) {
+                        const puzzle2 = puzzlesData.puzzles.find(p => p.id === 'puzzle-002');
+                        if (puzzle2) {
+                            console.log('Loading puzzle #2 for Weekly tab:', puzzle2);
+                            displayGame(puzzle2.id);
+                        } else {
+                            console.error('Puzzle #2 not found');
+                        }
+                    } else {
+                        // All other tabs use the same game functionality
+                        // Games are loaded automatically by updateGameButtons()
+                    }
                 });
             });
         }
@@ -3179,23 +3149,59 @@
         // The loadMyGamesContent and loadGMGamesContent functions are no longer needed
         // since all tabs display the same game categories
 
-        // Initialize games data on page load
+        // Initialize puzzles data on page load
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('DOM loaded, loading games...');
+            console.log('DOM loaded, loading puzzles...');
             
             // Initialize tabs
             initializeTabs();
             
             try {
-                gamesData = await GameLoader.loadGamesFromFiles();
-                console.log('Loaded games:', gamesData);
-                console.log('Number of games loaded:', gamesData ? gamesData.games.length : 0);
+                puzzlesData = await PuzzleLoader.loadPuzzlesFromFiles();
+                console.log('Loaded puzzles:', puzzlesData);
+                console.log('Number of puzzles loaded:', puzzlesData ? puzzlesData.puzzles.length : 0);
                 
-                // Custom games are now loaded through GameLoader.loadGamesFromFiles()
-                // No need for direct fallback loading
+                // Validate all puzzle data
+                if (puzzlesData && puzzlesData.puzzles) {
+                    console.log('🔍 Validating puzzle data...');
+                    puzzlesData.puzzles.forEach(puzzle => {
+                        const errors = validatePuzzleData(puzzle);
+                        if (errors.length === 0) {
+                            console.log('✅ Puzzle data valid:', puzzle.name);
+                        } else {
+                            console.error('❌ Puzzle data invalid:', puzzle.name, errors);
+                        }
+                    });
+                    console.log('🔍 Puzzle validation complete');
+                }
+                
+                // Categorize puzzles by difficulty
+                const easyPuzzles = puzzlesData.puzzles.filter(puzzle => puzzle.difficulty === 'easy');
+                const intermediatePuzzles = puzzlesData.puzzles.filter(puzzle => puzzle.difficulty === 'intermediate');
+                const advancedPuzzles = puzzlesData.puzzles.filter(puzzle => puzzle.difficulty === 'advanced');
+                const epicPuzzles = puzzlesData.puzzles.filter(puzzle => puzzle.difficulty === 'epic');
+                
+                console.log('Easy puzzles:', easyPuzzles.length);
+                console.log('Intermediate puzzles:', intermediatePuzzles.length);
+                console.log('Advanced puzzles:', advancedPuzzles.length);
+                console.log('Epic puzzles:', epicPuzzles.length);
+                
+                // Update all tabs with the same puzzle data
+                const tabPrefixes = ['', 'gm-games-'];
+                
+                tabPrefixes.forEach(prefix => {
+                    // Update easy puzzles (short-games-submenu maps to easy)
+                    updateGameCategory(prefix + 'short-games-submenu', easyPuzzles);
+                    // Update intermediate puzzles (medium-games-submenu maps to intermediate)
+                    updateGameCategory(prefix + 'medium-games-submenu', intermediatePuzzles);
+                    // Update advanced puzzles (long-games-submenu maps to advanced)
+                    updateGameCategory(prefix + 'long-games-submenu', advancedPuzzles);
+                    // Update epic puzzles (epic-games-submenu maps to epic)
+                    updateGameCategory(prefix + 'epic-games-submenu', epicPuzzles);
+                });
             } catch (error) {
-                console.error('Error loading games:', error);
-                gamesData = { games: [] };
+                console.error('Error loading puzzles:', error);
+                puzzlesData = { puzzles: [] };
             }
             
             // Load completed challenges from progress tracker
@@ -3350,11 +3356,7 @@
             }
             
             // Hide game info sections
-            const gameHeader = document.getElementById('game-header');
             const gameDetails = document.getElementById('game-details');
-            if (gameHeader) {
-                gameHeader.style.display = 'none';
-            }
             if (gameDetails) {
                 gameDetails.style.display = 'none';
             }
@@ -3365,11 +3367,6 @@
                 customGameInfo.style.display = 'none';
             }
             
-            // Hide comment section
-            const commentSection = document.getElementById('comment-section');
-            if (commentSection) {
-                commentSection.style.display = 'none';
-            }
             
             // Hide delete game section
             const deleteGameSection = document.getElementById('delete-game-section');
@@ -3421,7 +3418,7 @@
             
             try {
                 console.log('🗑️ Deleting custom game:', gameId);
-                const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+                    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
                 const apiUrl = isProduction ? `/api/delete-game?id=${gameId}` : `http://localhost:3001/delete-game/${gameId}`;
                 const response = await fetch(apiUrl, {
                     method: 'DELETE',
@@ -3459,88 +3456,89 @@
 
         // Function to update game buttons display
         function updateGameButtons() {
-            console.log('Updating game buttons...');
-            if (!gamesData || !gamesData.games) {
-                console.log('No games data available');
+            console.log('=== UPDATEGAMEBUTTONS CALLED ===');
+            console.log('Updating puzzle buttons...');
+            if (!puzzlesData || !puzzlesData.puzzles) {
+                console.log('No puzzles data available');
                 return;
             }
             
-            // Group games by category
-            const shortGames = gamesData.games.filter(g => g.moves <= 10 && !g.id.startsWith('custom-game-'));
-            const mediumGames = gamesData.games.filter(g => g.moves > 10 && g.moves <= 30 && !g.id.startsWith('custom-game-'));
-            const longGames = gamesData.games.filter(g => g.moves > 30 && !g.id.startsWith('custom-game-'));
-            const customGames = gamesData.games.filter(g => g.id.startsWith('custom-game-'));
+            // Group puzzles by difficulty
+            const easyPuzzles = puzzlesData.puzzles.filter(p => p.difficulty === 'easy');
+            const intermediatePuzzles = puzzlesData.puzzles.filter(p => p.difficulty === 'intermediate');
+            const advancedPuzzles = puzzlesData.puzzles.filter(p => p.difficulty === 'advanced');
+            const epicPuzzles = puzzlesData.puzzles.filter(p => p.difficulty === 'epic');
+            console.log('=== PUZZLE CATEGORIZATION DEBUG ===');
+            console.log('Total puzzles loaded:', puzzlesData.puzzles.length);
+            console.log('Easy puzzles:', easyPuzzles.length, easyPuzzles.map(p => ({ name: p.name, difficulty: p.difficulty })));
+            console.log('Intermediate puzzles:', intermediatePuzzles.length, intermediatePuzzles.map(p => ({ name: p.name, difficulty: p.difficulty })));
+            console.log('Advanced puzzles:', advancedPuzzles.length, advancedPuzzles.map(p => ({ name: p.name, difficulty: p.difficulty })));
+            console.log('Epic puzzles:', epicPuzzles.length, epicPuzzles.map(p => ({ name: p.name, difficulty: p.difficulty })));
+            console.log('All puzzle IDs:', puzzlesData.puzzles.map(p => p.id));
             
-            console.log('=== GAME CATEGORIZATION DEBUG ===');
-            console.log('Total games loaded:', gamesData.games.length);
-            console.log('Short games:', shortGames.length, shortGames.map(g => ({ name: g.name, locked: g.locked })));
-            console.log('Medium games:', mediumGames.length, mediumGames.map(g => ({ name: g.name, locked: g.locked })));
-            console.log('Long games:', longGames.length, longGames.map(g => ({ name: g.name, locked: g.locked })));
-            console.log('Custom games:', customGames.length);
-            console.log('Custom games details:', customGames);
-            console.log('All games IDs:', gamesData.games.map(g => g.id));
-            console.log('Custom game IDs:', customGames.map(g => g.id));
-            console.log('Custom games for My Games tab:', customGames.filter(g => g.id.startsWith('custom-game-')));
-            
-            // Update all tabs with the same game data
+            // Update all tabs with the same puzzle data
             const tabPrefixes = ['', 'gm-games-'];
             
             tabPrefixes.forEach(prefix => {
-                // Update short games
-                updateGameCategory(prefix + 'short-games-submenu', shortGames);
-                // Update medium games  
-                updateGameCategory(prefix + 'medium-games-submenu', mediumGames);
-                // Update long games
-                updateGameCategory(prefix + 'long-games-submenu', longGames);
-                // Update epic games
-                updateGameCategory(prefix + 'epic-games-submenu', epicGames);
+                // Update easy puzzles (short-games-submenu maps to easy)
+                updateGameCategory(prefix + 'short-games-submenu', easyPuzzles);
+                // Update intermediate puzzles (medium-games-submenu maps to intermediate)
+                updateGameCategory(prefix + 'medium-games-submenu', intermediatePuzzles);
+                // Update advanced puzzles (long-games-submenu maps to advanced)
+                updateGameCategory(prefix + 'long-games-submenu', advancedPuzzles);
+                // Update epic puzzles (epic-games-submenu maps to epic)
+                updateGameCategory(prefix + 'epic-games-submenu', epicPuzzles);
             });
         }
         
-        function updateGameCategory(categoryId, games) {
-            console.log(`Updating category ${categoryId} with ${games.length} games`);
-            console.log(`Games for ${categoryId}:`, games.map(g => ({ id: g.id, name: g.name })));
+        function updateGameCategory(categoryId, puzzles) {
+            console.log(`=== UPDATEGAMECATEGORY CALLED ===`);
+            console.log(`Updating category ${categoryId} with ${puzzles.length} puzzles`);
+            console.log(`Puzzles for ${categoryId}:`, puzzles.map(p => ({ id: p.id, name: p.name })));
             const categoryElement = document.getElementById(categoryId);
             if (!categoryElement) {
                 console.error(`Category element not found: ${categoryId}`);
                 return;
             }
             
+            console.log(`Clearing content for category: ${categoryId}`);
             // Clear existing content
             categoryElement.innerHTML = '';
             
-            games.forEach(game => {
-                const gameButton = document.createElement('a');
-                gameButton.href = '#';
-                gameButton.className = 'submenu-button';
-                gameButton.setAttribute('data-game-id', game.id);
+            puzzles.forEach(puzzle => {
+                const puzzleButton = document.createElement('a');
+                puzzleButton.href = '#';
+                puzzleButton.className = 'submenu-button';
+                puzzleButton.setAttribute('data-game-id', puzzle.id);
                 
                 // Check if user has active subscription
                 const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-                const isGameLocked = game.locked && !hasActiveSubscription;
+                const isPuzzleLocked = puzzle.locked && !hasActiveSubscription;
                 
-                // Add locked class if game is locked and user doesn't have subscription
-                if (isGameLocked) {
-                    gameButton.classList.add('locked');
+                // Add locked class if puzzle is locked and user doesn't have subscription
+                if (isPuzzleLocked) {
+                    puzzleButton.classList.add('locked');
                 }
                 
-                gameButton.onclick = (e) => {
+                puzzleButton.onclick = (e) => {
                     e.preventDefault();
-                    if (isGameLocked) {
+                    console.log('Puzzle button clicked:', puzzle.id, puzzle.name);
+                    if (isPuzzleLocked) {
                         // Show subscription required modal
                         showSubscriptionRequiredModal();
                         return;
                     }
-                    displayGame(game.id);
+                    console.log('Calling displayGame for puzzle:', puzzle.id);
+                    displayGame(puzzle.id);
                 };
                 
                 let buttonContent = `
-                    <span>${game.name}</span>
-                    <span class="game-completion-badge" data-game="${game.id}"><img src="images/check.png" alt="Complete" style="width: 20px; height: 20px;"></span>
+                    <span>${puzzle.name}</span>
+                    <span class="game-completion-badge" data-game="${puzzle.id}"><img src="images/checklist.png" alt="Complete" style="width: 20px; height: 20px;"></span>
                 `;
                 
-                // Add lock overlay if game is locked and user doesn't have subscription
-                if (isGameLocked) {
+                // Add lock overlay if puzzle is locked and user doesn't have subscription
+                if (isPuzzleLocked) {
                     buttonContent += `
                         <div class="lock-overlay">
                             <div class="lock-icon">🔒</div>
@@ -3548,9 +3546,9 @@
                     `;
                 }
                 
-                gameButton.innerHTML = buttonContent;
+                puzzleButton.innerHTML = buttonContent;
                 
-                categoryElement.appendChild(gameButton);
+                categoryElement.appendChild(puzzleButton);
             });
             
             // No custom game functionality in puzzles
@@ -3697,6 +3695,7 @@
 
         // Set up initial board position
         function setupInitialPosition() {
+            console.log('DEBUG: setupInitialPosition called');
             const board = document.getElementById('chess-board');
             const squares = board.querySelectorAll('.chess-square');
             
@@ -3705,12 +3704,17 @@
                 square.innerHTML = '';
             });
 
-            // Only set up pieces if a game is selected
+            // Only set up pieces if a game/puzzle is selected
             if (currentGame) {
                 let initialPosition;
                 
-                // Check if the game has a custom initial position
-                if (currentGame.initial_position) {
+                // Check if the game/puzzle has a FEN position (for puzzles)
+                if (currentGame.fen) {
+                    console.log('DEBUG: Using FEN for initial position:', currentGame.fen);
+                    initialPosition = parseFENToPosition(currentGame.fen);
+                } else if (currentGame.initial_position) {
+                    console.log('DEBUG: Using initial_position');
+                    // Use custom initial position (for games)
                     initialPosition = currentGame.initial_position;
                 } else {
                     // Use standard starting position
@@ -3730,8 +3734,10 @@
                 }
 
                 // Place pieces on their corresponding squares
+                console.log('DEBUG: Initial position pieces:', Object.entries(initialPosition).filter(([_, img]) => img));
                 Object.entries(initialPosition).forEach(([squareNotation, pieceImage]) => {
                     if (pieceImage && pieceImage !== '') { // Only place pieces if there's an image and it's not empty
+                        console.log('DEBUG: Placing piece', pieceImage, 'on', squareNotation);
                         const square = board.querySelector(`[data-square="${squareNotation}"]`);
                         if (square) {
                             const pieceElement = createDraggablePiece(pieceImage, squareNotation);
@@ -3740,6 +3746,187 @@
                     }
                 });
             }
+        }
+
+        // Validate puzzle data structure
+        function validatePuzzleData(puzzle) {
+            const errors = [];
+            const warnings = [];
+            
+            if (!puzzle.moves_detailed || !Array.isArray(puzzle.moves_detailed)) {
+                errors.push('Missing or invalid moves_detailed array');
+                return errors;
+            }
+            
+            puzzle.moves_detailed.forEach((move, index) => {
+                if (move.white && (!move.white_from || !move.white_to)) {
+                    warnings.push(`Move ${index + 1} (white): Missing coordinate data - will use parser fallback`);
+                }
+                if (move.black && (!move.black_from || !move.black_to)) {
+                    warnings.push(`Move ${index + 1} (black): Missing coordinate data - will use parser fallback`);
+                }
+            });
+            
+            if (errors.length > 0) {
+                console.error('❌ PUZZLE VALIDATION ERRORS:', {
+                    puzzleId: puzzle.id,
+                    puzzleName: puzzle.name,
+                    errors
+                });
+            }
+            
+            if (warnings.length > 0) {
+                console.warn('⚠️ PUZZLE VALIDATION WARNINGS:', {
+                    puzzleId: puzzle.id,
+                    puzzleName: puzzle.name,
+                    warnings
+                });
+            }
+            
+            return errors;
+        }
+
+        // Parse puzzle move using the robust game parser approach
+        function parsePuzzleMove(move, moveNotation, isWhiteMove) {
+            console.log('Parsing puzzle move:', move, 'notation:', moveNotation);
+            
+            // First, try to use the solid game parser logic
+            const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+            
+            // For puzzles, we can enhance the parsing with provided coordinates if available
+            // but only as a validation/fallback, not as the primary method
+            const fromSquare = isWhiteMove ? move.white_from : move.black_from;
+            const toSquare = isWhiteMove ? move.white_to : move.black_to;
+            
+            if (fromSquare && toSquare) {
+                // Validate that the parsed move matches the provided coordinates
+                if (parsedMove.source !== fromSquare || parsedMove.target !== toSquare) {
+                    console.warn('⚠️ Coordinate mismatch detected:', {
+                        parsed: { source: parsedMove.source, target: parsedMove.target },
+                        provided: { source: fromSquare, target: toSquare },
+                        notation: moveNotation
+                    });
+                    
+                    // Use provided coordinates as fallback if parsing seems wrong
+                    parsedMove.source = fromSquare;
+                    parsedMove.target = toSquare;
+                    console.log('Using provided coordinates as fallback');
+                } else {
+                    console.log('✅ Parsed coordinates match provided coordinates');
+                }
+            } else {
+                console.warn('⚠️ No coordinate data provided for puzzle move, relying on parser');
+            }
+            
+            // Add puzzle-specific properties
+            parsedMove.isEnPassant = moveNotation.includes('e.p.') || moveNotation.includes('ep');
+            parsedMove.isCheck = moveNotation.includes('+');
+            parsedMove.isCheckmate = moveNotation.includes('#');
+            parsedMove.promotion = moveNotation.includes('=') ? moveNotation.split('=')[1] : null;
+            
+            console.log('Final parsed puzzle move:', parsedMove);
+            return parsedMove;
+        }
+
+        // Display puzzle position information
+        function displayPuzzlePositionInfo(puzzle) {
+            const puzzlePositionInfo = document.getElementById('puzzle-position-info');
+            const puzzlePiecesInfo = document.getElementById('puzzle-pieces-info');
+            const puzzleTurnInfo = document.getElementById('puzzle-turn-info');
+            
+            if (!puzzlePositionInfo || !puzzlePiecesInfo || !puzzleTurnInfo) {
+                console.warn('Puzzle position info elements not found');
+                return;
+            }
+            
+            if (puzzle.fen) {
+                // Parse FEN to get position and turn info
+                const position = parseFENToPosition(puzzle.fen);
+                // Use puzzle.turn if available, otherwise parse from FEN
+                const turn = puzzle.turn === 'black' ? 'b' : (puzzle.turn === 'white' ? 'w' : puzzle.fen.split(' ')[1]);
+                
+                // Get piece positions
+                const pieces = [];
+                Object.entries(position).forEach(([square, pieceImage]) => {
+                    if (pieceImage && pieceImage !== '') {
+                        const pieceName = getPieceNameFromImage(pieceImage);
+                        pieces.push(`${pieceName}: ${square}`);
+                    }
+                });
+                
+                // Separate black and white pieces
+                const blackPieces = pieces.filter(piece => piece.includes('Black'));
+                const whitePieces = pieces.filter(piece => piece.includes('White'));
+                
+                // Display pieces info
+                puzzlePiecesInfo.innerHTML = `
+                    <div style="font-size: 16px; margin-bottom: 4px;"><strong>Black:</strong> ${blackPieces.join(', ')}</div>
+                    <div style="font-size: 16px;"><strong>White:</strong> ${whitePieces.join(', ')}</div>
+                `;
+                
+                // Display turn info with piece image
+                const turnImage = turn === 'w' ? 'pieces/Chess_klt45.svg.png' : 'pieces/Chess_kdt45.svg.png';
+                const turnText = turn === 'w' ? 'to move' : 'to move';
+                puzzleTurnInfo.innerHTML = `
+                    <img src="${turnImage}" alt="${turn === 'w' ? 'White King' : 'Black King'}" style="width: 26px; height: 26px; vertical-align: middle; margin-right: 0px; margin-top: -2px;">
+                    <span>${turnText}</span>
+                `;
+                
+                // Show the puzzle position info
+                puzzlePositionInfo.style.display = 'block';
+            } else {
+                // Hide if no FEN available
+                puzzlePositionInfo.style.display = 'none';
+            }
+        }
+        
+        // Get piece name from image filename
+        function getPieceNameFromImage(imageName) {
+            const pieceMap = {
+                'Chess_klt45.svg.png': 'White King', 'Chess_qlt45.svg.png': 'White Queen', 'Chess_rlt45.svg.png': 'White Rook',
+                'Chess_blt45.svg.png': 'White Bishop', 'Chess_nlt45.svg.png': 'White Knight', 'Chess_plt45.svg.png': 'White Pawn',
+                'Chess_kdt45.svg.png': 'Black King', 'Chess_qdt45.svg.png': 'Black Queen', 'Chess_rdt45.svg.png': 'Black Rook',
+                'Chess_bdt45.svg.png': 'Black Bishop', 'Chess_ndt45.svg.png': 'Black Knight', 'Chess_pdt45.svg.png': 'Black Pawn'
+            };
+            return pieceMap[imageName] || 'Unknown Piece';
+        }
+
+        // Parse FEN notation to position object
+        function parseFENToPosition(fen) {
+            const position = {};
+            const parts = fen.split(' ');
+            const boardPart = parts[0];
+            const rows = boardPart.split('/');
+            
+            // Map FEN piece letters to image filenames
+            const pieceMap = {
+                'K': 'Chess_klt45.svg.png', 'Q': 'Chess_qlt45.svg.png', 'R': 'Chess_rlt45.svg.png',
+                'B': 'Chess_blt45.svg.png', 'N': 'Chess_nlt45.svg.png', 'P': 'Chess_plt45.svg.png',
+                'k': 'Chess_kdt45.svg.png', 'q': 'Chess_qdt45.svg.png', 'r': 'Chess_rdt45.svg.png',
+                'b': 'Chess_bdt45.svg.png', 'n': 'Chess_ndt45.svg.png', 'p': 'Chess_pdt45.svg.png'
+            };
+            
+            // Process each row
+            for (let row = 0; row < 8; row++) {
+                const rowData = rows[row];
+                let col = 0;
+                
+                for (let i = 0; i < rowData.length; i++) {
+                    const char = rowData[i];
+                    
+                    if (char >= '1' && char <= '8') {
+                        // Empty squares - skip
+                        col += parseInt(char);
+                    } else if (pieceMap[char]) {
+                        // Piece found
+                        const square = String.fromCharCode(97 + col) + (8 - row);
+                        position[square] = pieceMap[char];
+                        col++;
+                    }
+                }
+            }
+            
+            return position;
         }
 
         // Helper function to get square notation from index
@@ -3805,6 +3992,9 @@
                 
                 // Ensure piece is draggable
                 piece.draggable = true;
+                
+                // Apply current visual mode to ensure consistency
+                applyVisualModeToPiece(piece, currentVisualMode);
             });
             
             // Also re-setup drop event listeners for squares
@@ -3929,30 +4119,6 @@
                 // Hide the original piece since it was moved
                 e.target.style.opacity = '0';
                 
-                // Check if we should autoplay the next move after a manual move
-                // Note: currentMoveIndex has already been incremented in the move validation logic
-                const selectedColor = window.selectedPlayColor || 'both';
-                if (selectedColor !== 'both' && currentGame && currentMoveIndex < currentGame.moves_detailed.length) {
-                    const nextMove = currentGame.moves_detailed[currentMoveIndex];
-                    const isNextWhiteMove = !!nextMove.white;
-                    const shouldAutoplayNext = (selectedColor === 'white' && !isNextWhiteMove) || 
-                                             (selectedColor === 'black' && isNextWhiteMove);
-                    
-                    console.log('Manual move completed - checking autoplay:', {
-                        selectedColor,
-                        currentMoveIndex,
-                        nextMove: nextMove.white || nextMove.black,
-                        isNextWhiteMove,
-                        shouldAutoplayNext
-                    });
-                    
-                    if (shouldAutoplayNext) {
-                        console.log('Auto-playing next move after manual move');
-                        setTimeout(() => {
-                            goToNextMove();
-                        }, 300); // Short delay after manual move
-                    }
-                }
             } else {
                 console.log('Piece was moved, skipping opacity restoration');
             }
@@ -4040,17 +4206,20 @@
                     updateMoveButtons();
                     highlightCurrentMove();
                     
-                    // Check if this is the final move and trigger completion indicator
-                    if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                    // Check if this is the final move and trigger completion indicator (only in test mode)
+                    console.log('Checking completion after click - isChallengeMode:', isChallengeMode, 'currentMoveIndex:', currentMoveIndex, 'moves_detailed.length:', currentGame.moves_detailed.length);
+                    if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
+                        console.log('*** PUZZLE COMPLETED VIA CLICK! Showing completion badge ***');
+                        showCompletionBadge();
                         setTimeout(() => {
                             showCompletionIndicator();
                         }, 200);
+                    } else {
+                        console.log('Puzzle not completed yet via click - isChallengeMode:', isChallengeMode, 'currentMoveIndex:', currentMoveIndex, 'moves_detailed.length:', currentGame.moves_detailed.length);
                     }
                     
                     // Update comment section with current move info
-                    const move = currentGame.moves_detailed[currentMoveIndex - 1];
-                    const moveNotation = move.white || move.black;
-                    showMoveCommentary(move.description, moveNotation, move);
+                    // Note: showMoveCommentary function doesn't exist in puzzles
                     
                     checkChallengeProgress();
                 }
@@ -4227,23 +4396,30 @@
                  // Advance to next move
                  if (currentGame && currentMoveIndex < currentGame.moves_detailed.length) {
                      currentMoveIndex++;
+                     
+                     // Use the same update system as move buttons
+                     updateBoardPosition();
                      updateMoveButtons();
                      highlightCurrentMove();
                      
-                     // Check if this is the final move and trigger completion indicator
-                     if (currentMoveIndex >= currentGame.moves_detailed.length) {
-                         setTimeout(() => {
-                             showCompletionIndicator();
-                         }, 200);
-                     }
-                     
                      // Update comment section with current move info
-                     const move = currentGame.moves_detailed[currentMoveIndex - 1];
-                     const moveNotation = move.white || move.black;
-                     showMoveCommentary(move.description, moveNotation, move);
+                     // Note: showMoveCommentary function doesn't exist in puzzles
                      
                      // Check challenge progress
                      checkChallengeProgress();
+                 }
+                 
+                 // Check if this is the final move and trigger completion indicator (only in test mode)
+                 // This needs to be outside the above condition to work properly
+                 console.log('Checking completion after drag and drop - isChallengeMode:', isChallengeMode, 'currentGame:', !!currentGame, 'currentMoveIndex:', currentMoveIndex, 'moves_detailed.length:', currentGame ? currentGame.moves_detailed.length : 'no game');
+                 if (isChallengeMode && currentGame && currentMoveIndex >= currentGame.moves_detailed.length) {
+                     console.log('*** PUZZLE COMPLETED VIA DRAG AND DROP! Showing completion badge ***');
+                     showCompletionBadge();
+                     setTimeout(() => {
+                         showCompletionIndicator();
+                     }, 200);
+                 } else {
+                     console.log('Puzzle not completed yet - isChallengeMode:', isChallengeMode, 'currentGame:', !!currentGame, 'currentMoveIndex:', currentMoveIndex, 'moves_detailed.length:', currentGame ? currentGame.moves_detailed.length : 'no game');
                  }
                  
                  // Small delay to ensure the move is processed, then re-initialize
@@ -4465,38 +4641,12 @@
         }
 
         // Show move commentary
-        function showMoveCommentary(commentary, move, moveData) {
-            // Update the comment content
-            const commentContent = document.getElementById('comment-content');
-            
-            if (commentContent && moveData) {
-                const moveNumber = moveData.move_number;
-                const player = moveData.white ? 'White' : 'Black';
-                const annotation = moveData.annotation || '';
-                // Use description first, fallback to commentary if description is empty
-                const description = moveData.description || moveData.commentary || '';
-                
-                let content = `<strong>Move ${moveNumber} (${player}):</strong> ${convertToChessSymbols(move)} ${annotation}`;
-                if (description) {
-                    content += `<br>${description}`;
-                }
-                
-                commentContent.innerHTML = content;
-            } else if (commentContent) {
-                commentContent.innerHTML = `<strong>Move ${convertToChessSymbols(move)}:</strong><br>${commentary}`;
-            }
-        }
 
         // Display game moves
         function displayGameMoves(game) {
             const movesList = document.getElementById('moves-list');
             movesList.innerHTML = '';
             
-            // Reset comment section when displaying new game
-            const commentContent = document.getElementById('comment-content');
-            if (commentContent) {
-                commentContent.innerHTML = 'Click on any move to see detailed commentary';
-            }
 
             // Group moves by move number (white and black moves together)
             const moveGroups = {};
@@ -4565,8 +4715,13 @@
                 
                 // Add click listener to entire white-moves div
                 whiteMoves.addEventListener('click', function() {
+                    console.log('White move clicked:', group.white, 'moveIndex:', moveIndex);
                     if (group.white) {
-                        currentMoveIndex = moveIndex * 2 + 1;
+                        // For puzzles, we want to show the position AFTER the move
+                        // The move is at index (initial_move_index + moveIndex)
+                        const targetIndex = (game.initial_move_index || 0) + moveIndex + 1;
+                        currentMoveIndex = Math.min(targetIndex, game.moves_detailed.length);
+                        console.log('Setting currentMoveIndex to:', currentMoveIndex, 'initial_move_index:', game.initial_move_index);
                         updateBoardPosition();
                         updateMoveButtons();
                         
@@ -4596,29 +4751,6 @@
                             showMoveCommentary(whiteMoveData.description, group.white, whiteMoveData);
                         }
                         
-                        // Check if we should autoplay the next move after clicking a move
-                        const selectedColor = window.selectedPlayColor || 'both';
-                        if (selectedColor !== 'both' && currentGame && currentMoveIndex < currentGame.moves_detailed.length) {
-                            const nextMove = currentGame.moves_detailed[currentMoveIndex];
-                            const isNextWhiteMove = !!nextMove.white;
-                            const shouldAutoplayNext = (selectedColor === 'white' && !isNextWhiteMove) || 
-                                                     (selectedColor === 'black' && isNextWhiteMove);
-                            
-                            console.log('Move clicked - checking autoplay:', {
-                                selectedColor,
-                                currentMoveIndex,
-                                nextMove: nextMove.white || nextMove.black,
-                                isNextWhiteMove,
-                                shouldAutoplayNext
-                            });
-                            
-                            if (shouldAutoplayNext) {
-                                console.log('Auto-playing next move after move click');
-                                setTimeout(() => {
-                                    goToNextMove();
-                                }, 300); // Short delay after move click
-                            }
-                        }
                     }
                 });
                 
@@ -4649,8 +4781,13 @@
                 
                 // Add click listener to entire black-moves div
                 blackMoves.addEventListener('click', function() {
+                    console.log('Black move clicked:', group.black, 'moveIndex:', moveIndex);
                     if (group.black) {
-                        currentMoveIndex = moveIndex * 2 + 2;
+                        // For puzzles, we want to show the position AFTER the move
+                        // Since puzzles start at initial_move_index (usually 0), we need to add 1 to show after the move
+                        const targetIndex = (game.initial_move_index || 0) + moveIndex + 1;
+                        currentMoveIndex = Math.min(targetIndex, game.moves_detailed.length);
+                        console.log('Setting currentMoveIndex to:', currentMoveIndex, 'initial_move_index:', game.initial_move_index);
                         updateBoardPosition();
                         updateMoveButtons();
                         
@@ -4680,29 +4817,6 @@
                             showMoveCommentary(blackMoveData.description, group.black, blackMoveData);
                         }
                         
-                        // Check if we should autoplay the next move after clicking a move
-                        const selectedColor = window.selectedPlayColor || 'both';
-                        if (selectedColor !== 'both' && currentGame && currentMoveIndex < currentGame.moves_detailed.length) {
-                            const nextMove = currentGame.moves_detailed[currentMoveIndex];
-                            const isNextWhiteMove = !!nextMove.white;
-                            const shouldAutoplayNext = (selectedColor === 'white' && !isNextWhiteMove) || 
-                                                     (selectedColor === 'black' && isNextWhiteMove);
-                            
-                            console.log('Move clicked - checking autoplay:', {
-                                selectedColor,
-                                currentMoveIndex,
-                                nextMove: nextMove.white || nextMove.black,
-                                isNextWhiteMove,
-                                shouldAutoplayNext
-                            });
-                            
-                            if (shouldAutoplayNext) {
-                                console.log('Auto-playing next move after move click');
-                                setTimeout(() => {
-                                    goToNextMove();
-                                }, 300); // Short delay after move click
-                            }
-                        }
                     }
                 });
                 
@@ -4736,30 +4850,6 @@
 
         }
 
-        // Function to attach event listeners for game header dropdown
-        function attachGameHeaderEventListeners() {
-            const gameHeader = document.getElementById('game-header');
-            const gameDetails = document.getElementById('game-details');
-            
-            if (gameHeader && gameDetails) {
-                // Remove any existing event listeners by cloning the element
-                const newGameHeader = gameHeader.cloneNode(true);
-                gameHeader.parentNode.replaceChild(newGameHeader, gameHeader);
-                
-                // Re-attach the event listener
-                newGameHeader.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Game header clicked');
-                    newGameHeader.classList.toggle('expanded');
-                    gameDetails.classList.toggle('show');
-                });
-                
-                console.log('Game header event listeners attached');
-            } else {
-                console.log('Game header or game details not found');
-            }
-        }
 
         // Function to restore main game event listeners
         function restoreMainGameEventListeners() {
@@ -4816,46 +4906,49 @@
             restoreMainGameEventListeners();
         }
 
-        // Display selected game
-        function displayGame(gameId) {
-            console.log('Displaying game:', gameId);
-            console.log('Games data:', gamesData);
+        // Display selected puzzle
+        function displayGame(puzzleId) {
+            console.log('=== DISPLAYGAME CALLED ===');
+            console.log('Displaying puzzle:', puzzleId);
+            console.log('Puzzles data:', puzzlesData);
+            console.log('Puzzles data exists:', !!puzzlesData);
+            console.log('Puzzles array length:', puzzlesData ? puzzlesData.puzzles.length : 'N/A');
             
-            // Always exit custom game mode when displaying any game
+            // Always exit custom game mode when displaying any puzzle
             exitCustomGameMode();
             
-            // Exit test mode if switching to a different game
-            if (isChallengeMode && currentGame && currentGame.id !== gameId) {
+            // Exit test mode if switching to a different puzzle
+            if (isChallengeMode && currentGame && currentGame.id !== puzzleId) {
                 toggleChallengeMode();
             }
             
-            if (!gamesData) {
-                console.error('No games data available');
+            if (!puzzlesData) {
+                console.error('No puzzles data available');
                 return;
             }
             
-            const game = gamesData.games.find(g => g.id === gameId);
-            console.log('Found game:', game);
+            const puzzle = puzzlesData.puzzles.find(p => p.id === puzzleId);
+            console.log('Found puzzle:', puzzle);
             
-            if (!game) {
-                console.error('Game not found:', gameId);
+            if (!puzzle) {
+                console.error('Puzzle not found:', puzzleId);
                 return;
             }
 
             // Set current game and reset move index
-            currentGame = game;
-            // Check if game has a custom initial move index, otherwise start at 0
-            currentMoveIndex = game.initial_move_index || 0;
+            currentGame = puzzle;
+            // Check if puzzle has a custom initial move index, otherwise start at 0
+            currentMoveIndex = puzzle.initial_move_index || 0;
             
             // Start training session tracking based on type
-            const sessionType = 'game';
+            const sessionType = 'puzzle';
             progressTracker.startSession(sessionType);
             
             // Update selected state for game buttons
             document.querySelectorAll('.submenu-button').forEach(btn => {
                 btn.classList.remove('selected');
             });
-            const selectedButton = document.querySelector(`[data-game-id="${gameId}"]`);
+            const selectedButton = document.querySelector(`[data-game-id="${puzzleId}"]`);
             if (selectedButton) {
                 selectedButton.classList.add('selected');
             }
@@ -4866,113 +4959,35 @@
             // Clear any piece selection
             clearSelection();
             
-            // Reset to normal visual mode when switching games
-            currentVisualMode = 'normal';
-            switchVisualMode('normal');
+            // Reset to empty visual mode when switching puzzles
+            currentVisualMode = 'empty';
+            switchVisualMode('empty');
 
             // Show game display
             const gameDisplay = document.getElementById('game-display');
             gameDisplay.classList.add('show');
 
-            // Show and update game header in moves panel
-            const gameHeader = document.getElementById('game-header');
-            gameHeader.style.display = 'block';
-            document.getElementById('game-title-line').innerHTML = `<span>${game.name}</span>`;
+            // Show moves toggle and hide moves by default
+            const movesToggle = document.getElementById('moves-toggle');
+            const movesList = document.getElementById('moves-list');
+            const toggleImg = document.getElementById('moves-toggle-img');
+            
+            movesToggle.style.display = 'block';
+            
+            // Hide moves by default and set button to "view" state
+            movesList.style.display = 'none';
+            toggleImg.src = 'images/view.png';
+            toggleImg.title = 'Show moves';
             
             // Event listeners are handled via delegation, no need to reattach
 
-            // Show moves toggle
-            const movesToggle = document.getElementById('moves-toggle');
-            movesToggle.style.display = 'block';
 
-            // Show play color selection
-            const playColorSection = document.getElementById('play-color-section');
-            if (playColorSection) {
-                playColorSection.style.display = 'block';
-                
-                // Add click-to-deselect functionality for radio buttons
-                const radioButtons = playColorSection.querySelectorAll('input[type="radio"]');
-                radioButtons.forEach(radio => {
-                    let lastChecked = false;
-                    
-                    radio.addEventListener('click', function(e) {
-                        // If this radio was already checked before this click, uncheck it
-                        if (lastChecked) {
-                            e.preventDefault();
-                            this.checked = false;
-                            lastChecked = false;
-                        } else {
-                            // If it wasn't checked, let it be checked and update our tracking
-                            lastChecked = true;
-                        }
-                    });
-                    
-                    // Track when this radio becomes checked (from other radios)
-                    radio.addEventListener('change', function() {
-                        if (this.checked) {
-                            lastChecked = true;
-                        } else {
-                            lastChecked = false;
-                        }
-                    });
-                });
-                
-                // Add autoplay functionality based on selected color
-                radioButtons.forEach(radio => {
-                    radio.addEventListener('change', function() {
-                        if (this.checked) {
-                            const selectedColor = this.value;
-                            console.log('Play color changed to:', selectedColor);
-                            
-                            // Reset to initial position when changing play color
-                            if (currentGame) {
-                                resetBoard();
-                                currentMoveIndex = currentGame.initial_move_index || 0;
-                                updateMoveButtons();
-                                highlightCurrentMove();
-                            }
-                            
-            // Store the selected color for use in move navigation
-            window.selectedPlayColor = selectedColor;
-            
-            // If a game is loaded and we're switching to autoplay mode, start autoplay
-            if (currentGame && selectedColor !== 'both') {
-                // Check if the first move should be autoplayed
-                const firstMove = currentGame.moves_detailed[0];
-                if (firstMove) {
-                    const isWhiteMove = !!firstMove.white;
-                    const shouldAutoplayFirst = (selectedColor === 'white' && !isWhiteMove) || 
-                                             (selectedColor === 'black' && isWhiteMove);
-                    
-                    if (shouldAutoplayFirst) {
-                        console.log('Starting autoplay from first move');
-                        setTimeout(() => {
-                            goToNextMove();
-                        }, 500);
-                    }
-                }
-            }
-                        }
-                    });
-                });
-            }
 
-            // Show comment section for games with commentary
-            const commentSection = document.getElementById('comment-section');
-            if (commentSection) {
-                if (game.id.startsWith('custom-game-')) {
-                    // For custom games, show comment section if they have commentary
-                    const hasCommentary = game.moves_detailed && game.moves_detailed.some(move => move.commentary && move.commentary.trim() !== '');
-                    commentSection.style.display = hasCommentary ? 'block' : 'none';
-                } else {
-                    commentSection.style.display = 'block';
-                }
-            }
             
-            // Handle custom game elements visibility
-            if (game.id.startsWith('custom-game-')) {
-                // Show custom game elements for custom games
-                // Ensure moves list is visible for saved custom games
+            // Handle custom puzzle elements visibility
+            if (puzzle.id.startsWith('custom-puzzle-')) {
+                // Show custom puzzle elements for custom puzzles
+                // Ensure moves list is visible for saved custom puzzles
                 const movesList = document.getElementById('moves-list');
                 if (movesList) {
                     movesList.style.display = 'block';
@@ -4993,43 +5008,57 @@
                 }
             }
 
-            // Populate game details
-            populateGameDetails(game);
+            // Populate puzzle details
+            populateGameDetails(puzzle);
 
             // Setup board and display moves
             setupInitialPosition();
-            reinitializeDragAndDrop(); // Ensure click handlers are attached
-            displayGameMoves(game);
-            updateMoveButtons();
             
-            // Check if we should start autoplay based on selected color
-            const selectedColor = window.selectedPlayColor || 'both';
-            if (selectedColor !== 'both' && game.moves_detailed.length > 0) {
-                const firstMove = game.moves_detailed[0];
-                const isWhiteMove = !!firstMove.white;
-                const shouldAutoplayFirst = (selectedColor === 'white' && !isWhiteMove) || 
-                                         (selectedColor === 'black' && isWhiteMove);
+            // Handle board orientation efficiently
+            const shouldBeFlipped = puzzle.turn === 'black';
+            const orientationChanged = shouldBeFlipped !== boardFlipped;
+            
+            if (orientationChanged) {
+                // Update the flipped state
+                boardFlipped = shouldBeFlipped;
                 
-                if (shouldAutoplayFirst) {
-                    console.log('Starting autoplay from first move on game load');
-                    setTimeout(() => {
-                        goToNextMove();
-                    }, 1000); // Longer delay for initial load
+                // Update button appearance
+                const flipBtn = document.getElementById('flip-board-btn');
+                if (boardFlipped) {
+                    flipBtn.classList.add('flipped');
+                } else {
+                    flipBtn.classList.remove('flipped');
                 }
+                
+                // Update notation
+                flipNotation();
+                
+                // Rebuild the board with new orientation
+                initializeChessBoard();
+                setupInitialPosition();
+                reinitializeDragAndDrop();
             }
             
-            // If game has a custom initial move index, update board to that position
-            if (game.initial_move_index && game.initial_move_index > 0) {
+            reinitializeDragAndDrop(); // Ensure click handlers are attached
+            displayGameMoves(puzzle);
+            updateMoveButtons();
+            
+            // Display puzzle position information
+            displayPuzzlePositionInfo(puzzle);
+            
+            
+            // If puzzle has a custom initial move index, update board to that position
+            if (puzzle.initial_move_index && puzzle.initial_move_index > 0) {
                 updateBoardPosition();
             }
              highlightCurrentMove();
              
-            // Show/hide delete button for custom games (only when viewing saved custom games, not in Add Game mode)
+            // Show/hide delete button for custom puzzles (only when viewing saved custom puzzles, not in Add Puzzle mode)
             const deleteGameSection = document.getElementById('delete-game-section');
             const deleteGameBtn = document.getElementById('delete-game-btn');
-            if (game.id.startsWith('custom-game-') && !window.customGameMode) {
+            if (puzzle.id.startsWith('custom-puzzle-') && !window.customGameMode) {
                 deleteGameSection.style.display = 'block';
-                deleteGameBtn.onclick = (e) => deleteCustomGame(e, game.id);
+                deleteGameBtn.onclick = (e) => deleteCustomGame(e, puzzle.id);
                  
                  // Hide custom commentary section and save button when viewing saved custom games
                  if (typeof hideCustomCommentarySection === 'function') {
@@ -5041,9 +5070,6 @@
              } else {
                  deleteGameSection.style.display = 'none';
              }
-             
-             // Update game list badges
-             updateGameListBadges();
              
              // Visual mode placeholder - no effects applied yet
         }
@@ -5062,31 +5088,6 @@
             document.getElementById('detail-facts').textContent = facts;
         }
 
-        // Toggle moves visibility
-        function toggleMovesVisibility() {
-            const movesList = document.getElementById('moves-list');
-            const commentSection = document.getElementById('comment-section');
-            const toggleImg = document.getElementById('moves-toggle-img');
-            
-            if (movesList.style.display === 'none') {
-                movesList.style.display = 'block';
-                // Show comment section for games with commentary
-                if (currentGame) {
-                    if (currentGame.id.startsWith('custom-game-')) {
-                        // For custom games, show comment section if they have commentary
-                        const hasCommentary = currentGame.moves_detailed && currentGame.moves_detailed.some(move => move.commentary && move.commentary.trim() !== '');
-                        commentSection.style.display = hasCommentary ? 'block' : 'none';
-                    } else {
-                        commentSection.style.display = 'block';
-                    }
-                }
-                toggleImg.src = 'images/hide.png';
-            } else {
-                movesList.style.display = 'none';
-                commentSection.style.display = 'none';
-                toggleImg.src = 'images/view.png';
-            }
-        }
 
         // Create confetti effect
         function createConfetti() {
@@ -5128,7 +5129,9 @@
             const isWhiteMove = !!lastMove.white;
             
             // Parse the move to get the destination square
-            const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+            const parsedMove = currentGame.type === 'puzzle' ? 
+                parsePuzzleMove(lastMove, moveNotation, isWhiteMove) : 
+                moveParser.parseMove(moveNotation, isWhiteMove);
             if (parsedMove) {
                 const destinationSquare = document.querySelector(`[data-square="${parsedMove.target}"]`);
                 if (destinationSquare) {
@@ -5183,14 +5186,6 @@
                 .replace(/#/g, '#');  // Checkmate symbol
         }
 
-        // Add click event listener to moves toggle image
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleImg = document.getElementById('moves-toggle-img');
-            if (toggleImg) {
-                toggleImg.addEventListener('click', toggleMovesVisibility);
-            }
-
-        });
 
         // Function to highlight the current move in the moves list
         function highlightCurrentMove() {
@@ -5280,11 +5275,6 @@
             // Remove completion indicator when going to initial position
             removeCompletionIndicator();
             
-            // Clear comment section at initial position
-            const commentContent = document.getElementById('comment-content');
-            if (commentContent) {
-                commentContent.innerHTML = 'Click on any move to see detailed commentary';
-            }
             
             // Play sound for user feedback
             playSound(false);
@@ -5307,22 +5297,6 @@
                 // Remove completion indicator when moving away from final position
                 removeCompletionIndicator();
                 
-                // Update comment section with current move info only if moves are visible
-                const movesList = document.getElementById('moves-list');
-                if (movesList.style.display !== 'none') {
-                    if (currentMoveIndex === 0) {
-                        // Clear comment section if at initial position
-                        const commentContent = document.getElementById('comment-content');
-                        if (commentContent) {
-                            commentContent.innerHTML = 'Click on any move to see detailed commentary';
-                        }
-                    } else if (currentGame && currentMoveIndex < currentGame.moves_detailed.length) {
-                        // Show commentary for the move we just went back to
-                        const move = currentGame.moves_detailed[currentMoveIndex - 1];
-                        const moveNotation = move.white || move.black;
-                        showMoveCommentary(move.description, moveNotation, move);
-                    }
-                }
             }
         }
 
@@ -5336,52 +5310,8 @@
             console.log('goToNextMove called - currentMoveIndex:', currentMoveIndex, 'total moves:', currentGame ? currentGame.moves_detailed.length : 'no game');
             
             if (currentGame && currentMoveIndex < currentGame.moves_detailed.length) {
-                // Check if we should autoplay this move
-                const move = currentGame.moves_detailed[currentMoveIndex];
-                const isWhiteMove = !!move.white;
-                const selectedColor = window.selectedPlayColor || 'both';
-                
-                console.log('Move analysis - isWhiteMove:', isWhiteMove, 'selectedColor:', selectedColor);
-                
-                // Determine if this move should be autoplayed
-                let shouldAutoplay = false;
-                if (selectedColor === 'white' && !isWhiteMove) {
-                    // Playing as white, autoplay black moves
-                    shouldAutoplay = true;
-                } else if (selectedColor === 'black' && isWhiteMove) {
-                    // Playing as black, autoplay white moves
-                    shouldAutoplay = true;
-                } else if (selectedColor === 'both') {
-                    // Playing as both, no autoplay
-                    shouldAutoplay = false;
-                }
-                
-                console.log('Should autoplay:', shouldAutoplay);
-                
-                if (shouldAutoplay) {
-                    // Autoplay this move (opponent's move)
-                    executeMove();
-                    return;
-                } else {
-                    // Normal move execution for player moves
-                    executeMove();
-                    
-                    // After executing a player move, check if the next move should autoplay
-                    const selectedColor = window.selectedPlayColor || 'both';
-                    if (selectedColor !== 'both' && currentMoveIndex < currentGame.moves_detailed.length) {
-                        const nextMove = currentGame.moves_detailed[currentMoveIndex];
-                        const isNextWhiteMove = !!nextMove.white;
-                        const shouldAutoplayNext = (selectedColor === 'white' && !isNextWhiteMove) || 
-                                                 (selectedColor === 'black' && isNextWhiteMove);
-                        
-                        if (shouldAutoplayNext) {
-                            console.log('Auto-playing next move after player move');
-                            setTimeout(() => {
-                                goToNextMove();
-                            }, 300); // Short delay after player move
-                        }
-                    }
-                }
+                // Execute the move
+                executeMove();
             }
         }
         
@@ -5431,7 +5361,9 @@
                     pieceImage = moveParser.getPieceImage(piece, isWhiteMove);
                 } else {
                     // Fallback to parsing move notation
-                    const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+                    const parsedMove = currentGame.type === 'puzzle' ? 
+                        parsePuzzleMove(move, moveNotation, isWhiteMove) : 
+                        moveParser.parseMove(moveNotation, isWhiteMove);
                     console.log('Parsed move:', parsedMove);
                     pieceImage = moveParser.getPieceImage(parsedMove.piece, isWhiteMove);
                     sourceSquare = getSquareByNotation(parsedMove.source);
@@ -5442,7 +5374,9 @@
                 
                 if (moveNotation.includes('O-O')) {
                     // Handle castling
-                    const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+                    const parsedMove = currentGame.type === 'puzzle' ? 
+                        parsePuzzleMove(move, moveNotation, isWhiteMove) : 
+                        moveParser.parseMove(moveNotation, isWhiteMove);
                     applyCastling(parsedMove, true, true);
                 } else if (sourceSquare && destinationSquare && pieceImage) {
                     // Use the proper animation for existing pieces
@@ -5459,18 +5393,25 @@
                     updateMoveButtons();
                     highlightCurrentMove();
                     
-                    // Check if this is the final move and trigger completion indicator after animation
-                    if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                    // Check if this is the final move and trigger completion indicator after animation (only in test mode)
+                    console.log('Checking completion - isChallengeMode:', isChallengeMode, 'currentMoveIndex:', currentMoveIndex, 'totalMoves:', currentGame.moves_detailed.length);
+                    if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
+                        console.log('Puzzle completed! Showing completion badge');
+                        showCompletionBadge();
                         // Wait for animation to complete (300ms + buffer)
                         setTimeout(() => {
                             showCompletionIndicator();
                         }, 400);
                     }
                     
+                    // Update challenge progress in test mode
+                    if (isChallengeMode) {
+                        checkChallengeProgress();
+                    }
+                    
                     // Update comment section with current move info only if moves are visible
                     const movesList = document.getElementById('moves-list');
                     if (move && movesList.style.display !== 'none') {
-                        showMoveCommentary(move.description, moveNotation, move);
                 }
             }
         }
@@ -5489,10 +5430,12 @@
                 updateMoveButtons();
                 highlightCurrentMove();
                 
-                // Trigger completion indicator for reaching final position
-                setTimeout(() => {
-                    showCompletionIndicator();
-                }, 200);
+                // Trigger completion indicator for reaching final position (only in test mode)
+                if (isChallengeMode) {
+                    setTimeout(() => {
+                        showCompletionIndicator();
+                    }, 200);
+                }
                 
                 // Update comment section with the last move info only if moves are visible
                 const movesList = document.getElementById('moves-list');
@@ -5505,9 +5448,12 @@
         }
 
         function updateBoardPosition() {
-            if (!currentGame) return;
+            if (!currentGame) {
+                console.log('updateBoardPosition: No currentGame available');
+                return;
+            }
             
-            console.log('Updating board position to move index:', currentMoveIndex);
+            console.log('Updating board position to move index:', currentMoveIndex, 'Total moves:', currentGame.moves_detailed.length);
             
             // Store completion indicator state before clearing
             const wasAtFinalPosition = currentMoveIndex >= currentGame.moves_detailed.length;
@@ -5526,9 +5472,12 @@
             setupInitialPosition();
 
             // Apply moves up to current position
-            for (let i = 0; i < currentMoveIndex && i < currentGame.moves_detailed.length; i++) {
+            // For puzzles, start from initial_move_index, for games start from 0
+            const startIndex = currentGame.initial_move_index || 0;
+            console.log('DEBUG: startIndex:', startIndex, 'currentMoveIndex:', currentMoveIndex, 'total moves:', currentGame.moves_detailed.length);
+            for (let i = startIndex; i < currentMoveIndex && i < currentGame.moves_detailed.length; i++) {
                 const move = currentGame.moves_detailed[i];
-                console.log(`Applying move ${i + 1}:`, move.white || move.black);
+                console.log(`DEBUG: Applying move ${i + 1}:`, move.white || move.black, 'from', move.white_from, 'to', move.white_to);
                 applyMove(move, false, false);
             }
             
@@ -5546,18 +5495,14 @@
             // Re-initialize drag and drop for all pieces
             reinitializeDragAndDrop();
             
-            // Update comment section with current move info
-            if (currentMoveIndex > 0 && currentMoveIndex <= currentGame.moves_detailed.length) {
-                const currentMove = currentGame.moves_detailed[currentMoveIndex - 1];
-                const moveNotation = currentMove.white || currentMove.black;
-                showMoveCommentary(currentMove.commentary, moveNotation, currentMove);
-            } else if (currentMoveIndex === 0) {
-                // Clear comment section at initial position
-                const commentContent = document.getElementById('comment-content');
-                if (commentContent) {
-                    commentContent.innerHTML = 'Click on any move to see detailed commentary';
-                }
+            // Make pieces invisible if in test mode
+            if (isChallengeMode) {
+                const pieces = document.querySelectorAll('.chess-piece');
+                pieces.forEach(piece => {
+                    piece.style.opacity = '0';
+                });
             }
+            
             
             // Update move highlighting
             highlightCurrentMove();
@@ -5617,9 +5562,15 @@
             
             console.log('Applying move:', moveNotation, 'isWhite:', isWhiteMove);
             
-            // Parse the move using the universal parser
-            const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
-            console.log('Parsed move:', parsedMove);
+            // Parse the move - use puzzle-specific parsing if it's a puzzle
+            let parsedMove;
+            if (currentGame.type === 'puzzle') {
+                parsedMove = parsePuzzleMove(move, moveNotation, isWhiteMove);
+            } else {
+                // Parse the move using the universal parser for games
+                parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+                console.log('Parsed game move:', parsedMove);
+            }
             
             if (parsedMove.isCastling) {
                 applyCastling(parsedMove, animate, enableSound);
@@ -5789,6 +5740,23 @@
             });
         }
 
+        // Reset board to standard orientation (white at bottom)
+        function resetBoardOrientation() {
+            if (boardFlipped) {
+                boardFlipped = false;
+                
+                // Update button appearance
+                const flipBtn = document.getElementById('flip-board-btn');
+                flipBtn.classList.remove('flipped');
+                
+                // Reset the notation
+                flipNotation();
+                
+                // Reinitialize the board with standard orientation
+                initializeChessBoard();
+            }
+        }
+
         // Flip board function
         function flipBoard() {
             boardFlipped = !boardFlipped;
@@ -5847,30 +5815,54 @@
                         // Keep black pieces as black
                         newPiece = originalPiece;
                     }
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
                     piece.style.opacity = '1';
+                    // Reset background size to default
+                    piece.style.backgroundSize = '';
+                    piece.style.backgroundRepeat = '';
+                    piece.style.backgroundPosition = '';
                     break;
                  case 'checkers':
-                     // For checkers mode, use black plate for all pieces
-                     newPiece = 'black-plate-for-your-kitchen-png.webp';
+                     // For checkers mode, use dot for all pieces
+                     newPiece = 'images/dot.png';
+                     piece.style.backgroundImage = `url('${newPiece}')`;
                      piece.style.opacity = '1';
+                     piece.style.backgroundSize = '80%';
+                     piece.style.backgroundRepeat = 'no-repeat';
+                     piece.style.backgroundPosition = 'center';
                      break;
                 case 'empty':
                     // Make pieces completely invisible
                     newPiece = originalPiece;
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
                     piece.style.opacity = '0';
+                    // Reset background size to default
+                    piece.style.backgroundSize = '';
+                    piece.style.backgroundRepeat = '';
+                    piece.style.backgroundPosition = '';
                     break;
                 case 'normal':
                 default:
                     // Reset to original pieces with original colors
                     newPiece = originalPiece;
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
                     piece.style.opacity = '1';
+                    // Reset background size to default
+                    piece.style.backgroundSize = '';
+                    piece.style.backgroundRepeat = '';
+                    piece.style.backgroundPosition = '';
                     break;
             }
             
             // Update the piece image if it changed
             if (newPiece !== currentPiece) {
                 piece.dataset.piece = newPiece;
-                piece.style.backgroundImage = `url('pieces/${newPiece}')`;
+                // Handle both full paths and piece filenames
+                if (newPiece.startsWith('images/') || newPiece.startsWith('pieces/')) {
+                    piece.style.backgroundImage = `url('${newPiece}')`;
+                } else {
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
+                }
             }
          }
 
@@ -5906,13 +5898,13 @@
                      commentSection.style.display = 'none';
                  }
                  
-                 // Reset to initial position
-                 currentMoveIndex = 0;
-                 setupInitialPosition();
-                 updateMoveButtons();
-                 
-                 // Update moves display to show only completed moves (none initially)
-                 updateChallengeMovesDisplay();
+                // Reset to initial position
+                currentMoveIndex = 0;
+                setupInitialPosition();
+                updateMoveButtons();
+                
+                // Update moves display to show only completed moves (none initially)
+                updateChallengeMovesDisplay();
                  
                 // Make all pieces invisible
                 const pieces = document.querySelectorAll('.chess-piece');
@@ -5941,13 +5933,20 @@
                      commentSection.style.display = 'block';
                  }
                  
+                 // Reset to initial position
+                 currentMoveIndex = 0;
+                 setupInitialPosition();
+                 updateMoveButtons();
+                 highlightCurrentMove();
+                 
+                 // Reset visual mode to normal
+                 currentVisualMode = 'normal';
+                 applyVisualMode('normal');
+                 
                  // Restore full moves display
                  displayGameMoves(currentGame);
                  
-                 // Restore current visual mode
-                 applyVisualMode(currentVisualMode);
-                 
-                 console.log('Challenge mode ended!');
+                 console.log('Challenge mode exited!');
              }
          }
          
@@ -6023,42 +6022,59 @@
                  
                  movesList.appendChild(moveItem);
              } else {
-                 // Show placeholder when no moves completed yet
-                 const placeholder = document.createElement('div');
-                 placeholder.className = 'move-item';
-                 placeholder.style.textAlign = 'center';
-                 placeholder.style.color = '#7f8c8d';
-                 placeholder.style.fontStyle = 'italic';
-                 placeholder.textContent = '';
-                 movesList.appendChild(placeholder);
+                 // Hide the moves list when no moves have been played yet
+                 movesList.style.display = 'none';
              }
          }
          
-         function checkChallengeProgress() {
-             if (!isChallengeMode || !currentGame) return;
-             
-             // Update the moves display to show progress
-             updateChallengeMovesDisplay();
-             
-             // Check if user completed the entire game
-             if (currentMoveIndex >= currentGame.moves_detailed.length) {
-                 showCompletionBadge();
-             }
-         }
+        function checkChallengeProgress() {
+            console.log('checkChallengeProgress called - isChallengeMode:', isChallengeMode, 'currentGame:', !!currentGame, 'currentMoveIndex:', currentMoveIndex, 'totalMoves:', currentGame ? currentGame.moves_detailed.length : 0);
+            if (!isChallengeMode || !currentGame) {
+                console.log('checkChallengeProgress: Not in challenge mode or no current game');
+                return;
+            }
+            
+            // Update the moves display to show progress
+            updateChallengeMovesDisplay();
+            
+            // Check if user completed the entire puzzle
+            // Use the same logic as games: completion when all moves are completed
+            console.log('checkChallengeProgress - Checking completion - currentMoveIndex:', currentMoveIndex, 'totalMoves:', currentGame.moves_detailed.length);
+            if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                console.log('*** PUZZLE COMPLETED IN checkChallengeProgress! Calling showCompletionBadge ***');
+                showCompletionBadge();
+            } else {
+                console.log('Puzzle not completed yet in checkChallengeProgress - currentMoveIndex:', currentMoveIndex, 'totalMoves:', currentGame.moves_detailed.length);
+            }
+        }
 
          function showCompletionBadge() {
+             console.log('*** showCompletionBadge called ***');
              const badge = document.getElementById('completion-badge');
              const overlay = document.getElementById('badge-overlay');
              
+             console.log('Badge element:', badge);
+             console.log('Overlay element:', overlay);
+             
+             if (!badge) {
+                 console.error('Completion badge element not found!');
+                 return;
+             }
+             if (!overlay) {
+                 console.error('Badge overlay element not found!');
+                 return;
+             }
+             
              // Mark this game as completed
              if (currentGame) {
+                 console.log('Adding puzzle to completedChallenges:', currentGame.id);
                  completedChallenges.add(currentGame.id);
+                 console.log('completedChallenges after adding:', completedChallenges);
                  
-                 // Record completion in progress tracker based on type
+                 // Record completion in progress tracker
+                 // Use recordGameCompletion for both games and puzzles since it's the only completion recording function
                  const difficulty = currentGame.difficulty || 'intermediate';
-                 if (currentGame.type === 'game') {
-                     progressTracker.recordGameCompletion(difficulty, currentGame.id);
-                 }
+                 progressTracker.recordGameCompletion(difficulty, currentGame.id);
                  
                  // End the current training session
                  progressTracker.endSession();
@@ -6067,6 +6083,7 @@
              }
              
              // Update badges in games list
+             console.log('About to call updateGameListBadges()');
              updateGameListBadges();
             
             // Trigger confetti celebration
@@ -6083,6 +6100,10 @@
              const badge = document.getElementById('completion-badge');
              const overlay = document.getElementById('badge-overlay');
              
+             // Switch to normal mode to reveal all pieces
+             currentVisualMode = 'normal';
+             switchVisualMode('normal');
+             
              // Hide badge and overlay
              badge.classList.remove('show');
              setTimeout(() => {
@@ -6096,21 +6117,47 @@
          function updateGameListBadges() {
              // Refresh completed challenges from progress tracker
              completedChallenges = loadCompletedChallenges();
-             console.log('Updating badges with completed challenges:', completedChallenges);
+             console.log('*** updateGameListBadges called ***');
+             console.log('Completed challenges:', completedChallenges);
              
              // Update badges in the games list sidebar
              const badges = document.querySelectorAll('.game-completion-badge');
              console.log('Found badges:', badges.length);
-             badges.forEach(badge => {
+             console.log('Badges found:', badges);
+             console.log('Current game ID:', currentGame ? currentGame.id : 'no current game');
+             console.log('Completed challenges set:', Array.from(completedChallenges));
+             badges.forEach((badge, index) => {
                  const gameId = badge.dataset.game;
                  const isCompleted = completedChallenges.has(gameId);
-                 console.log(`Game ${gameId}: completed = ${isCompleted}`);
+                 console.log(`Badge ${index} for game ${gameId}: completed = ${isCompleted}`);
+                 console.log(`Badge element:`, badge);
+                 console.log(`Badge dataset:`, badge.dataset);
                  if (isCompleted) {
+                     console.log(`Adding 'show' class to badge for ${gameId}`);
                      badge.classList.add('show');
+                     console.log(`Badge classes after adding 'show':`, badge.classList.toString());
+                     console.log(`Badge style after adding 'show':`, badge.style.cssText);
                  } else {
+                     console.log(`Removing 'show' class from badge for ${gameId}`);
                      badge.classList.remove('show');
                  }
              });
+         }
+
+         // Toggle moves visibility
+         function toggleMovesVisibility() {
+             const movesList = document.getElementById('moves-list');
+             const toggleImg = document.getElementById('moves-toggle-img');
+             
+             if (movesList.style.display === 'none') {
+                 movesList.style.display = 'block';
+                 toggleImg.src = 'images/hide.png';
+                 toggleImg.title = 'Hide moves';
+             } else {
+                 movesList.style.display = 'none';
+                 toggleImg.src = 'images/view.png';
+                 toggleImg.title = 'Show moves';
+             }
          }
 
          document.addEventListener('DOMContentLoaded', function() {
@@ -6120,6 +6167,12 @@
             initializeChessBoard();
             setupInitialPosition();
             reinitializeDragAndDrop(); // Ensure click handlers are attached to initial pieces
+            
+            // Add event listener for moves toggle
+            const toggleImg = document.getElementById('moves-toggle-img');
+            if (toggleImg) {
+                toggleImg.addEventListener('click', toggleMovesVisibility);
+            }
             
             // Hide custom game elements on initial load
             if (typeof hideCustomGameInfo === 'function') {
@@ -6156,7 +6209,7 @@
                 
                 if (button && submenu) {
                     button.addEventListener('click', function(e) {
-                        e.preventDefault();
+                e.preventDefault();
                         console.log('Game button clicked:', buttonId);
                         
                         // Close all other submenus first
@@ -6175,7 +6228,7 @@
                         if (submenu.classList.contains('show')) {
                             submenu.classList.remove('show');
                             button.classList.remove('active');
-                        } else {
+                } else {
                             submenu.classList.add('show');
                             button.classList.add('active');
                         }
@@ -6196,26 +6249,6 @@
                 });
             });
 
-            // Game header click to expand/collapse details - use event delegation
-            document.addEventListener('click', function(e) {
-                // Only handle clicks on the main game header, not the custom game header
-                if (e.target.closest('#game-header') && !e.target.closest('#custom-game-header')) {
-                    const gameHeader = document.getElementById('game-header');
-                    const gameDetails = document.getElementById('game-details');
-                    
-                    if (gameHeader && gameDetails && gameHeader.style.display !== 'none') {
-                        gameHeader.classList.toggle('expanded');
-                        gameDetails.classList.toggle('show');
-                        
-                        // Remove any inline display style that might be overriding the CSS
-                        if (gameDetails.classList.contains('show')) {
-                            gameDetails.style.display = '';
-                        } else {
-                            gameDetails.style.display = 'none';
-                        }
-                    }
-                }
-            });
 
             // Move navigation button event listeners
             document.getElementById('btn-initial').addEventListener('click', goToInitialPosition);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blind Chess</title>
+    <title>Memo Chess</title>
     <script>
         // Check subscription status immediately to prevent flashing
         (function() {
@@ -29,7 +29,7 @@
         }
 
         .navbar {
-            background-color: #2c3e50;
+            background-color: #f5f5f5;
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
@@ -40,7 +40,7 @@
         .logo {
             display: flex;
             align-items: center;
-            color: #ecf0f1;
+            color: #1e3a8a;
             font-size: 1.5rem;
             font-weight: bold;
             text-decoration: none;
@@ -48,19 +48,15 @@
         }
         
         .logo:hover {
-            color: #3498db;
+            color: #1e3a8a;
         }
 
         .logo-icon {
             width: 40px;
             height: 40px;
             margin-right: 10px;
-            background-color: #ecf0f1;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+            object-fit: cover;
         }
 
         .nav-links {
@@ -71,7 +67,7 @@
         }
 
         .nav-links a {
-            color: #ecf0f1;
+            color: #1e3a8a;
             text-decoration: none;
             font-weight: 500;
             font-size: 1.1rem;
@@ -83,12 +79,12 @@
         }
 
         .nav-links a:hover {
-            background-color: #34495e;
+            background-color: #e5e7eb;
         }
 
         /* Profile Button Styles */
         .profile-button {
-            color: #ecf0f1;
+            color: #1e3a8a;
             text-decoration: none;
             font-weight: 500;
             font-size: 1.1rem;
@@ -211,7 +207,7 @@
         }
 
         .nav-links a.active {
-            background-color: #3498db;
+            background-color: #1e3a8a;
             color: #ffffff;
         }
 
@@ -247,12 +243,12 @@
         }
 
         .games-tabs .tab.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
+            color: #1e3a8a;
+            border-bottom-color: #1e3a8a;
         }
 
         .games-tabs .tab:hover {
-            color: #3498db;
+            color: #1e3a8a;
         }
 
         /* Tab Content Styles */
@@ -311,7 +307,7 @@
         .stat-card .stat-number {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #3498db;
+            color: #1e3a8a;
             margin-bottom: 0.25rem;
         }
 
@@ -343,7 +339,7 @@
             color: #2c3e50;
             margin-bottom: 0.5rem;
             padding-bottom: 0.25rem;
-            border-bottom: 1px solid #3498db;
+            border-bottom: 1px solid #1e3a8a;
         }
 
         .gm-list {
@@ -365,7 +361,7 @@
         }
 
         .gm-item:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
         }
 
         .gm-name {
@@ -399,7 +395,7 @@
         }
 
         .game-item:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
         }
 
         .game-title {
@@ -522,7 +518,7 @@
         }
 
         .game-button:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
             background-color: #f8f9fa;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -596,7 +592,7 @@
 
         .form-input:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
@@ -618,12 +614,12 @@
         }
 
         .btn-primary {
-            background-color: #3498db;
+            background-color: #1e3a8a;
             color: white;
         }
 
         .btn-primary:hover {
-            background-color: #2980b9;
+            background-color: #1e40af;
         }
 
         .btn-secondary {
@@ -668,7 +664,7 @@
         }
 
         .register-link a {
-            color: #3498db;
+            color: #1e3a8a;
             text-decoration: none;
         }
 
@@ -860,7 +856,7 @@
         }
 
         .btn-subscription-yes {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             color: white;
         }
 
@@ -913,9 +909,9 @@
         }
 
         .game-button.active {
-            border-color: #3498db;
-            background-color: #e3f2fd;
-            color: #2980b9;
+            border-color: #1e3a8a;
+            background-color: #e0e7ff;
+            color: #1e40af;
         }
 
         .game-button .description {
@@ -947,16 +943,16 @@
         }
 
         .game-button-container .game-button:hover {
-            border-color: #3498db;
+            border-color: #1e3a8a;
             background-color: #f8f9fa;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         .game-button-container .game-button.active {
-            border-color: #3498db;
-            background-color: #e3f2fd;
-            color: #2980b9;
+            border-color: #1e3a8a;
+            background-color: #e0e7ff;
+            color: #1e40af;
         }
 
         .submenu {
@@ -999,16 +995,16 @@
 
         .submenu-button.selected {
             transform: translateX(6px) !important;
-            background-color: #e3f2fd !important;
-            border: 1px solid #2196f3 !important;
+            background-color: #e0e7ff !important;
+            border: 1px solid #1e3a8a !important;
             box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2) !important;
             font-weight: normal !important;
-            color: #1976d2 !important;
+            color: #1e3a8a !important;
         }
 
         .submenu-button.selected:hover {
-            background-color: #e3f2fd !important;
-            border-color: #2196f3 !important;
+            background-color: #e0e7ff !important;
+            border-color: #1e3a8a !important;
             transform: translateX(6px) !important;
             box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2) !important;
         }
@@ -1021,6 +1017,12 @@
             opacity: 0;
             transition: all 0.15s ease;
             z-index: 10;
+        }
+
+        .game-completion-badge img {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
 
         .game-completion-badge.show {
@@ -1131,13 +1133,13 @@
         }
 
         .mode-option.active {
-            background-color: #3498db;
-            border-color: #2980b9;
+            background-color: #1e3a8a;
+            border-color: #1e40af;
             color: white;
         }
 
         .mode-option.active:hover {
-            background-color: #2980b9;
+            background-color: #1e40af;
             transform: translateY(-1px);
         }
 
@@ -1708,8 +1710,8 @@
           }
 
           .completion-badge .badge-close {
-              background: linear-gradient(135deg, #3498db, #2980b9);
-              border: 2px solid #3498db;
+              background: linear-gradient(135deg, #1e3a8a, #1e40af);
+              border: 2px solid #1e3a8a;
               color: white;
               padding: 0.75rem 2rem;
               border-radius: 8px;
@@ -1722,8 +1724,8 @@
           }
 
           .completion-badge .badge-close:hover {
-              background: linear-gradient(135deg, #2980b9, #21618c);
-              border-color: #2980b9;
+              background: linear-gradient(135deg, #1e40af, #1e3a8a);
+              border-color: #1e40af;
               transform: translateY(-1px);
               box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
           }
@@ -1842,13 +1844,13 @@
         }
 
         .white-moves.clicked .clickable-move {
-            background-color: #e3f2fd;
-            color: #1976d2;
+            background-color: #e0e7ff;
+            color: #1e3a8a;
         }
 
         .black-moves.clicked .clickable-move {
-            background-color: #e3f2fd;
-            color: #1976d2;
+            background-color: #e0e7ff;
+            color: #1e3a8a;
         }
 
         .clickable-move.active-move {
@@ -2296,7 +2298,7 @@
 
         .custom-game-info-section #custom-game-title-input:focus {
             background: rgba(255, 255, 255, 0.8);
-            border: 1px solid #3498db;
+            border: 1px solid #1e3a8a;
             border-radius: 4px;
             padding: 2px 6px;
         }
@@ -2326,7 +2328,7 @@
 
         .custom-detail-input:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
@@ -2352,7 +2354,7 @@
 
         .custom-detail-select:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: #1e3a8a;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
@@ -2429,8 +2431,8 @@
 <body>
     <nav class="navbar">
         <a href="index.html" class="logo">
-            <div class="logo-icon">♟️</div>
-            <span>Blind Chess</span>
+            <img src="images/chess-board.png" alt="Memo Chess" class="logo-icon">
+            <span>Memo Chess</span>
         </a>
                 <ul class="nav-links">
                     <li><a href="index.html">Home</a></li>
@@ -2479,8 +2481,8 @@
                     <div class="game-buttons">
             <div class="game-button-container">
                 <a href="#short-games" class="game-button active" id="short-games-btn">
-                    <div>Fundamental Games</div>
-                    <div class="description">Essential chess patterns</div>
+                    <div>Quick Games</div>
+                    <div class="description">Under 10 moves</div>
                 </a>
                 <div class="submenu" id="short-games-submenu">
                     <!-- Games will be populated dynamically -->
@@ -2488,8 +2490,8 @@
             </div>
             <div class="game-button-container">
                 <a href="#medium-games" class="game-button" id="medium-games-btn">
-                    <div>Tactical Games</div>
-                    <div class="description">Combinations and tactics</div>
+                    <div>Short Games</div>
+                    <div class="description">10 to 30 moves</div>
                 </a>
                 <div class="submenu" id="medium-games-submenu">
                     <!-- Games will be populated dynamically -->
@@ -2497,8 +2499,8 @@
             </div>
             <div class="game-button-container">
                 <a href="#long-games" class="game-button" id="long-games-btn">
-                <div>Strategic Games</div>
-                <div class="description">Positional mastery</div>
+                    <div>Medium Games</div>
+                    <div class="description">30 to 50 moves</div>
             </a>
                 <div class="submenu" id="long-games-submenu">
                     <!-- Games will be populated dynamically -->
@@ -2506,8 +2508,8 @@
             </div>
             <div class="game-button-container">
                 <a href="#epic-games" class="game-button" id="epic-games-btn">
-                    <div>Master Games</div>
-                    <div class="description">Legendary masterpieces</div>
+                    <div>Long Games</div>
+                    <div class="description">50+ moves</div>
                 </a>
                 <div class="submenu" id="epic-games-submenu">
                     <!-- Games will be populated dynamically -->
@@ -2535,43 +2537,11 @@
         <div class="tab-panel" id="gm-games-panel">
             <div class="game-buttons">
             <div class="game-button-container">
-                <a href="#short-games" class="game-button active" id="gm-games-short-games-btn">
-                    <div>Fundamental Games</div>
-                    <div class="description">Essential chess patterns</div>
+                <a href="#fischer-games" class="game-button active" id="gm-games-fischer-games-btn">
+                    <div>Bobby Fischer Games</div>
                 </a>
-                <div class="submenu" id="gm-games-short-games-submenu">
+                <div class="submenu" id="gm-games-fischer-games-submenu">
                     <!-- Games will be populated dynamically -->
-                </div>
-            </div>
-            <div class="game-button-container">
-                <a href="#medium-games" class="game-button" id="gm-games-medium-games-btn">
-                    <div>Tactical Games</div>
-                    <div class="description">Combinations and tactics</div>
-                </a>
-                <div class="submenu" id="gm-games-medium-games-submenu">
-                    <!-- Games will be populated dynamically -->
-                </div>
-            </div>
-            <div class="game-button-container">
-                <a href="#long-games" class="game-button" id="gm-games-long-games-btn">
-                <div>Strategic Games</div>
-                <div class="description">Positional mastery</div>
-            </a>
-                <div class="submenu" id="gm-games-long-games-submenu">
-                    <!-- Games will be populated dynamically -->
-                </div>
-            </div>
-            <a href="#epic-games" class="game-button" id="gm-games-epic-games-btn">
-                <div>Master Games</div>
-                <div class="description">Legendary masterpieces</div>
-            </a>
-            <div class="game-button-container">
-                <a href="#my-games" class="game-button" id="gm-games-my-games-btn">
-                <div>My Games</div>
-                <div class="description">Your saved games</div>
-            </a>
-                <div class="submenu" id="gm-games-my-games-submenu">
-                    <!-- Custom games will be populated dynamically -->
                 </div>
             </div>
             </div>
@@ -2734,7 +2704,7 @@
                         </div>
                         
                         <!-- Comment Section -->
-                        <div id="comment-section" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #3498db;">
+                        <div id="comment-section" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #1e3a8a;">
                             <div id="comment-content" style="color: #34495e; line-height: 1.4; font-size: 13px; text-align: left;">
                                 Click on any move to see detailed commentary
                             </div>
@@ -2759,7 +2729,7 @@
     <!-- Completion Badge -->
     <div class="badge-overlay" id="badge-overlay"></div>
     <div class="completion-badge" id="completion-badge">
-        <div class="badge-icon"><img src="images/check.png" alt="Complete" style="width: 56px; height: 56px;"></div>
+        <div class="badge-icon"><img src="images/checklist.png" alt="Complete" style="width: 56px; height: 56px;"></div>
         <div class="badge-title">Challenge Complete!</div>
         <div class="badge-subtitle">You successfully completed the memory challenge</div>
         <button class="badge-close" onclick="hideBadge()">Continue</button>
@@ -3188,6 +3158,57 @@
                         console.error('Panel not found:', `${tabId}-panel`);
                     }
                     
+                    // Exit test mode when switching tabs
+                    if (isChallengeMode) {
+                        toggleChallengeMode();
+                    }
+                    
+                    // Reset to initial page state when switching tabs
+                    resetBoard();
+                    currentGame = null;
+                    currentMoveIndex = 0;
+                    updateMoveButtons();
+                    
+                    // Hide game display
+                    const gameDisplay = document.getElementById('game-display');
+                    if (gameDisplay) {
+                        gameDisplay.classList.remove('show');
+                    }
+                    
+                    // Reset moves list to initial state
+                    const movesList = document.getElementById('moves-list');
+                    if (movesList) {
+                        movesList.innerHTML = '<p style="text-align: center; color: #7f8c8d;">Select a game to view moves</p>';
+                        movesList.style.display = 'block';
+                    }
+                    
+                    // Reset game details to initial state
+                    document.getElementById('detail-description').textContent = '-';
+                    document.getElementById('detail-moves').textContent = '-';
+                    document.getElementById('detail-white').textContent = '-';
+                    document.getElementById('detail-black').textContent = '-';
+                    document.getElementById('detail-opening').textContent = '-';
+                    document.getElementById('detail-difficulty').textContent = '-';
+                    document.getElementById('detail-facts').textContent = '-';
+                    
+                    // Hide game header
+                    const gameHeader = document.getElementById('game-header');
+                    if (gameHeader) {
+                        gameHeader.style.display = 'none';
+                    }
+                    
+                    // Hide play color selection
+                    const playColorSection = document.getElementById('play-color-section');
+                    if (playColorSection) {
+                        playColorSection.style.display = 'none';
+                    }
+                    
+                    // Hide comment section
+                    const commentSection = document.getElementById('comment-section');
+                    if (commentSection) {
+                        commentSection.style.display = 'none';
+                    }
+                    
                     // All tabs now use the same game functionality
                     // Games are loaded automatically by updateGameButtons()
                 });
@@ -3558,7 +3579,7 @@
                 
                 let buttonContent = `
                     <span>${game.name}</span>
-                    <span class="game-completion-badge" data-game="${game.id}"><img src="images/check.png" alt="Complete" style="width: 20px; height: 20px;"></span>
+                    <span class="game-completion-badge" data-game="${game.id}"><img src="images/checklist.png" alt="Complete" style="width: 20px; height: 20px;"></span>
                 `;
                 
                 // Add lock overlay if game is locked and user doesn't have subscription
@@ -3834,6 +3855,9 @@
             pieceElement.dataset.piece = pieceImage;
             pieceElement.dataset.square = squareNotation;
             
+            // Store original piece before applying visual mode
+            pieceElement.dataset.originalPiece = pieceImage;
+            
             // Add drag event listeners
             pieceElement.addEventListener('dragstart', handleDragStart);
             pieceElement.addEventListener('dragend', handleDragEnd);
@@ -3873,6 +3897,9 @@
                 
                 // Ensure piece is draggable
                 piece.draggable = true;
+                
+                // Apply current visual mode to ensure consistency
+                applyVisualModeToPiece(piece, currentVisualMode);
             });
             
             // Also re-setup drop event listeners for squares
@@ -4108,8 +4135,8 @@
                     updateMoveButtons();
                     highlightCurrentMove();
                     
-                    // Check if this is the final move and trigger completion indicator
-                    if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                    // Check if this is the final move and trigger completion indicator (only in test mode)
+                    if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
                         setTimeout(() => {
                             showCompletionIndicator();
                         }, 200);
@@ -4295,11 +4322,14 @@
                  // Advance to next move
                  if (currentGame && currentMoveIndex < currentGame.moves_detailed.length) {
                      currentMoveIndex++;
+                     
+                     // Use the same update system as move buttons
+                     updateBoardPosition();
                      updateMoveButtons();
                      highlightCurrentMove();
                      
-                     // Check if this is the final move and trigger completion indicator
-                     if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                     // Check if this is the final move and trigger completion indicator (only in test mode)
+                     if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
                          setTimeout(() => {
                              showCompletionIndicator();
                          }, 200);
@@ -4313,11 +4343,6 @@
                      // Check challenge progress
                      checkChallengeProgress();
                  }
-                 
-                 // Small delay to ensure the move is processed, then re-initialize
-                 setTimeout(() => {
-                     reinitializeDragAndDrop();
-                 }, 100);
             } else {
                 console.log('Invalid move! Cannot drop on', toSquareNotation);
             }
@@ -4536,22 +4561,33 @@
         function showMoveCommentary(commentary, move, moveData) {
             // Update the comment content
             const commentContent = document.getElementById('comment-content');
+            const commentSection = document.getElementById('comment-section');
             
             if (commentContent && moveData) {
                 const moveNumber = moveData.move_number;
                 const player = moveData.white ? 'White' : 'Black';
                 const annotation = moveData.annotation || '';
-                // Use description first, fallback to commentary if description is empty
-                const description = moveData.description || moveData.commentary || '';
                 
-                let content = `<strong>Move ${moveNumber} (${player}):</strong> ${convertToChessSymbols(move)} ${annotation}`;
-                if (description) {
-                    content += `<br>${description}`;
+                // Only show commentary if there's an annotation mark and commentary
+                if (annotation && moveData.commentary) {
+                    // Show only the commentary text without move details
+                    commentContent.innerHTML = moveData.commentary;
+                    // Show the comment section
+                    if (commentSection) {
+                        commentSection.style.display = 'block';
+                    }
+                } else {
+                    // Hide the comment section if no annotation or commentary
+                    if (commentSection) {
+                        commentSection.style.display = 'none';
+                    }
                 }
-                
-                commentContent.innerHTML = content;
             } else if (commentContent) {
                 commentContent.innerHTML = `<strong>Move ${convertToChessSymbols(move)}:</strong><br>${commentary}`;
+                // Show the comment section for fallback commentary
+                if (commentSection) {
+                    commentSection.style.display = 'block';
+                }
             }
         }
 
@@ -4562,8 +4598,13 @@
             
             // Reset comment section when displaying new game
             const commentContent = document.getElementById('comment-content');
+            const commentSection = document.getElementById('comment-section');
             if (commentContent) {
                 commentContent.innerHTML = 'Click on any move to see detailed commentary';
+            }
+            // Hide comment section by default
+            if (commentSection) {
+                commentSection.style.display = 'none';
             }
 
             // Group moves by move number (white and black moves together)
@@ -4638,8 +4679,8 @@
                         updateBoardPosition();
                         updateMoveButtons();
                         
-                        // Check if this is the final move and trigger completion indicator
-                        if (currentMoveIndex >= game.moves_detailed.length) {
+                        // Check if this is the final move and trigger completion indicator (only in test mode)
+                        if (isChallengeMode && currentMoveIndex >= game.moves_detailed.length) {
                             setTimeout(() => {
                                 showCompletionIndicator();
                             }, 200);
@@ -4722,8 +4763,8 @@
                         updateBoardPosition();
                         updateMoveButtons();
                         
-                        // Check if this is the final move and trigger completion indicator
-                        if (currentMoveIndex >= game.moves_detailed.length) {
+                        // Check if this is the final move and trigger completion indicator (only in test mode)
+                        if (isChallengeMode && currentMoveIndex >= game.moves_detailed.length) {
                             setTimeout(() => {
                                 showCompletionIndicator();
                             }, 200);
@@ -4928,6 +4969,15 @@
                 selectedButton.classList.add('selected');
             }
             
+            // Reset board orientation to standard (white at bottom) first
+            if (boardFlipped) {
+                boardFlipped = false;
+                const flipBtn = document.getElementById('flip-board-btn');
+                flipBtn.classList.remove('flipped');
+                flipNotation();
+                initializeChessBoard();
+            }
+            
             // Reset the board to starting position
             resetBoard();
             
@@ -4958,9 +5008,29 @@
             if (playColorSection) {
                 playColorSection.style.display = 'block';
                 
-                // Add click-to-deselect functionality for radio buttons
+                // Reset play color selection to "Both"
+                const bothRadio = playColorSection.querySelector('input[value="both"]');
+                const whiteRadio = playColorSection.querySelector('input[value="white"]');
+                const blackRadio = playColorSection.querySelector('input[value="black"]');
+                
+                if (bothRadio) bothRadio.checked = true;
+                if (whiteRadio) whiteRadio.checked = false;
+                if (blackRadio) blackRadio.checked = false;
+                
+                // Reset selected play color
+                window.selectedPlayColor = 'both';
+                
+                // Remove existing event listeners first to avoid duplicates
                 const radioButtons = playColorSection.querySelectorAll('input[type="radio"]');
                 radioButtons.forEach(radio => {
+                    // Clone the radio button to remove all event listeners
+                    const newRadio = radio.cloneNode(true);
+                    radio.parentNode.replaceChild(newRadio, radio);
+                });
+                
+                // Get the new radio buttons after cloning
+                const newRadioButtons = playColorSection.querySelectorAll('input[type="radio"]');
+                newRadioButtons.forEach(radio => {
                     let lastChecked = false;
                     
                     radio.addEventListener('click', function(e) {
@@ -4986,18 +5056,32 @@
                 });
                 
                 // Add autoplay functionality based on selected color
-                radioButtons.forEach(radio => {
+                newRadioButtons.forEach(radio => {
                     radio.addEventListener('change', function() {
                         if (this.checked) {
                             const selectedColor = this.value;
                             console.log('Play color changed to:', selectedColor);
                             
-                            // Reset to initial position when changing play color
+                            // Flip board based on selected color
                             if (currentGame) {
-                                resetBoard();
+                                if (selectedColor === 'black' && !boardFlipped) {
+                                    // Flip to black perspective
+                                    flipBoard();
+                                } else if (selectedColor === 'white' && boardFlipped) {
+                                    // Flip to white perspective
+                                    flipBoard();
+                                }
+                                
                                 currentMoveIndex = currentGame.initial_move_index || 0;
                                 updateMoveButtons();
                                 highlightCurrentMove();
+                                
+                                // Reset board to initial position when switching play colors
+                                resetBoard();
+                                updateBoardPosition();
+                                
+                                // Display game moves
+                                displayGameMoves(currentGame);
                             }
                             
             // Store the selected color for use in move navigation
@@ -5350,8 +5434,13 @@
             
             // Clear comment section at initial position
             const commentContent = document.getElementById('comment-content');
+            const commentSection = document.getElementById('comment-section');
             if (commentContent) {
                 commentContent.innerHTML = 'Click on any move to see detailed commentary';
+            }
+            // Hide comment section at initial position
+            if (commentSection) {
+                commentSection.style.display = 'none';
             }
             
             // Play sound for user feedback
@@ -5450,6 +5539,12 @@
                         }
                     }
                 }
+            } else {
+                // Game completed - show completion badge (only in test mode)
+                if (isChallengeMode && currentGame && currentMoveIndex >= currentGame.moves_detailed.length) {
+                    console.log('Game completed! Showing completion badge');
+                    showCompletionBadge();
+                }
             }
         }
         
@@ -5527,12 +5622,19 @@
                     updateMoveButtons();
                     highlightCurrentMove();
                     
-                    // Check if this is the final move and trigger completion indicator after animation
-                    if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                    // Check if this is the final move and trigger completion indicator after animation (only in test mode)
+                    if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
+                        console.log('Game completed! Showing completion badge');
+                        showCompletionBadge();
                         // Wait for animation to complete (300ms + buffer)
                         setTimeout(() => {
                             showCompletionIndicator();
                         }, 400);
+                    }
+                    
+                    // Update challenge progress in test mode
+                    if (isChallengeMode) {
+                        checkChallengeProgress();
                     }
                     
                     // Update comment section with current move info only if moves are visible
@@ -5557,10 +5659,12 @@
                 updateMoveButtons();
                 highlightCurrentMove();
                 
-                // Trigger completion indicator for reaching final position
-                setTimeout(() => {
-                    showCompletionIndicator();
-                }, 200);
+                // Trigger completion indicator for reaching final position (only in test mode)
+                if (isChallengeMode) {
+                    setTimeout(() => {
+                        showCompletionIndicator();
+                    }, 200);
+                }
                 
                 // Update comment section with the last move info only if moves are visible
                 const movesList = document.getElementById('moves-list');
@@ -5613,6 +5717,14 @@
 
             // Re-initialize drag and drop for all pieces
             reinitializeDragAndDrop();
+            
+            // Make pieces invisible if in test mode
+            if (isChallengeMode) {
+                const pieces = document.querySelectorAll('.chess-piece');
+                pieces.forEach(piece => {
+                    piece.style.opacity = '0';
+                });
+            }
             
             // Update comment section with current move info
             if (currentMoveIndex > 0 && currentMoveIndex <= currentGame.moves_detailed.length) {
@@ -5908,37 +6020,61 @@
             switch(mode) {
                 case 'grey':
                     // Switch all white pieces to black pieces
-                    if (originalPiece.includes('lt45')) {
+                    if (originalPiece && originalPiece.includes('lt45')) {
                         // White piece -> Black piece
                         newPiece = originalPiece.replace('lt45', 'dt45');
                     } else {
                         // Keep black pieces as black
                         newPiece = originalPiece;
                     }
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
                     piece.style.opacity = '1';
+                    // Reset background size to default
+                    piece.style.backgroundSize = '';
+                    piece.style.backgroundRepeat = '';
+                    piece.style.backgroundPosition = '';
                     break;
                  case 'checkers':
-                     // For checkers mode, use black plate for all pieces
-                     newPiece = 'black-plate-for-your-kitchen-png.webp';
+                     // For checkers mode, use dot for all pieces
+                     newPiece = 'images/dot.png';
+                     piece.style.backgroundImage = `url('${newPiece}')`;
                      piece.style.opacity = '1';
+                     piece.style.backgroundSize = '80%';
+                     piece.style.backgroundRepeat = 'no-repeat';
+                     piece.style.backgroundPosition = 'center';
                      break;
                 case 'empty':
                     // Make pieces completely invisible
                     newPiece = originalPiece;
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
                     piece.style.opacity = '0';
+                    // Reset background size to default
+                    piece.style.backgroundSize = '';
+                    piece.style.backgroundRepeat = '';
+                    piece.style.backgroundPosition = '';
                     break;
                 case 'normal':
                 default:
                     // Reset to original pieces with original colors
                     newPiece = originalPiece;
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
                     piece.style.opacity = '1';
+                    // Reset background size to default
+                    piece.style.backgroundSize = '';
+                    piece.style.backgroundRepeat = '';
+                    piece.style.backgroundPosition = '';
                     break;
             }
             
             // Update the piece image if it changed
             if (newPiece !== currentPiece) {
                 piece.dataset.piece = newPiece;
-                piece.style.backgroundImage = `url('pieces/${newPiece}')`;
+                // Handle both full paths and piece filenames
+                if (newPiece.startsWith('images/') || newPiece.startsWith('pieces/')) {
+                    piece.style.backgroundImage = `url('${newPiece}')`;
+                } else {
+                    piece.style.backgroundImage = `url('pieces/${newPiece}')`;
+                }
             }
          }
 
@@ -5974,13 +6110,28 @@
                      commentSection.style.display = 'none';
                  }
                  
-                 // Reset to initial position
-                 currentMoveIndex = 0;
-                 setupInitialPosition();
-                 updateMoveButtons();
-                 
-                 // Update moves display to show only completed moves (none initially)
-                 updateChallengeMovesDisplay();
+                // Reset to initial position
+                currentMoveIndex = 0;
+                setupInitialPosition();
+                updateMoveButtons();
+                
+                // Reset play color selection to "Both"
+                const playColorSection = document.getElementById('play-color-section');
+                if (playColorSection) {
+                    const bothRadio = playColorSection.querySelector('input[value="both"]');
+                    const whiteRadio = playColorSection.querySelector('input[value="white"]');
+                    const blackRadio = playColorSection.querySelector('input[value="black"]');
+                    
+                    if (bothRadio) bothRadio.checked = true;
+                    if (whiteRadio) whiteRadio.checked = false;
+                    if (blackRadio) blackRadio.checked = false;
+                    
+                    // Reset selected play color
+                    window.selectedPlayColor = 'both';
+                }
+                
+                // Update moves display to show only completed moves (none initially)
+                updateChallengeMovesDisplay();
                  
                 // Make all pieces invisible
                 const pieces = document.querySelectorAll('.chess-piece');
@@ -6028,12 +6179,13 @@
              // Clear existing moves
              movesList.innerHTML = '';
              
-             // Group moves by move number, but only show completed moves
-             const moveGroups = {};
-             const completedMoves = Math.floor(currentMoveIndex / 2);
-             const isWhiteMoveCompleted = currentMoveIndex % 2 === 1;
-             
-             for (let i = 0; i < currentMoveIndex; i++) {
+            // Group moves by move number, show completed moves plus current move
+            const moveGroups = {};
+            const completedMoves = Math.floor(currentMoveIndex / 2);
+            const isWhiteMoveCompleted = currentMoveIndex % 2 === 1;
+            
+            // Show only moves that have been played (not the current move being made)
+            for (let i = 0; i < currentMoveIndex && i < currentGame.moves_detailed.length; i++) {
                  const move = currentGame.moves_detailed[i];
                  const moveNumber = Math.floor(i / 2) + 1;
                  
@@ -6048,58 +6200,55 @@
                  }
              }
              
-             // Create the moves display (only completed moves)
-             if (Object.keys(moveGroups).length > 0) {
-                 const moveItem = document.createElement('div');
-                 moveItem.className = 'move-item';
-                 
-                 Object.keys(moveGroups).forEach((moveNumber, moveIndex) => {
-                     const group = moveGroups[moveNumber];
-                     
-                     const moveRow = document.createElement('div');
-                     moveRow.className = 'move-row';
-                     
-                     const moveNumberSpan = document.createElement('span');
-                     moveNumberSpan.textContent = moveNumber + '.';
-                     moveNumberSpan.className = 'move-number';
-                     moveRow.appendChild(moveNumberSpan);
-                     
-                     const whiteMoves = document.createElement('div');
-                     whiteMoves.className = 'white-moves';
-                     
-                     const blackMoves = document.createElement('div');
-                     blackMoves.className = 'black-moves';
-                     
-                     if (group.white) {
-                         const whiteMoveSpan = document.createElement('span');
-                         whiteMoveSpan.textContent = convertToChessSymbols(group.white);
-                         whiteMoveSpan.className = 'clickable-move';
-                         whiteMoves.appendChild(whiteMoveSpan);
-                     }
-                     
-                     if (group.black) {
-                         const blackMoveSpan = document.createElement('span');
-                         blackMoveSpan.textContent = convertToChessSymbols(group.black);
-                         blackMoveSpan.className = 'clickable-move';
-                         blackMoves.appendChild(blackMoveSpan);
-                     }
-                     
-                     moveRow.appendChild(whiteMoves);
-                     moveRow.appendChild(blackMoves);
-                     moveItem.appendChild(moveRow);
-                 });
-                 
-                 movesList.appendChild(moveItem);
-             } else {
-                 // Show placeholder when no moves completed yet
-                 const placeholder = document.createElement('div');
-                 placeholder.className = 'move-item';
-                 placeholder.style.textAlign = 'center';
-                 placeholder.style.color = '#7f8c8d';
-                 placeholder.style.fontStyle = 'italic';
-                 placeholder.textContent = '';
-                 movesList.appendChild(placeholder);
-             }
+            // Create the moves display (only completed moves)
+            if (Object.keys(moveGroups).length > 0 && currentMoveIndex > 0) {
+                // Show the moves list only if moves have been played
+                movesList.style.display = 'block';
+                
+                const moveItem = document.createElement('div');
+                moveItem.className = 'move-item';
+                
+                Object.keys(moveGroups).forEach((moveNumber, moveIndex) => {
+                    const group = moveGroups[moveNumber];
+                    
+                    const moveRow = document.createElement('div');
+                    moveRow.className = 'move-row';
+                    
+                    const moveNumberSpan = document.createElement('span');
+                    moveNumberSpan.textContent = moveNumber + '.';
+                    moveNumberSpan.className = 'move-number';
+                    moveRow.appendChild(moveNumberSpan);
+                    
+                    const whiteMoves = document.createElement('div');
+                    whiteMoves.className = 'white-moves';
+                    
+                    const blackMoves = document.createElement('div');
+                    blackMoves.className = 'black-moves';
+                    
+                    if (group.white) {
+                        const whiteMoveSpan = document.createElement('span');
+                        whiteMoveSpan.textContent = convertToChessSymbols(group.white);
+                        whiteMoveSpan.className = 'clickable-move';
+                        whiteMoves.appendChild(whiteMoveSpan);
+                    }
+                    
+                    if (group.black) {
+                        const blackMoveSpan = document.createElement('span');
+                        blackMoveSpan.textContent = convertToChessSymbols(group.black);
+                        blackMoveSpan.className = 'clickable-move';
+                        blackMoves.appendChild(blackMoveSpan);
+                    }
+                    
+                    moveRow.appendChild(whiteMoves);
+                    moveRow.appendChild(blackMoves);
+                    moveItem.appendChild(moveRow);
+                });
+                
+                movesList.appendChild(moveItem);
+            } else {
+                // Hide the moves list when no moves have been played yet
+                movesList.style.display = 'none';
+            }
          }
          
          function checkChallengeProgress() {
@@ -6151,6 +6300,10 @@
              const badge = document.getElementById('completion-badge');
              const overlay = document.getElementById('badge-overlay');
              
+             // Switch to normal mode to reveal all pieces
+             currentVisualMode = 'normal';
+             switchVisualMode('normal');
+             
              // Hide badge and overlay
              badge.classList.remove('show');
              setTimeout(() => {
@@ -6186,7 +6339,7 @@
 
             // Initialize chess board
             initializeChessBoard();
-            setupInitialPosition();
+            setupStartingPosition();
             reinitializeDragAndDrop(); // Ensure click handlers are attached to initial pieces
             
             // Hide custom game elements on initial load
@@ -6205,19 +6358,19 @@
 
             // Set up submenu toggles for all tabs
             const gameButtonIds = [
-                'short-games-btn', 'my-games-short-games-btn', 'gm-games-short-games-btn',
-                'medium-games-btn', 'my-games-medium-games-btn', 'gm-games-medium-games-btn',
-                'long-games-btn', 'my-games-long-games-btn', 'gm-games-long-games-btn',
-                'epic-games-btn', 'my-games-epic-games-btn', 'gm-games-epic-games-btn',
-                'my-games-my-games-btn', 'gm-games-my-games-btn'
+                'short-games-btn', 'my-games-short-games-btn', 'gm-games-fischer-games-btn',
+                'medium-games-btn', 'my-games-medium-games-btn',
+                'long-games-btn', 'my-games-long-games-btn',
+                'epic-games-btn', 'my-games-epic-games-btn',
+                'my-games-my-games-btn'
             ];
             
             const submenuIds = [
-                'short-games-submenu', 'my-games-short-games-submenu', 'gm-games-short-games-submenu',
-                'medium-games-submenu', 'my-games-medium-games-submenu', 'gm-games-medium-games-submenu',
-                'long-games-submenu', 'my-games-long-games-submenu', 'gm-games-long-games-submenu',
-                'epic-games-submenu', 'my-games-epic-games-submenu', 'gm-games-epic-games-submenu',
-                'my-games-my-games-submenu', 'gm-games-my-games-submenu'
+                'short-games-submenu', 'my-games-short-games-submenu', 'gm-games-fischer-games-submenu',
+                'medium-games-submenu', 'my-games-medium-games-submenu',
+                'long-games-submenu', 'my-games-long-games-submenu',
+                'epic-games-submenu', 'my-games-epic-games-submenu',
+                'my-games-my-games-submenu'
             ];
             
             gameButtonIds.forEach((buttonId, index) => {
