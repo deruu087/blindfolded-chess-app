@@ -4222,9 +4222,6 @@
                     if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
                         console.log('*** PUZZLE COMPLETED VIA CLICK! Showing completion badge ***');
                         showCompletionBadge();
-                        setTimeout(() => {
-                            showCompletionIndicator();
-                        }, 200);
                     } else {
                         console.log('Puzzle not completed yet via click - isChallengeMode:', isChallengeMode, 'currentMoveIndex:', currentMoveIndex, 'moves_detailed.length:', currentGame.moves_detailed.length);
                     }
@@ -4435,9 +4432,6 @@
                  if (isChallengeMode && currentGame && currentMoveIndex >= currentGame.moves_detailed.length) {
                      console.log('*** PUZZLE COMPLETED VIA DRAG AND DROP! Showing completion badge ***');
                      showCompletionBadge();
-                     setTimeout(() => {
-                         showCompletionIndicator();
-                     }, 200);
                  } else {
                      console.log('Puzzle not completed yet - isChallengeMode:', isChallengeMode, 'currentGame:', !!currentGame, 'currentMoveIndex:', currentMoveIndex, 'moves_detailed.length:', currentGame ? currentGame.moves_detailed.length : 'no game');
                  }
@@ -5554,10 +5548,6 @@
                     if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
                         console.log('Puzzle completed! Showing completion badge');
                         showCompletionBadge();
-                        // Wait for animation to complete (300ms + buffer)
-                        setTimeout(() => {
-                            showCompletionIndicator();
-                        }, 400);
                     }
                     
                     // Update challenge progress in test mode
@@ -5593,12 +5583,7 @@
                     showLastMoveCheck();
                 }, 400);
                 
-                // Trigger completion indicator for reaching final position (only in test mode)
-                if (isChallengeMode) {
-                    setTimeout(() => {
-                        showCompletionIndicator();
-                    }, 200);
-                }
+                // No need to show completion indicator - already have green check
                 
                 // Update comment section with the last move info only if moves are visible
                 const movesList = document.getElementById('moves-list');
@@ -6263,22 +6248,58 @@
              }, 100);
          }
 
-         function hideBadge() {
-             const badge = document.getElementById('completion-badge');
-             const overlay = document.getElementById('badge-overlay');
-             
-             // Switch to normal mode to reveal all pieces
-             currentVisualMode = 'normal';
-             switchVisualMode('normal');
-             
-             // Hide badge and overlay
-             badge.classList.remove('show');
-             setTimeout(() => {
-                 overlay.classList.remove('show');
-                 // Exit challenge mode after hiding badge
-                 toggleChallengeMode();
-             }, 300);
-         }
+        function hideBadge() {
+            const badge = document.getElementById('completion-badge');
+            const overlay = document.getElementById('badge-overlay');
+            
+            // Switch to normal mode to reveal all pieces
+            currentVisualMode = 'normal';
+            switchVisualMode('normal');
+            
+            // Hide badge and overlay
+            badge.classList.remove('show');
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                // Exit challenge mode after hiding badge
+                isChallengeMode = false;
+                const challengeBtn = document.getElementById('challenge-btn');
+                const modeOptions = document.querySelectorAll('.mode-option');
+                const moveControls = document.querySelector('.move-controls');
+                const commentSection = document.getElementById('comment-section');
+                
+                // Update button text and state
+                if (challengeBtn) {
+                    challengeBtn.textContent = 'Test';
+                    challengeBtn.classList.remove('active');
+                }
+                
+                // Show visual mode options and navigation buttons
+                modeOptions.forEach(option => {
+                    option.style.display = 'flex';
+                });
+                if (moveControls) {
+                    moveControls.style.display = 'flex';
+                }
+                if (commentSection) {
+                    commentSection.style.display = 'block';
+                }
+                
+                // Keep the final position on the board instead of resetting
+                // Just reveal the pieces - don't rebuild the board to avoid double sound
+                const pieces = document.querySelectorAll('.chess-piece');
+                pieces.forEach(piece => {
+                    piece.style.opacity = '1';
+                });
+                
+                updateMoveButtons();
+                highlightCurrentMove();
+                
+                // Show green check indicator for final move
+                showLastMoveCheck();
+                
+                console.log('Challenge mode exited! Final position kept visible.');
+            }, 300);
+        }
 
 
          function updateGameListBadges() {

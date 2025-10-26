@@ -3651,24 +3651,9 @@
                 addGameButton.className = 'submenu-button';
                 addGameButton.id = 'add-game-my-btn';
                 
-                // Check if user has active subscription
-                const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-                const isAddGameLocked = !hasActiveSubscription;
-                
-                // Add locked class if user doesn't have subscription
-                if (isAddGameLocked) {
-                    addGameButton.classList.add('locked');
-                }
-                
+                // Add Game button is now unlocked for all users
                 addGameButton.onclick = (e) => {
                     e.preventDefault();
-                    
-                    if (isAddGameLocked) {
-                        // Show subscription required modal
-                        showSubscriptionRequiredModal();
-                        return;
-                    }
-                    
                     initializeCustomGameMode();
                 };
                 
@@ -3676,22 +3661,13 @@
                     <span>+ Add Game</span>
                 `;
                 
-                // Add lock overlay if add game is locked
-                if (isAddGameLocked) {
-                    buttonContent += `
-                        <div class="lock-overlay">
-                            <div class="lock-icon">🔒</div>
-                        </div>
-                    `;
-                }
-                
                 addGameButton.innerHTML = buttonContent;
                 
                 categoryElement.appendChild(addGameButton);
             }
         }
         
-        // Function to reset the board to starting position
+        // Function to reset the board to empty state
         function resetBoard() {
             // Clear all squares
             for (let i = 0; i < 8; i++) {
@@ -3706,8 +3682,7 @@
             // Reset piece positions in parser
             moveParser.resetBoard();
             
-            // Set up starting position
-            setupStartingPosition();
+            // Don't call setupStartingPosition() - board should be empty until game is selected
         }
         
         function setupStartingPosition() {
@@ -3946,6 +3921,11 @@
                 
                 // Apply current visual mode to ensure consistency
                 applyVisualModeToPiece(piece, currentVisualMode);
+                
+                // Make invisible if in test mode (overrides visual mode)
+                if (isChallengeMode) {
+                    piece.style.opacity = '0';
+                }
             });
             
             // Also re-setup drop event listeners for squares
@@ -5136,27 +5116,9 @@
                 // Get the new radio buttons after cloning
                 const newRadioButtons = playColorSection.querySelectorAll('input[type="radio"]');
                 newRadioButtons.forEach(radio => {
-                    let lastChecked = false;
-                    
-                    radio.addEventListener('click', function(e) {
-                        // If this radio was already checked before this click, uncheck it
-                        if (lastChecked) {
-                            e.preventDefault();
-                            this.checked = false;
-                            lastChecked = false;
-                        } else {
-                            // If it wasn't checked, let it be checked and update our tracking
-                            lastChecked = true;
-                        }
-                    });
-                    
                     // Track when this radio becomes checked (from other radios)
                     radio.addEventListener('change', function() {
-                        if (this.checked) {
-                            lastChecked = true;
-                        } else {
-                            lastChecked = false;
-                        }
+                        // This is handled in the autoplay functionality below
                     });
                 });
                 
@@ -5993,11 +5955,13 @@
             reinitializeDragAndDrop();
             
             // Make pieces invisible if in test mode
+            // This must happen after reinitializeDragAndDrop() to ensure pieces are found
             if (isChallengeMode) {
                 const pieces = document.querySelectorAll('.chess-piece');
                 pieces.forEach(piece => {
                     piece.style.opacity = '0';
                 });
+                console.log('Test mode: Made pieces invisible after updateBoardPosition');
             }
             
             // Update comment section with current move info
@@ -6634,10 +6598,9 @@
          document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing...');
 
-            // Initialize chess board
+            // Initialize chess board (empty board, no pieces)
             initializeChessBoard();
-            setupStartingPosition();
-            reinitializeDragAndDrop(); // Ensure click handlers are attached to initial pieces
+            // Don't call setupStartingPosition() - board should be empty until game is selected
             
             // Hide custom game elements on initial load
             if (typeof hideCustomGameInfo === 'function') {
