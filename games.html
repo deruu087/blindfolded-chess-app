@@ -1301,6 +1301,7 @@
             background-color: rgba(144, 238, 144, 0.3) !important;
             outline: 3px solid #32CD32;
             outline-offset: -3px;
+            transition: background-color 0.3s ease, outline 0s !important;
         }
 
         .chess-square.valid-move:hover {
@@ -2426,6 +2427,40 @@
                 height: 46px;
             }
         }
+        
+        .hint-button {
+            background-color: #ffffff;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 5px 0;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #495057;
+            transition: all 0.2s ease;
+            text-align: center;
+            min-height: 40px;
+            width: 110px;
+            margin: 10px auto;
+            display: block;
+        }
+
+        .hint-button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+            transform: translateY(-1px);
+        }
+
+        .hint-button.active {
+            background-color: #1e3a8a;
+            border-color: #1e40af;
+            color: white;
+        }
+
+        .hint-button.active:hover {
+            background-color: #1e40af;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -2438,25 +2473,25 @@
                     <li><a href="index.html">Home</a></li>
                 <li><a href="games.html" class="active">Games</a></li>
                 <li><a href="puzzles.html">Puzzles</a></li>
-                <li><a href="leaderboard.html">Leaderboard</a></li>
-                <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
-                    <li class="profile-dropdown">
+                <!-- <li><a href="leaderboard.html">Community</a></li> -->
+                <!-- <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li> -->
+                    <!-- <li class="profile-dropdown">
                         <a href="#" id="profileLink" class="profile-button">Profile</a>
-            <div class="dropdown-menu" id="profileDropdown">
-                <a href="profile.html" class="dropdown-item" id="profileMenuItem">
-                    <span class="dropdown-text">My Profile</span>
-                </a>
-                <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
-                    <span class="dropdown-text">Account Information</span>
-                </a>
-                <a href="#" class="dropdown-item" id="signInMenuItem">
-                    <span class="dropdown-text">Sign In</span>
-                </a>
-                <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
-                    <span class="dropdown-text">Logout</span>
-                </a>
-            </div>
-                    </li>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <a href="profile.html" class="dropdown-item" id="profileMenuItem">
+                                <span class="dropdown-text">My Profile</span>
+                            </a>
+                            <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
+                                <span class="dropdown-text">Account Information</span>
+                            </a>
+                            <a href="#" class="dropdown-item" id="signInMenuItem">
+                                <span class="dropdown-text">Sign In</span>
+                            </a>
+                            <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
+                                <span class="dropdown-text">Logout</span>
+                            </a>
+                        </div>
+                    </li> -->
                 </ul>
     </nav>
 
@@ -2709,6 +2744,11 @@
                                 Click on any move to see detailed commentary
                             </div>
                         </div>
+                        
+                        <!-- Hint Button -->
+                        <button id="hint-btn" class="hint-button" title="Get a hint for the next move" style="display: none;">
+                            💡 Get Hint
+                        </button>
                         
                     <!-- Delete Game Button (only for custom games) -->
                     <div id="delete-game-section" style="display: none; margin-top: 15px; text-align: center;">
@@ -3168,6 +3208,9 @@
                     currentGame = null;
                     currentMoveIndex = 0;
                     updateMoveButtons();
+                    
+                    // Hide hint button when switching tabs
+                    updateHintButtonVisibility();
                     
                     // Hide game display
                     const gameDisplay = document.getElementById('game-display');
@@ -4135,6 +4178,20 @@
                     updateMoveButtons();
                     highlightCurrentMove();
                     
+                    // Unclick hint button after move
+                    unclickHintButton();
+                    
+                    // Update hint button visibility (hide if on last move)
+                    updateHintButtonVisibility();
+                    
+                    // Show green check indicator when on the last move (for all modes except test mode)
+                    if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                        removeLastMoveCheck();
+                        setTimeout(() => {
+                            showLastMoveCheck();
+                        }, 50);
+                    }
+                    
                     // Check if this is the final move and trigger completion indicator (only in test mode)
                     if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
                         setTimeout(() => {
@@ -4327,6 +4384,20 @@
                      updateBoardPosition();
                      updateMoveButtons();
                      highlightCurrentMove();
+                     
+                     // Unclick hint button after move
+                     unclickHintButton();
+                     
+                     // Update hint button visibility (hide if on last move)
+                     updateHintButtonVisibility();
+                     
+                     // Show green check indicator when on the last move (for all modes except test mode)
+                     if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                         removeLastMoveCheck();
+                         setTimeout(() => {
+                             showLastMoveCheck();
+                         }, 300);
+                     }
                      
                      // Check if this is the final move and trigger completion indicator (only in test mode)
                      if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
@@ -4679,6 +4750,20 @@
                         updateBoardPosition();
                         updateMoveButtons();
                         
+                        // Unclick hint button when clicking on moves
+                        unclickHintButton();
+                        
+                        // Update hint button visibility
+                        updateHintButtonVisibility();
+                        
+                        // Show green check indicator when on the last move (for all modes except test mode)
+                        if (currentMoveIndex >= game.moves_detailed.length) {
+                            removeLastMoveCheck();
+                            setTimeout(() => {
+                                showLastMoveCheck();
+                            }, 50);
+                        }
+                        
                         // Check if this is the final move and trigger completion indicator (only in test mode)
                         if (isChallengeMode && currentMoveIndex >= game.moves_detailed.length) {
                             setTimeout(() => {
@@ -4762,6 +4847,20 @@
                         currentMoveIndex = moveIndex * 2 + 2;
                         updateBoardPosition();
                         updateMoveButtons();
+                        
+                        // Unclick hint button when clicking on moves
+                        unclickHintButton();
+                        
+                        // Update hint button visibility
+                        updateHintButtonVisibility();
+                        
+                        // Show green check indicator when on the last move (for all modes except test mode)
+                        if (currentMoveIndex >= game.moves_detailed.length) {
+                            removeLastMoveCheck();
+                            setTimeout(() => {
+                                showLastMoveCheck();
+                            }, 50);
+                        }
                         
                         // Check if this is the final move and trigger completion indicator (only in test mode)
                         if (isChallengeMode && currentMoveIndex >= game.moves_detailed.length) {
@@ -4955,6 +5054,9 @@
             currentGame = game;
             // Check if game has a custom initial move index, otherwise start at 0
             currentMoveIndex = game.initial_move_index || 0;
+            
+            // Update hint button visibility
+            updateHintButtonVisibility();
             
             // Start training session tracking based on type
             const sessionType = 'game';
@@ -5313,6 +5415,131 @@
             }
         }
 
+        // Show green check indicator when the last move is completed (for all modes except test mode)
+        function showLastMoveCheck() {
+            // Don't show check in test mode
+            if (isChallengeMode) return;
+            
+            // Only show when on the last move
+            if (!currentGame || currentMoveIndex < currentGame.moves_detailed.length) return;
+            
+            // Get the last move to find which piece moved
+            const lastMove = currentGame.moves_detailed[currentGame.moves_detailed.length - 1];
+            const moveNotation = lastMove.white || lastMove.black;
+            const isWhiteMove = !!lastMove.white;
+            
+            // Parse the move to get the destination square
+            const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+            if (parsedMove) {
+                const destinationSquare = document.querySelector(`[data-square="${parsedMove.target}"]`);
+                if (destinationSquare) {
+                    // Remove any existing check indicator
+                    const existingCheck = document.querySelector('.last-move-check');
+                    if (existingCheck) {
+                        existingCheck.remove();
+                    }
+                    
+                    // Create new check indicator with the green check image
+                    const checkIndicator = document.createElement('div');
+                    checkIndicator.className = 'last-move-check';
+                    checkIndicator.style.position = 'absolute';
+                    checkIndicator.style.top = '2px';
+                    checkIndicator.style.right = '2px';
+                    checkIndicator.style.width = '20px';
+                    checkIndicator.style.height = '20px';
+                    checkIndicator.style.backgroundImage = 'url(images/checked.png)';
+                    checkIndicator.style.backgroundSize = 'contain';
+                    checkIndicator.style.backgroundRepeat = 'no-repeat';
+                    checkIndicator.style.backgroundPosition = 'center';
+                    checkIndicator.style.pointerEvents = 'none';
+                    checkIndicator.style.zIndex = '9999';
+                    checkIndicator.title = 'Final move completed!';
+                    
+                    // Make sure the square has relative positioning
+                    destinationSquare.style.position = 'relative';
+                    
+                    // Add the indicator to the destination square
+                    destinationSquare.appendChild(checkIndicator);
+                }
+            }
+        }
+
+        // Remove last move check indicator
+        function removeLastMoveCheck() {
+            const existingCheck = document.querySelector('.last-move-check');
+            if (existingCheck) {
+                existingCheck.remove();
+            }
+        }
+
+        // Update hint button visibility
+        function updateHintButtonVisibility() {
+            const hintBtn = document.getElementById('hint-btn');
+            if (!hintBtn) return;
+            
+            // Show hint button only if game is loaded, not in test mode, and not on the last move
+            if (currentGame && !isChallengeMode && currentMoveIndex < currentGame.moves_detailed.length) {
+                hintBtn.style.display = 'block';
+            } else {
+                hintBtn.style.display = 'none';
+                // Clear any active state
+                hintBtn.classList.remove('active');
+                clearHighlights();
+            }
+        }
+
+        // Unclick hint button after a move
+        function unclickHintButton() {
+            const hintBtn = document.getElementById('hint-btn');
+            if (hintBtn) {
+                hintBtn.classList.remove('active');
+                clearHighlights();
+            }
+        }
+
+        // Show hint for the next move
+        function showHint() {
+            const hintBtn = document.getElementById('hint-btn');
+            
+            if (!currentGame || currentMoveIndex >= currentGame.moves_detailed.length) {
+                console.log('No hint available - game finished or no current game');
+                return;
+            }
+            
+            // Toggle active state
+            if (hintBtn.classList.contains('active')) {
+                // Clear hint
+                clearHighlights();
+                hintBtn.classList.remove('active');
+            } else {
+                // Show hint
+                // Get the next move
+                const nextMove = currentGame.moves_detailed[currentMoveIndex];
+                const moveNotation = nextMove.white || nextMove.black;
+                const isWhiteMove = !!nextMove.white;
+                
+                // Parse the move to get the source square
+                const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+                if (parsedMove && parsedMove.source) {
+                    const sourceSquare = document.querySelector(`[data-square="${parsedMove.source}"]`);
+                    if (sourceSquare) {
+                        // Clear any existing valid-move highlights
+                        clearHighlights();
+                        
+                        // Add valid-move class to the source square to highlight it
+                        sourceSquare.classList.add('valid-move');
+                        hintBtn.classList.add('active');
+                        
+                        console.log('Showing hint - highlighting source square:', parsedMove.source);
+                    } else {
+                        console.log('Source square not found:', parsedMove.source);
+                    }
+                } else {
+                    console.log('Failed to parse next move for hint');
+                }
+            }
+        }
+
         // Convert chess piece letters to symbols
         function convertToChessSymbols(notation) {
             if (!notation) return notation;
@@ -5429,8 +5656,12 @@
             updateMoveButtons();
             highlightCurrentMove();
             
-            // Remove completion indicator when going to initial position
+            // Remove completion and check indicators when going to initial position
             removeCompletionIndicator();
+            removeLastMoveCheck();
+            
+            // Unclick hint button when going to initial position
+            unclickHintButton();
             
             // Clear comment section at initial position
             const commentContent = document.getElementById('comment-content');
@@ -5461,8 +5692,15 @@
                 updateMoveButtons();
                 highlightCurrentMove();
                 
-                // Remove completion indicator when moving away from final position
+                // Remove completion and check indicators when moving away from final position
                 removeCompletionIndicator();
+                removeLastMoveCheck();
+                
+                // Unclick hint button when navigating moves
+                unclickHintButton();
+                
+                // Update hint button visibility
+                updateHintButtonVisibility();
                 
                 // Update comment section with current move info only if moves are visible
                 const movesList = document.getElementById('moves-list');
@@ -5622,6 +5860,21 @@
                     updateMoveButtons();
                     highlightCurrentMove();
                     
+                    // Unclick hint button after move
+                    unclickHintButton();
+                    
+                    // Update hint button visibility (hide if on last move)
+                    updateHintButtonVisibility();
+                    
+                    // Call updateBoardPosition to ensure check indicator is properly displayed
+                    // Use longer delay (400ms) to ensure animation completes before showing check indicator
+                    if (currentMoveIndex >= currentGame.moves_detailed.length) {
+                        setTimeout(() => {
+                            removeLastMoveCheck();
+                            showLastMoveCheck();
+                        }, 400);
+                    }
+                    
                     // Check if this is the final move and trigger completion indicator after animation (only in test mode)
                     if (isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
                         console.log('Game completed! Showing completion badge');
@@ -5658,6 +5911,21 @@
                 updateBoardPosition();
                 updateMoveButtons();
                 highlightCurrentMove();
+                
+                // Unclick hint button when going to final position
+                unclickHintButton();
+                
+                // Hide hint button when going to final position
+                const hintBtn = document.getElementById('hint-btn');
+                if (hintBtn) {
+                    hintBtn.style.display = 'none';
+                }
+                
+                // Show green check indicator when jumping to final position (for all modes except test mode)
+                removeLastMoveCheck();
+                setTimeout(() => {
+                    showLastMoveCheck();
+                }, 50);
                 
                 // Trigger completion indicator for reaching final position (only in test mode)
                 if (isChallengeMode) {
@@ -5741,6 +6009,20 @@
             
             // Update move highlighting
             highlightCurrentMove();
+            
+            // Show green check indicator if on the final position (for all modes except test mode)
+            if (!isChallengeMode && currentMoveIndex >= currentGame.moves_detailed.length) {
+                // Only add the check indicator if it doesn't already exist
+                const existingCheck = document.querySelector('.last-move-check');
+                if (!existingCheck) {
+                    setTimeout(() => {
+                        showLastMoveCheck();
+                    }, 100);
+                }
+            } else {
+                // Remove check indicator if not on final position
+                removeLastMoveCheck();
+            }
         }
 
         // Animate piece movement
@@ -5973,6 +6255,9 @@
         function flipBoard() {
             boardFlipped = !boardFlipped;
             
+            // Unclick hint button when board is flipped
+            unclickHintButton();
+            
             // Update button appearance
             const flipBtn = document.getElementById('flip-board-btn');
             if (boardFlipped) {
@@ -6096,6 +6381,9 @@
                  challengeBtn.textContent = 'Exit';
                  challengeBtn.classList.add('active');
                  
+                 // Update hint button visibility
+                 updateHintButtonVisibility();
+                 
                  // Hide visual mode options and navigation buttons
                  modeOptions.forEach(option => {
                      option.style.display = 'none';
@@ -6145,6 +6433,9 @@
                  isChallengeMode = false;
                  challengeBtn.textContent = 'Test';
                  challengeBtn.classList.remove('active');
+                 
+                 // Update hint button visibility
+                 updateHintButtonVisibility();
                  
                  // Show visual mode options and navigation buttons
                  modeOptions.forEach(option => {
@@ -6445,6 +6736,12 @@
             document.getElementById('btn-back').addEventListener('click', goToPreviousMove);
             document.getElementById('btn-forward').addEventListener('click', goToNextMove);
             document.getElementById('btn-final').addEventListener('click', goToFinalPosition);
+            
+            // Hint button event listener
+            const hintBtn = document.getElementById('hint-btn');
+            if (hintBtn) {
+                hintBtn.addEventListener('click', showHint);
+            }
 
             // Visual mode option event listeners
             const modeOptions = document.querySelectorAll('.mode-option');

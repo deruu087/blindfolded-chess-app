@@ -92,7 +92,7 @@
       "date": "1880s",
       "white_player": "Café Visitor",
       "black_player": "Blackburne",
-      "locked": true,
+      "locked": false,
       "moves_notation": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nd4", "Nxe5", "Qg5", "Nxf7", "Qxg2", "Rf1", "Qxe4+", "Be2", "Nf3#", "0-1"],
       "moves_detailed": [
         {"move_number": 1, "white": "e4", "black": null, "white_from": "e2", "white_to": "e4", "description": "White opens with e4, claiming the center.", "annotation": "", "evaluation": "+0.2"},
@@ -125,7 +125,7 @@
       "date": "1858",
       "white_player": "Paul Morphy",
       "black_player": "Duke Karl / Count Isouard",
-      "locked": true,
+      "locked": false,
       "moves_notation": ["e4", "e5", "Nf3", "d6", "d4", "Bg4", "dxe5", "Bxf3", "Qxf3", "dxe5", "Bc4", "Nf6", "Qb3", "Qe7", "Nc3", "c6", "Bg5", "b5", "Nxb5", "cxb5", "Bxb5+", "Nbd7", "0-0-0", "Rd8", "Rxd7", "Rxd7", "Rd1", "Qe6", "Bxd7+", "Nxd7", "Qb8+", "Nxb8", "Rd8#", "1-0"],
       "moves_detailed": [
         {"move_number": 1, "white": "e4", "black": null, "description": "White opens with e4, controlling the center", "white_from": "e2", "white_to": "e4", "annotation": "", "evaluation": "+0.2", "commentary": "The most popular opening move, controlling the center and freeing the queen and bishop for development. This move is the foundation of many aggressive openings."},

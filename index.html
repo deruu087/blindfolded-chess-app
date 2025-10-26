@@ -37,6 +37,12 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            width: 100%;
         }
 
         .logo {
@@ -224,7 +230,7 @@
             justify-content: center;
             max-width: 1200px;
             width: 100%;
-            margin: 0 auto;
+            margin: 70px auto 0 auto; /* Add top margin to account for fixed navbar */
         }
 
         .hero-section {
@@ -903,25 +909,25 @@
                     <li><a href="index.html" class="active">Home</a></li>
                 <li><a href="games.html">Games</a></li>
                 <li><a href="puzzles.html">Puzzles</a></li>
-                <li><a href="leaderboard.html">Leaderboard</a></li>
-                <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
-                    <li class="profile-dropdown">
+                <!-- <li><a href="leaderboard.html">Community</a></li> -->
+                <!-- <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li> -->
+                    <!-- <li class="profile-dropdown">
                         <a href="#" id="profileLink" class="profile-button">Profile</a>
-            <div class="dropdown-menu" id="profileDropdown">
-                <a href="profile.html" class="dropdown-item" id="profileMenuItem">
-                    <span class="dropdown-text">My Profile</span>
-                </a>
-                <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
-                    <span class="dropdown-text">Account Information</span>
-                </a>
-                <a href="#" class="dropdown-item" id="signInMenuItem">
-                    <span class="dropdown-text">Sign In</span>
-                </a>
-                <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
-                    <span class="dropdown-text">Logout</span>
-                </a>
-            </div>
-                    </li>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <a href="profile.html" class="dropdown-item" id="profileMenuItem">
+                                <span class="dropdown-text">My Profile</span>
+                            </a>
+                            <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
+                                <span class="dropdown-text">Account Information</span>
+                            </a>
+                            <a href="#" class="dropdown-item" id="signInMenuItem">
+                                <span class="dropdown-text">Sign In</span>
+                            </a>
+                            <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
+                                <span class="dropdown-text">Logout</span>
+                            </a>
+                        </div>
+                    </li> -->
                 </ul>
     </nav>
 
@@ -929,10 +935,10 @@
         <section class="hero-section">
             <div class="hero-content">
                 <div class="hero-text">
-                    <h1 class="hero-title">Welcome to Memo Chess</h1>
-                    <p class="hero-subtitle">
-                        This site was created to give a powerful tool of visualization to chess players so that they can improve their rating in the fastest way.
-                    </p>
+                     <h1 class="hero-title">Welcome to Memo Chess</h1>
+                     <p class="hero-subtitle">
+                         A specialized platform dedicated to chess visualization and memory training that will level up your chess skills and help you play like a grandmaster.
+                     </p>
                 </div>
                 
                 <div class="hero-video">
