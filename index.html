@@ -1599,8 +1599,11 @@
         function initFAQ() {
             const faqQuestions = document.querySelectorAll('.faq-question');
             
+            console.log('Initializing FAQ, found', faqQuestions.length, 'questions');
+            
             faqQuestions.forEach(question => {
-                question.addEventListener('click', () => {
+                question.addEventListener('click', (e) => {
+                    console.log('FAQ clicked');
                     const faqItem = question.parentElement;
                     const faqAnswer = faqItem.querySelector('.faq-answer');
                     const faqIcon = question.querySelector('.faq-icon');
