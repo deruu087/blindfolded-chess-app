@@ -1330,60 +1330,74 @@
             
             // Show/hide subscription tab based on subscription status
             const subscriptionLi = document.querySelector('.subscription-tab-li');
-            if (hasActiveSubscription) {
-                subscriptionLi.classList.add('hidden-for-subscriber');
-            } else {
-                subscriptionLi.classList.remove('hidden-for-subscriber');
+            if (subscriptionLi) {
+                if (hasActiveSubscription) {
+                    subscriptionLi.classList.add('hidden-for-subscriber');
+                } else {
+                    subscriptionLi.classList.remove('hidden-for-subscriber');
+                }
             }
             
             if (isLoggedIn) {
                 // User is logged in - show profile, account info, and logout options
-                profileMenuItem.style.display = 'flex';
-                accountInfoMenuItem.style.display = 'flex';
-                logoutMenuItem.style.display = 'flex';
-                signInMenuItem.style.display = 'none';
+                if (profileMenuItem) profileMenuItem.style.display = 'flex';
+                if (accountInfoMenuItem) accountInfoMenuItem.style.display = 'flex';
+                if (logoutMenuItem) logoutMenuItem.style.display = 'flex';
+                if (signInMenuItem) signInMenuItem.style.display = 'none';
                 
                 // Set up profile menu item
-                profileMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = 'profile.html';
-                };
+                if (profileMenuItem) {
+                    profileMenuItem.onclick = function(e) {
+                        e.preventDefault();
+                        window.location.href = 'profile.html';
+                    };
+                }
                 
                 // Set up account info menu item
-                accountInfoMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    showAccountInfoModal();
-                };
+                if (accountInfoMenuItem) {
+                    accountInfoMenuItem.onclick = function(e) {
+                        e.preventDefault();
+                        showAccountInfoModal();
+                    };
+                }
                 
                 // Set up logout menu item
-                logoutMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    logout();
-                };
+                if (logoutMenuItem) {
+                    logoutMenuItem.onclick = function(e) {
+                        e.preventDefault();
+                        logout();
+                    };
+                }
                 
                 // Profile icon click - go to profile
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = 'profile.html';
-                };
+                if (profileLink) {
+                    profileLink.onclick = function(e) {
+                        e.preventDefault();
+                        window.location.href = 'profile.html';
+                    };
+                }
             } else {
                 // User is not logged in - show sign in option
-                profileMenuItem.style.display = 'none';
-                accountInfoMenuItem.style.display = 'none';
-                logoutMenuItem.style.display = 'none';
-                signInMenuItem.style.display = 'flex';
+                if (profileMenuItem) profileMenuItem.style.display = 'none';
+                if (accountInfoMenuItem) accountInfoMenuItem.style.display = 'none';
+                if (logoutMenuItem) logoutMenuItem.style.display = 'none';
+                if (signInMenuItem) signInMenuItem.style.display = 'flex';
                 
                 // Set up sign in menu item
-                signInMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    showSignInModal();
-                };
+                if (signInMenuItem) {
+                    signInMenuItem.onclick = function(e) {
+                        e.preventDefault();
+                        showSignInModal();
+                    };
+                }
                 
                 // Profile icon click - show sign in modal
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    showSignInModal();
-                };
+                if (profileLink) {
+                    profileLink.onclick = function(e) {
+                        e.preventDefault();
+                        showSignInModal();
+                    };
+                }
             }
         }
 
