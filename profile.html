@@ -27,7 +27,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f5f5f5;
             min-height: 100vh;
-            color: #2c3e50;
+            color: #1e3a8a;
         }
 
         .navbar {
@@ -44,13 +44,13 @@
             align-items: center;
             color: #1e3a8a;
             font-size: 1.5rem;
-            font-weight: bold;
+            font-weight: normal;
             text-decoration: none;
             transition: color 0.3s ease;
         }
 
         .logo:hover {
-            color: #3498db;
+            color: #1e3a8a;
         }
 
         .logo-icon {
@@ -71,7 +71,7 @@
         .nav-links a {
             color: #1e3a8a;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: normal;
             font-size: 1.1rem;
             padding: 0.5rem 1rem;
             border-radius: 4px;
@@ -86,9 +86,9 @@
 
         /* Profile Button Styles */
         .profile-button {
-            color: #ecf0f1;
+            color: #1e3a8a;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: normal;
             font-size: 1.1rem;
             padding: 0.5rem 1rem;
             border-radius: 4px;
@@ -98,7 +98,16 @@
         }
 
         .profile-button:hover {
-            background-color: #34495e;
+            background-color: #e5e7eb;
+        }
+
+        .profile-button.active {
+            background-color: #1e3a8a;
+            color: #ffffff;
+        }
+
+        .profile-button.active:hover {
+            background-color: #1e40af;
         }
 
         /* Profile Dropdown Styles */
@@ -113,7 +122,7 @@
             border-radius: 4px;
             transition: all 0.3s ease;
             font-size: 1rem;
-            font-weight: 500;
+            font-weight: normal;
             position: relative;
         }
 
@@ -208,12 +217,12 @@
 
         .dropdown-text {
             font-size: 0.9rem;
-            font-weight: 500;
+            font-weight: normal;
             color: #1a1a1a;
         }
 
         .nav-links a.active {
-            background-color: #3498db;
+            background-color: #1e3a8a;
             color: #ffffff;
         }
 
@@ -236,13 +245,14 @@
 
         .profile-title {
             font-size: 2.5rem;
-            color: #2c3e50;
+            color: #1e3a8a;
             margin-bottom: 1rem;
+            font-weight: normal;
         }
 
         .profile-subtitle {
             font-size: 1.15rem;
-            color: #7f8c8d;
+            color: #4b5563;
             max-width: 600px;
             margin: 0 auto;
         }
@@ -267,7 +277,7 @@
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #3498db, #2980b9);
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -278,14 +288,14 @@
 
         .profile-name {
             font-size: 1.5rem;
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             text-align: center;
             margin-bottom: 0.5rem;
         }
 
         .profile-email {
-            color: #7f8c8d;
+            color: #4b5563;
             text-align: center;
             margin-bottom: 1.5rem;
         }
@@ -310,14 +320,14 @@
         }
 
         .status-text {
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             margin-bottom: 0.5rem;
         }
 
         .status-details {
             font-size: 0.9rem;
-            color: #7f8c8d;
+            color: #4b5563;
         }
 
         /* Subtle subscription info */
@@ -336,8 +346,8 @@
 
         .plan-name-subtle {
             font-size: 1rem;
-            font-weight: 600;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             margin-bottom: 0.5rem;
         }
 
@@ -367,15 +377,15 @@
         }
 
         .upgrade-text {
-            color: #3498db;
+            color: #1e3a8a;
             text-decoration: none;
             font-size: 0.9rem;
-            font-weight: 500;
+            font-weight: normal;
             transition: color 0.3s ease;
         }
 
         .upgrade-text:hover {
-            color: #2980b9;
+            color: #1e40af;
             text-decoration: underline;
         }
 
@@ -396,12 +406,12 @@
         }
 
         .stat-label {
-            color: #7f8c8d;
+            color: #4b5563;
         }
 
         .stat-value {
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
         }
 
         .training-time-breakdown {
@@ -437,15 +447,15 @@
             border-radius: 12px;
             padding: 2rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            height: 463px;
+            height: 400px;
             display: flex;
             flex-direction: column;
         }
 
         .section-title {
             font-size: 1.5rem;
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             margin-bottom: 1.5rem;
         }
 
@@ -473,13 +483,13 @@
         }
 
         .progress-title {
-            font-weight: 600;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             font-size: 1.1rem;
         }
 
         .progress-count {
-            font-weight: bold;
+            font-weight: normal;
             color: #27ae60;
             font-size: 1.2rem;
         }
@@ -518,7 +528,7 @@
 
         .progress-goal {
             font-size: 0.9rem;
-            color: #7f8c8d;
+            color: #4b5563;
             margin-top: 0.5rem;
             text-align: center;
         }
@@ -532,7 +542,7 @@
         }
 
         .leaderboard-widget .progress-header {
-            background: linear-gradient(135deg, #3498db, #2980b9);
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
             color: white;
             margin: -1rem -1rem 1rem -1rem;
             padding: 1rem;
@@ -541,12 +551,12 @@
 
         .leaderboard-widget .progress-title {
             color: white;
-            font-weight: 600;
+            font-weight: normal;
         }
 
         .leaderboard-widget .progress-count {
             color: white;
-            font-weight: 700;
+            font-weight: normal;
             font-size: 1.2rem;
         }
 
@@ -560,8 +570,8 @@
 
         .rank-text {
             font-size: 1.1rem;
-            font-weight: 600;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             margin-bottom: 1rem;
         }
 
@@ -574,7 +584,7 @@
         }
 
         .percentile-fill {
-            background: linear-gradient(90deg, #3498db, #2ecc71);
+            background: linear-gradient(90deg, #1e3a8a, #2ecc71);
             height: 100%;
             border-radius: 4px;
             transition: width 0.5s ease;
@@ -582,7 +592,7 @@
 
         .next-milestone {
             font-size: 0.9rem;
-            color: #7f8c8d;
+            color: #4b5563;
             font-style: italic;
         }
 
@@ -593,14 +603,14 @@
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
             font-size: 0.8rem;
-            font-weight: 600;
+            font-weight: normal;
             margin-left: 0.5rem;
         }
 
         .percentile-badge.top-1 { background: linear-gradient(135deg, #f1c40f, #f39c12); }
         .percentile-badge.top-5 { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
         .percentile-badge.top-10 { background: linear-gradient(135deg, #cd7f32, #a0522d); }
-        .percentile-badge.top-25 { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .percentile-badge.top-25 { background: linear-gradient(135deg, #1e3a8a, #1e40af); }
 
 
         .recent-games {
@@ -625,21 +635,21 @@
         }
 
         .game-name {
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             margin-bottom: 0.25rem;
         }
 
         .game-date {
             font-size: 0.9rem;
-            color: #7f8c8d;
+            color: #4b5563;
         }
 
         .game-status {
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
             font-size: 0.8rem;
-            font-weight: bold;
+            font-weight: normal;
         }
 
         .game-status.completed {
@@ -662,7 +672,7 @@
             padding: 0.75rem 1.5rem;
             border: none;
             border-radius: 8px;
-            font-weight: bold;
+            font-weight: normal;
             cursor: pointer;
             transition: background-color 0.3s ease;
             text-decoration: none;
@@ -671,21 +681,21 @@
         }
 
         .btn-primary {
-            background: #3498db;
+            background: #1e3a8a;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #2980b9;
+            background: #1e40af;
         }
 
         .btn-secondary {
-            background: #95a5a6;
+            background: #4b5563;
             color: white;
         }
 
         .btn-secondary:hover {
-            background: #7f8c8d;
+            background: #374151;
         }
 
         .btn-success {
@@ -752,8 +762,9 @@
 
         .modal-header h2 {
             margin: 0;
-            color: #2c3e50;
+            color: #1e3a8a;
             font-size: 1.5rem;
+            font-weight: normal;
         }
 
         .form-group {
@@ -763,8 +774,8 @@
         .form-label {
             display: block;
             margin-bottom: 0.5rem;
-            color: #2c3e50;
-            font-weight: 500;
+            color: #1e3a8a;
+            font-weight: normal;
         }
 
         .form-input {
@@ -778,8 +789,8 @@
 
         .form-input:focus {
             outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.2);
         }
 
         .modal-buttons {
@@ -815,13 +826,13 @@
         }
 
         .info-item label {
-            font-weight: 600;
-            color: #2c3e50;
+            font-weight: normal;
+            color: #1e3a8a;
             min-width: 100px;
         }
 
         .info-item span {
-            color: #7f8c8d;
+            color: #4b5563;
             text-align: right;
         }
 
@@ -839,21 +850,21 @@
 
 
         .btn-primary {
-            background-color: #3498db;
+            background-color: #1e3a8a;
             color: white;
         }
 
         .btn-primary:hover {
-            background-color: #2980b9;
+            background-color: #1e40af;
         }
 
         .btn-secondary {
-            background-color: #95a5a6;
+            background-color: #4b5563;
             color: white;
         }
 
         .btn-secondary:hover {
-            background-color: #7f8c8d;
+            background-color: #374151;
         }
 
         .register-link {
@@ -862,7 +873,7 @@
         }
 
         .register-link a {
-            color: #3498db;
+            color: #1e3a8a;
             text-decoration: none;
         }
 
@@ -873,7 +884,7 @@
         .close {
             color: #aaa;
             font-size: 28px;
-            font-weight: bold;
+            font-weight: normal;
             cursor: pointer;
             position: absolute;
             right: 15px;
@@ -916,13 +927,13 @@
 
         .logout-confirm-header h2 {
             margin: 0;
-            color: #2c3e50;
+            color: #1e3a8a;
             font-size: 1.25rem;
-            font-weight: 600;
+            font-weight: normal;
         }
 
         .logout-confirm-message {
-            color: #7f8c8d;
+            color: #4b5563;
             margin-bottom: 2rem;
             line-height: 1.5;
         }
@@ -938,7 +949,7 @@
             border: none;
             border-radius: 8px;
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: normal;
             cursor: pointer;
             transition: all 0.3s ease;
             min-width: 100px;
@@ -954,12 +965,12 @@
         }
 
         .btn-logout-no {
-            background-color: #95a5a6;
+            background-color: #4b5563;
             color: white;
         }
 
         .btn-logout-no:hover {
-            background-color: #7f8c8d;
+            background-color: #374151;
         }
 
         .google-signup {
@@ -976,7 +987,7 @@
             justify-content: center;
             gap: 8px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: normal;
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
@@ -1015,10 +1026,11 @@
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
                 <li><a href="games.html">Games</a></li>
-                <li><a href="leaderboard.html">Community</a></li>
+                <li><a href="puzzles.html">Puzzles</a></li>
+                <!-- <li><a href="leaderboard.html">Community</a></li> -->
                 <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
                     <li class="profile-dropdown">
-                        <a href="#" id="profileLink" class="profile-button">Profile</a>
+                        <a href="#" id="profileLink" class="profile-button active">Profile</a>
             <div class="dropdown-menu" id="profileDropdown">
                 <a href="profile.html" class="dropdown-item" id="profileMenuItem">
                     <span class="dropdown-text">My Profile</span>
@@ -1080,6 +1092,8 @@
                         <span class="stat-value" id="gamesPlayed">0</span>
                     </li>
                     <li>
+                        <span class="stat-label">Puzzles Completed</span>
+                        <span class="stat-value" id="puzzlesCompleted">0</span>
                     </li>
                     <li>
                         <span class="stat-label">Training Time</span>
@@ -1107,21 +1121,15 @@
                             <div class="progress-goal" id="gamesProgressGoal">Goal: Complete all available games</div>
                         </div>
                         
-                        <!-- Leaderboard Widget -->
-                        <div class="progress-item leaderboard-widget">
+                        <div class="progress-item">
                             <div class="progress-header">
-                                <div class="progress-title">🏆 Your Ranking</div>
-                                <div class="progress-count" id="userPercentile">Calculating...</div>
+                                <div class="progress-title">Puzzles Completed</div>
+                                <div class="progress-count" id="puzzlesProgressCount">0</div>
                             </div>
-                            <div class="leaderboard-content">
-                                <div class="ranking-info" id="rankingInfo">
-                                    <div class="rank-text" id="rankText">Loading your position...</div>
-                                    <div class="percentile-bar">
-                                        <div class="percentile-fill" id="percentileFill" style="width: 0%"></div>
-                                    </div>
-                                    <div class="next-milestone" id="nextMilestone">Complete more games to improve your ranking!</div>
-                                </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="puzzlesProgressBar" style="width: 0%"></div>
                             </div>
+                            <div class="progress-goal" id="puzzlesProgressGoal">Goal: Complete all available puzzles</div>
                         </div>
                         
                     </div>
@@ -1275,42 +1283,76 @@
             const progress = progressTracker.getProgressSummary();
             const trainingTime = progressTracker.getDetailedTrainingTime();
             
-            // Count completed games from the actual completed lists
-            const completedGames = progressTracker.userProgress.completedGames.length;
-            
-            // Update the display with actual completed counts
-            document.getElementById('gamesPlayed').textContent = completedGames;
-            
-            // Update training time with detailed breakdown
-            const trainingTimeElement = document.getElementById('trainingHours');
-            if (trainingTimeElement) {
-                trainingTimeElement.innerHTML = `
-                    <div class="training-time-breakdown">
-                        <div class="total-time">${trainingTime.total}</div>
-                        ${trainingTime.isActive ? `<div class="current-session">Current: ${trainingTime.currentSession}</div>` : ''}
-                    </div>
-                `;
+            // Count completed games and puzzles separately
+            async function getCompletedCounts() {
+                try {
+                    const response = await fetch(`/games/games.json?t=${Date.now()}`);
+                    const data = await response.json();
+                    
+                    if (data && data.games) {
+                        const completedGames = progressTracker.userProgress.completedGames.filter(gameId => {
+                            const game = data.games.find(g => g.id === gameId);
+                            return game && game.type === 'game';
+                        }).length;
+                        
+                        const completedPuzzles = progressTracker.userProgress.completedGames.filter(gameId => {
+                            const game = data.games.find(g => g.id === gameId);
+                            return game && game.type === 'puzzle';
+                        }).length;
+                        
+                        // Update the display
+                        document.getElementById('gamesPlayed').textContent = completedGames;
+                        document.getElementById('puzzlesCompleted').textContent = completedPuzzles;
+                        
+                        return { completedGames, completedPuzzles };
+                    }
+                } catch (error) {
+                    console.error('Error getting completed counts:', error);
+                    // Fallback
+                    const allCompleted = progressTracker.userProgress.completedGames.length;
+                    document.getElementById('gamesPlayed').textContent = allCompleted;
+                    document.getElementById('puzzlesCompleted').textContent = '0';
+                    return { completedGames: allCompleted, completedPuzzles: 0 };
+                }
             }
             
-            document.getElementById('currentStreak').textContent = progress.currentStreak + ' days';
-            
-            // Update progress bars
-            updateProgressBars(completedGames);
-            
-            // Update leaderboard widget
-            updateLeaderboardWidget(completedGames);
-            
-            // Update userData to match progress tracker
-            userData.gamesPlayed = completedGames;
-            userData.trainingHours = progress.totalHours;
-            userData.currentStreak = progress.currentStreak;
-            
-            console.log('Profile stats updated:', {
-                completedGames: completedGames,
-                totalTime: trainingTime.total,
-                currentSession: trainingTime.currentSession,
-                isActive: trainingTime.isActive,
-                currentStreak: progress.currentStreak
+            // Get completed counts
+            getCompletedCounts().then(({ completedGames, completedPuzzles }) => {
+                const allCompleted = completedGames + completedPuzzles;
+                
+                // Update training time with detailed breakdown
+                const trainingTimeElement = document.getElementById('trainingHours');
+                if (trainingTimeElement) {
+                    trainingTimeElement.innerHTML = `
+                        <div class="training-time-breakdown">
+                            <div class="total-time">${trainingTime.total}</div>
+                            ${trainingTime.isActive ? `<div class="current-session">Current: ${trainingTime.currentSession}</div>` : ''}
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('currentStreak').textContent = progress.currentStreak + ' days';
+                
+                // Update progress bars - pass all completed items, function will filter by type
+                updateProgressBars();
+                
+                // Update leaderboard widget (using all completed items for now)
+                updateLeaderboardWidget(allCompleted);
+                
+                // Update userData to match progress tracker
+                userData.gamesPlayed = allCompleted;
+                userData.trainingHours = progress.totalHours;
+                userData.currentStreak = progress.currentStreak;
+                
+                console.log('Profile stats updated:', {
+                    completedGames: completedGames,
+                    completedPuzzles: completedPuzzles,
+                    allCompleted: allCompleted,
+                    totalTime: trainingTime.total,
+                    currentSession: trainingTime.currentSession,
+                    isActive: trainingTime.isActive,
+                    currentStreak: progress.currentStreak
+                });
             });
         }
 
@@ -1404,32 +1446,56 @@
         }
 
         // Update progress bars with current completion counts
-        async function updateProgressBars(completedGames) {
+        async function updateProgressBars() {
             try {
-                // Get total available games
+                // Get total available games and puzzles
                 const response = await fetch(`/games/games.json?t=${Date.now()}`);
                 const data = await response.json();
                 
                 if (data && data.games) {
                     const totalGames = data.games.filter(game => game.type === 'game').length;
+                    const totalPuzzles = data.games.filter(game => game.type === 'puzzle').length;
+                    
+                    // Get completed games and puzzles from progress tracker
+                    const completedGames = progressTracker.userProgress.completedGames.filter(gameId => {
+                        const game = data.games.find(g => g.id === gameId);
+                        return game && game.type === 'game';
+                    }).length;
+                    
+                    const completedPuzzles = progressTracker.userProgress.completedGames.filter(gameId => {
+                        const game = data.games.find(g => g.id === gameId);
+                        return game && game.type === 'puzzle';
+                    }).length;
                     
                     console.log('Progress bar debug:');
                     console.log('All games:', data.games.map(g => ({ name: g.name, type: g.type })));
                     console.log('Games (type=game):', data.games.filter(game => game.type === 'game').map(g => g.name));
                     console.log('Total games:', totalGames);
+                    console.log('Total puzzles:', totalPuzzles);
+                    console.log('Completed games:', completedGames);
+                    console.log('Completed puzzles:', completedPuzzles);
                     
-                    // Calculate progress percentage
+                    // Calculate progress percentage for games
                     const gamesProgress = totalGames > 0 ? (completedGames / totalGames) * 100 : 0;
+                    
+                    // Calculate progress percentage for puzzles
+                    const puzzlesProgress = totalPuzzles > 0 ? (completedPuzzles / totalPuzzles) * 100 : 0;
                     
                     // Update games progress
                     document.getElementById('gamesProgressCount').textContent = `${completedGames}/${totalGames}`;
                     document.getElementById('gamesProgressBar').style.width = `${Math.min(gamesProgress, 100)}%`;
                     document.getElementById('gamesProgressGoal').textContent = `Goal: Complete all ${totalGames} available games`;
+                    
+                    // Update puzzles progress
+                    document.getElementById('puzzlesProgressCount').textContent = `${completedPuzzles}/${totalPuzzles}`;
+                    document.getElementById('puzzlesProgressBar').style.width = `${Math.min(puzzlesProgress, 100)}%`;
+                    document.getElementById('puzzlesProgressGoal').textContent = `Goal: Complete all ${totalPuzzles} available puzzles`;
                 }
             } catch (error) {
                 console.error('Error updating progress bars:', error);
                 // Fallback to basic display
-                document.getElementById('gamesProgressCount').textContent = completedGames;
+                document.getElementById('gamesProgressCount').textContent = '0';
+                document.getElementById('puzzlesProgressCount').textContent = '0';
             }
         }
 
