@@ -2478,7 +2478,7 @@
                 <li><a href="games.html" class="active">Games</a></li>
                 <li><a href="puzzles.html">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
-                <!-- <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li> -->
+                <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
                     <!-- <li class="profile-dropdown">
                         <a href="#" id="profileLink" class="profile-button">Profile</a>
                         <div class="dropdown-menu" id="profileDropdown">
@@ -2889,10 +2889,12 @@
             
             // Show/hide subscription tab based on subscription status
             const subscriptionLi = document.querySelector('.subscription-tab-li');
-            if (hasActiveSubscription) {
-                subscriptionLi.classList.add('hidden-for-subscriber');
-            } else {
-                subscriptionLi.classList.remove('hidden-for-subscriber');
+            if (subscriptionLi) {
+                if (hasActiveSubscription) {
+                    subscriptionLi.classList.add('hidden-for-subscriber');
+                } else {
+                    subscriptionLi.classList.remove('hidden-for-subscriber');
+                }
             }
             
             if (isLoggedIn) {
