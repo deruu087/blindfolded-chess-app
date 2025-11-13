@@ -386,7 +386,6 @@
             <li><a href="index.html">Home</a></li>
             <li><a href="games.html">Games</a></li>
             <li><a href="leaderboard.html" class="active">Community</a></li>
-            <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
             <li class="profile-dropdown">
                 <a href="#" id="profileLink" class="profile-button">Profile</a>
                 <div class="dropdown-menu" id="profileDropdown">
@@ -709,17 +708,9 @@
             const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
             const signInMenuItem = document.getElementById('signInMenuItem');
             const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const subscriptionTab = document.getElementById('subscriptionTab');
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
             
-            // Show/hide subscription tab based on subscription status
-            const subscriptionLi = document.querySelector('.subscription-tab-li');
-            if (hasActiveSubscription) {
-                subscriptionLi.classList.add('hidden-for-subscriber');
-            } else {
-                subscriptionLi.classList.remove('hidden-for-subscriber');
-            }
+            // Subscription tab removed - content is now on home page
             
             if (isLoggedIn) {
                 // User is logged in - show profile, account info, and logout options

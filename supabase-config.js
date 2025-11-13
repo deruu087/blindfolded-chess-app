@@ -1,32 +1,32 @@
 // Supabase configuration
 // Replace these with your actual Supabase project credentials
 
-export const supabaseConfig = {
-    url: 'YOUR_SUPABASE_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY'
-};
+// Get Supabase client from CDN (loaded in HTML)
+// After you add the Supabase script to your HTML, you can access it via window.supabase
 
-// For now, we'll use a simple in-memory storage as fallback
-// This will be replaced with actual Supabase calls
-export const fallbackStorage = {
-    games: [],
-    
-    saveGame(gameData) {
-        this.games.push(gameData);
-        console.log('Game saved to fallback storage:', gameData.id);
-    },
-    
-    getGames() {
-        return this.games;
-    },
-    
-    deleteGame(gameId) {
-        const index = this.games.findIndex(game => game.id === gameId);
-        if (index !== -1) {
-            this.games.splice(index, 1);
-            console.log('Game deleted from fallback storage:', gameId);
-            return true;
-        }
-        return false;
+let supabaseClient = null;
+
+// Initialize Supabase client
+function initSupabase() {
+    if (typeof supabase !== 'undefined') {
+        // Your Supabase credentials
+        const SUPABASE_URL = 'https://yaaxydrmuslgzjletzbw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhYXh5ZHJtdXNsZ3pqbGV0emJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQ3NjksImV4cCI6MjA3Nzg3MDc2OX0.uv4fqCgRxq7HCT5TWvFxq5xHOUNFT3PI4nmvhhPS2Qk';
+        
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase client initialized');
+        return supabaseClient;
+    } else {
+        console.warn('Supabase library not loaded yet');
+        return null;
     }
-};
+}
+
+// Export for use in other files
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { initSupabase, getSupabase: () => supabaseClient };
+}
+
+// For browser usage
+window.initSupabase = initSupabase;
+window.getSupabase = () => supabaseClient;

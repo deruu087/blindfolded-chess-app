@@ -1,0 +1,418 @@
+// Helper functions to interact with Supabase database
+
+/**
+ * Get the current user's progress from the database
+ */
+async function getUserProgress() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return null;
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return null;
+    }
+
+    // Fetch user's progress from database
+    const { data, error } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+    if (error) {
+        console.error('Error fetching progress:', error);
+        return null;
+    }
+
+    return data;
+}
+
+/**
+ * Save or update user's progress in the database
+ */
+async function saveUserProgress(progressData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return false;
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return false;
+    }
+
+    // Prepare data to save
+    const dataToSave = {
+        user_id: user.id,
+        completed_games: progressData.completedGames || [],
+        completed_puzzles: progressData.completedPuzzles || [],
+        total_games_played: progressData.totalGamesPlayed || 0,
+        training_hours: progressData.trainingHours || 0,
+        current_streak: progressData.currentStreak || 0,
+        last_activity_date: new Date().toISOString().split('T')[0], // Today's date
+        updated_at: new Date().toISOString()
+    };
+
+    // Try to update existing record, or insert new one
+    const { data, error } = await supabase
+        .from('user_progress')
+        .upsert(dataToSave, {
+            onConflict: 'user_id'
+        });
+
+    if (error) {
+        console.error('Error saving progress:', error);
+        return false;
+    }
+
+    console.log('✅ Progress saved successfully!');
+    return true;
+}
+
+/**
+ * Test function to check if we can connect to the database
+ */
+async function testDatabaseConnection() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return;
+    }
+
+    console.log('Testing database connection...');
+    
+    // Try to query the table (this will work even without auth)
+    const { data, error } = await supabase
+        .from('user_progress')
+        .select('count');
+
+    if (error) {
+        console.error('❌ Database connection failed:', error);
+    } else {
+        console.log('✅ Database connection successful!');
+    }
+}
+
+/**
+ * Save a custom game to the database
+ */
+async function saveCustomGame(gameData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Prepare data to save
+    const dataToSave = {
+        user_id: user.id,
+        game_data: gameData, // Store all game data as JSON
+        updated_at: new Date().toISOString()
+    };
+
+    // Insert the new custom game
+    const { data, error } = await supabase
+        .from('custom_games')
+        .insert(dataToSave)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error saving custom game:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Custom game saved successfully!', data);
+    return { success: true, game: data };
+}
+
+/**
+ * Get all custom games for the current user
+ */
+async function getUserCustomGames() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return null;
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return null;
+    }
+
+    // Fetch user's custom games from database
+    const { data, error } = await supabase
+        .from('custom_games')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching custom games:', error);
+        return null;
+    }
+
+    return data;
+}
+
+/**
+ * Delete a custom game by ID
+ */
+async function deleteCustomGame(gameId) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Delete the game (RLS will ensure user can only delete their own games)
+    const { error } = await supabase
+        .from('custom_games')
+        .delete()
+        .eq('id', gameId)
+        .eq('user_id', user.id);
+
+    if (error) {
+        console.error('Error deleting custom game:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Custom game deleted successfully!');
+    return { success: true };
+}
+
+/**
+ * Update a custom game
+ */
+async function updateCustomGame(gameId, gameData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Update the game (RLS will ensure user can only update their own games)
+    const { data, error } = await supabase
+        .from('custom_games')
+        .update({
+            game_data: gameData,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', gameId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating custom game:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Custom game updated successfully!', data);
+    return { success: true, game: data };
+}
+
+/**
+ * Get the current user's subscription from the database
+ */
+async function getUserSubscription() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return null;
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return null;
+    }
+
+    // Fetch user's subscription from database
+    const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+    if (error) {
+        // If no subscription found, that's okay - user is on free plan
+        if (error.code === 'PGRST116') {
+            console.log('No subscription found - user is on free plan');
+            return null;
+        }
+        console.error('Error fetching subscription:', error);
+        return null;
+    }
+
+    return data;
+}
+
+/**
+ * Check if the current user has an active subscription
+ * Returns true if subscription exists and status is 'active'
+ */
+async function hasActiveSubscription() {
+    const subscription = await getUserSubscription();
+    
+    if (!subscription) {
+        return false;
+    }
+
+    // Check if subscription is active and not expired
+    if (subscription.status === 'active') {
+        // If there's an end_date, check if it's in the future
+        if (subscription.end_date) {
+            const endDate = new Date(subscription.end_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return endDate >= today;
+        }
+        // If no end_date (lifetime plan), it's active
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Create or update a subscription (for testing/manual entry)
+ * @param {object} subscriptionData - { plan_type, status, start_date, end_date, amount_paid, currency, payment_method }
+ */
+async function createOrUpdateSubscription(subscriptionData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Prepare data to save
+    const dataToSave = {
+        user_id: user.id,
+        plan_type: subscriptionData.plan_type || 'monthly',
+        status: subscriptionData.status || 'active',
+        start_date: subscriptionData.start_date || new Date().toISOString().split('T')[0],
+        end_date: subscriptionData.end_date || null,
+        amount_paid: subscriptionData.amount_paid || null,
+        currency: subscriptionData.currency || 'EUR',
+        payment_method: subscriptionData.payment_method || 'manual',
+        updated_at: new Date().toISOString()
+    };
+
+    // Try to update existing record, or insert new one
+    const { data, error } = await supabase
+        .from('subscriptions')
+        .upsert(dataToSave, {
+            onConflict: 'user_id'
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error saving subscription:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Subscription saved successfully!', data);
+    return { success: true, subscription: data };
+}
+
+/**
+ * Cancel a subscription (sets status to 'cancelled' but keeps it active until end_date)
+ */
+async function cancelSubscription() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Update subscription status to cancelled
+    const { data, error } = await supabase
+        .from('subscriptions')
+        .update({
+            status: 'cancelled',
+            updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error cancelling subscription:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Subscription cancelled successfully!', data);
+    return { success: true, subscription: data };
+}
+
+// Make functions available globally
+window.getUserProgress = getUserProgress;
+window.saveUserProgress = saveUserProgress;
+window.testDatabaseConnection = testDatabaseConnection;
+window.saveCustomGame = saveCustomGame;
+window.getUserCustomGames = getUserCustomGames;
+window.deleteCustomGame = deleteCustomGame;
+window.updateCustomGame = updateCustomGame;
+window.getUserSubscription = getUserSubscription;
+window.hasActiveSubscription = hasActiveSubscription;
+window.createOrUpdateSubscription = createOrUpdateSubscription;
+window.cancelSubscription = cancelSubscription;
+

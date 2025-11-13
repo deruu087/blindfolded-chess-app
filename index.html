@@ -9,16 +9,7 @@
     <title>Memo Chess - Master Chess Visualization & Memory Training</title>
     <link rel="icon" type="image/png" href="images/chess-board.png">
     <script>
-        // Check subscription status immediately to prevent flashing
-        (function() {
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-            if (hasActiveSubscription) {
-                // Add CSS to hide subscription tab for subscribers
-                const style = document.createElement('style');
-                style.textContent = '.subscription-tab-li { display: none !important; }';
-                document.head.appendChild(style);
-            }
-        })();
+        // Subscription tab removed - content is now on home page
     </script>
     <style>
         * {
@@ -197,15 +188,6 @@
             transform: translateX(2px);
         }
         
-        /* Initially hide subscription tab only for users with active subscription */
-        .subscription-tab-li {
-            display: block; /* Show by default for free users */
-        }
-        
-        /* Hide only if user has active subscription (set by JavaScript) */
-        .subscription-tab-li.hidden-for-subscriber {
-            display: none;
-        }
 
         .dropdown-icon {
             font-size: 1rem;
@@ -393,11 +375,184 @@
             margin-right: auto;
         }
 
+        /* Subscription Styles */
+        .subscription-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            margin-top: 6rem;
+        }
+
+        .subscription-title {
+            font-size: 2.5rem;
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+            font-weight: normal;
+        }
+
+        .subscription-subtitle {
+            font-size: 1.15rem;
+            color: #4b5563;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .pricing-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 3rem;
+        }
+
+        .pricing-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .pricing-card.featured {
+            border: 2px solid #1e3a8a;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured::before {
+            content: "Most Popular";
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e3a8a;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-price {
+            font-size: 3rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-period {
+            color: #4b5563;
+            margin-bottom: 2rem;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 2rem;
+            padding: 0;
+        }
+
+        .plan-features li {
+            padding: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .plan-features li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: normal;
+            margin-right: 0.5rem;
+        }
+
+        .subscribe-btn {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: normal;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+
+        .subscribe-btn:hover {
+            background: #1e40af;
+        }
+
+        .subscribe-btn.secondary {
+            background: #95a5a6;
+        }
+
+        .subscribe-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .free-features {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 1.5rem auto 3rem;
+            max-width: 600px;
+        }
+
+        .free-features h3 {
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: normal;
+        }
+
+        .free-features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .free-features li {
+            padding: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .free-features li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: normal;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .pricing-card.featured {
+                transform: none;
+            }
+            
+            .subscription-title {
+                font-size: 2rem;
+            }
+        }
+
         /* FAQ Styles */
         .faq-header {
             text-align: center;
             margin-bottom: 2rem;
-            padding-top: 6rem;
+            padding-top: 5rem;
         }
 
         .faq-title {
@@ -914,7 +1069,6 @@
                 <li><a href="games.html">Games</a></li>
                 <li><a href="puzzles.html">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
-                <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
                     <li class="profile-dropdown">
                         <a href="#" id="profileLink" class="profile-button">Profile</a>
                         <div class="dropdown-menu" id="profileDropdown">
@@ -1000,6 +1154,59 @@
                 </div>
             </div>
         </section>
+
+        <!-- Subscription Section -->
+        <div class="subscription-header">
+            <h1 class="subscription-title">Unlock All Chess Content</h1>
+            <p class="subscription-subtitle">
+                Get unlimited access to our complete library of chess games, puzzles, and training materials. 
+                Perfect your blindfold chess skills with premium content.
+            </p>
+        </div>
+
+        <div class="pricing-container">
+            <div class="pricing-card">
+                <h3 class="plan-name">Monthly</h3>
+                <div class="plan-price">$4.99</div>
+                <div class="plan-period">per month</div>
+                <ul class="plan-features">
+                    <li>Unlimited access to all games</li>
+                    <li>Unlimited access to all puzzles</li>
+                    <li>Advanced training modes</li>
+                    <li>Progress tracking</li>
+                    <li>Priority support</li>
+                </ul>
+                <button class="subscribe-btn" onclick="subscribe('monthly')">
+                    Subscribe Monthly
+                </button>
+            </div>
+
+            <div class="pricing-card featured">
+                <h3 class="plan-name">3 Months</h3>
+                <div class="plan-price">$12.99</div>
+                <div class="plan-period">per 3 months (Save 13%)</div>
+                <ul class="plan-features">
+                    <li>Everything in Monthly</li>
+                    <li>Save $2 per 3 months</li>
+                    <li>Exclusive quarterly content</li>
+                    <li>Priority feature requests</li>
+                    <li>Advanced analytics</li>
+                </ul>
+                <button class="subscribe-btn" onclick="subscribe('quarterly')">
+                    Subscribe 3 Months
+                </button>
+            </div>
+        </div>
+
+        <div class="free-features">
+            <h3>Free Tier Includes</h3>
+            <ul>
+                <li>3 Classic Chess Games (Fool's Mate, Scholar's Mate, Légal Trap)</li>
+                <li>2 Tactical Puzzles</li>
+                <li>Basic training modes</li>
+                <li>Community access</li>
+            </ul>
+        </div>
 
         <!-- FAQ Section -->
         <div class="faq-header">
@@ -1318,25 +1525,30 @@
         }
 
         // Check login status and update navigation
-        function updateNavigation() {
+        async function updateNavigation() {
             const profileLink = document.getElementById('profileLink');
             const profileMenuItem = document.getElementById('profileMenuItem');
             const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
             const signInMenuItem = document.getElementById('signInMenuItem');
             const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const subscriptionTab = document.getElementById('subscriptionTab');
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
             
-            // Show/hide subscription tab based on subscription status
-            const subscriptionLi = document.querySelector('.subscription-tab-li');
-            if (subscriptionLi) {
-                if (hasActiveSubscription) {
-                    subscriptionLi.classList.add('hidden-for-subscriber');
-                } else {
-                    subscriptionLi.classList.remove('hidden-for-subscriber');
+            // Check subscription status from Supabase (if available) or localStorage as fallback
+            let hasActiveSubscription = false;
+            if (typeof window.hasActiveSubscription === 'function') {
+                try {
+                    hasActiveSubscription = await window.hasActiveSubscription();
+                } catch (e) {
+                    console.log('Supabase subscription check failed, using localStorage fallback');
+                    // Fallback to localStorage if Supabase not ready
+                    hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
                 }
+            } else {
+                // Fallback to localStorage if Supabase function not available
+                hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
             }
+            
+            // Subscription tab removed - content is now on home page
             
             if (isLoggedIn) {
                 // User is logged in - show profile, account info, and logout options
@@ -1402,21 +1614,74 @@
         }
 
         // Show account information modal
-        function showAccountInfoModal() {
+        async function showAccountInfoModal() {
             const userName = localStorage.getItem('userName') || 'User';
             const userEmail = localStorage.getItem('userEmail') || 'No email provided';
-            const subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
             
-            // Format subscription display
-            let subscriptionDisplay = 'Free Account';
-            if (subscriptionPlan === 'monthly') {
-                subscriptionDisplay = 'Premium Monthly';
+            // Get subscription from Supabase first, fallback to localStorage
+            let subscription = null;
+            let subscriptionPlan = 'free';
+            let hasActiveSubscription = false;
+            
+            if (typeof window.getUserSubscription === 'function') {
+                try {
+                    subscription = await window.getUserSubscription();
+                    if (subscription) {
+                        subscriptionPlan = subscription.plan_type;
+                        hasActiveSubscription = subscription.status === 'active';
+                    }
+                } catch (e) {
+                    console.log('Error fetching subscription from Supabase:', e);
+                    // Fallback to localStorage
+                    subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+                }
+            } else {
+                // Fallback to localStorage if Supabase not available
+                subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            }
+            
+            // Format subscription display with details
+            let subscriptionDisplay = '';
+            if (subscription && hasActiveSubscription) {
+                // Show detailed subscription info from Supabase
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const price = subscription.amount_paid ? 
+                             `${subscription.currency || 'EUR'} ${subscription.amount_paid}` : 
+                             (subscription.plan_type === 'monthly' ? '€4.99/month' : '€12.99/quarter');
+                const startDate = subscription.start_date ? 
+                                new Date(subscription.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                                'N/A';
+                
+                subscriptionDisplay = `
+                    <div style="margin-top: 0.5rem;">
+                        <div style="color: #27ae60; font-weight: normal; margin-bottom: 0.25rem;">${planName} - Active</div>
+                        <div style="font-size: 0.9rem; color: #4b5563;">
+                            <div>Amount: ${price}</div>
+                            <div>Start: ${startDate}</div>
+                            <div>Method: ${subscription.payment_method || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (subscription && subscription.status === 'cancelled') {
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const endDate = subscription.end_date ? 
+                               new Date(subscription.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                               'N/A';
+                subscriptionDisplay = `${planName} (Cancelled) - Access until ${endDate}`;
+            } else if (subscriptionPlan === 'monthly') {
+                subscriptionDisplay = 'Premium Monthly - $4.99/month';
             } else if (subscriptionPlan === 'quarterly') {
-                subscriptionDisplay = 'Premium Quarterly';
+                subscriptionDisplay = 'Premium Quarterly - $12.99/quarter';
             } else if (subscriptionPlan === 'monthly_cancelled') {
                 subscriptionDisplay = 'Premium Monthly (Cancelled)';
             } else if (subscriptionPlan === 'quarterly_cancelled') {
                 subscriptionDisplay = 'Premium Quarterly (Cancelled)';
+            } else {
+                subscriptionDisplay = 'Free Account';
             }
             
             const modal = document.createElement('div');
@@ -1609,6 +1874,45 @@
             window.location.href = 'profile.html';
         }
 
+        // Subscription functions
+        function subscribe(plan) {
+            // Check if user is authenticated
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (!isLoggedIn) {
+                // Store the selected plan and show sign-in modal
+                localStorage.setItem('pendingSubscription', plan);
+                showSignInModal();
+                return;
+            }
+            
+            // User is authenticated, redirect to Dodo Payments checkout
+            redirectToDodoPayments(plan);
+        }
+
+        // Redirect to Dodo Payments checkout
+        function redirectToDodoPayments(plan) {
+            // Dodo Payments product ID for monthly subscription
+            const productId = 'pdt_VIAqmDBox37hRlUhkU7AP';
+            
+            // Get user email for pre-filling checkout (optional)
+            const userEmail = localStorage.getItem('userEmail') || '';
+            
+            // Build checkout URL
+            let checkoutUrl = `https://checkout.dodopayments.com/buy/${productId}?quantity=1`;
+            
+            // Add user email if available (helps with order tracking)
+            if (userEmail) {
+                checkoutUrl += `&email=${encodeURIComponent(userEmail)}`;
+            }
+            
+            // Store the plan type for when we get the webhook callback
+            localStorage.setItem('pendingSubscriptionPlan', plan);
+            
+            // Redirect to Dodo Payments checkout
+            window.location.href = checkoutUrl;
+        }
+
         // FAQ Accordion functionality
         function initFAQ() {
             const faqQuestions = document.querySelectorAll('.faq-question');
@@ -1691,5 +1995,53 @@
             </div>
         </div>
     </div>
+    
+    <!-- Supabase JavaScript Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Supabase Configuration -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase Helper Functions -->
+    <script src="supabase-helpers.js"></script>
+    
+    <!-- Supabase Authentication Functions -->
+    <script src="supabase-auth.js"></script>
+    
+    <!-- Initialize Supabase when page loads -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Supabase client
+            initSupabase();
+            
+            // Test connection (check if Supabase is working)
+            const client = getSupabase();
+            if (client) {
+                console.log('✅ Supabase is ready to use!');
+                
+                // Set up auth state listener
+                setupAuthListener();
+                
+                // Check if user is already signed in
+                getCurrentUser().then(user => {
+                    if (user) {
+                        console.log('✅ User is already signed in:', user.email);
+                        // Update navigation with Supabase subscription status
+                        updateNavigation();
+                    } else {
+                        console.log('ℹ️ No user signed in');
+                        updateNavigation();
+                    }
+                });
+                
+                // Test database connection (after a short delay to ensure everything is loaded)
+                setTimeout(() => {
+                    testDatabaseConnection();
+                }, 500);
+            } else {
+                console.error('❌ Supabase failed to initialize');
+            }
+        });
+    </script>
 </body>
 </html>

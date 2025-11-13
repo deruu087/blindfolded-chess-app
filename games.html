@@ -9,16 +9,7 @@
     <title>Memo Chess - Interactive Chess Training Games</title>
     <link rel="icon" type="image/png" href="images/chess-board.png">
     <script>
-        // Check subscription status immediately to prevent flashing
-        (function() {
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-            if (hasActiveSubscription) {
-                // Add CSS to hide subscription tab for subscribers
-                const style = document.createElement('style');
-                style.textContent = '.subscription-tab-li { display: none !important; }';
-                document.head.appendChild(style);
-            }
-        })();
+        // Subscription tab removed - content is now on home page
     </script>
     <style>
         * {
@@ -187,15 +178,6 @@
             transform: translateX(2px);
         }
         
-        /* Initially hide subscription tab only for users with active subscription */
-        .subscription-tab-li {
-            display: block; /* Show by default for free users */
-        }
-        
-        /* Hide only if user has active subscription (set by JavaScript) */
-        .subscription-tab-li.hidden-for-subscriber {
-            display: none;
-        }
 
         .dropdown-icon {
             font-size: 1rem;
@@ -2478,7 +2460,6 @@
                 <li><a href="games.html" class="active">Games</a></li>
                 <li><a href="puzzles.html">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
-                <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
                     <li class="profile-dropdown">
                         <a href="#" id="profileLink" class="profile-button">Profile</a>
                         <div class="dropdown-menu" id="profileDropdown">
@@ -2883,19 +2864,9 @@
             const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
             const signInMenuItem = document.getElementById('signInMenuItem');
             const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const subscriptionTab = document.getElementById('subscriptionTab');
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
             
-            // Show/hide subscription tab based on subscription status
-            const subscriptionLi = document.querySelector('.subscription-tab-li');
-            if (subscriptionLi) {
-                if (hasActiveSubscription) {
-                    subscriptionLi.classList.add('hidden-for-subscriber');
-                } else {
-                    subscriptionLi.classList.remove('hidden-for-subscriber');
-                }
-            }
+            // Subscription tab removed - content is now on home page
             
             if (isLoggedIn) {
                 // User is logged in - show profile, account info, and logout options
@@ -2949,21 +2920,71 @@
         }
 
         // Show account information modal
-        function showAccountInfoModal() {
+        async function showAccountInfoModal() {
             const userName = localStorage.getItem('userName') || 'User';
             const userEmail = localStorage.getItem('userEmail') || 'No email provided';
-            const subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
             
-            // Format subscription display
-            let subscriptionDisplay = 'Free Account';
-            if (subscriptionPlan === 'monthly') {
-                subscriptionDisplay = 'Premium Monthly';
+            // Get subscription from Supabase first, fallback to localStorage
+            let subscription = null;
+            let subscriptionPlan = 'free';
+            let hasActiveSubscription = false;
+            
+            if (typeof window.getUserSubscription === 'function') {
+                try {
+                    subscription = await window.getUserSubscription();
+                    if (subscription) {
+                        subscriptionPlan = subscription.plan_type;
+                        hasActiveSubscription = subscription.status === 'active';
+                    }
+                } catch (e) {
+                    console.log('Error fetching subscription from Supabase:', e);
+                    subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+                }
+            } else {
+                subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            }
+            
+            // Format subscription display with details
+            let subscriptionDisplay = '';
+            if (subscription && hasActiveSubscription) {
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const price = subscription.amount_paid ? 
+                             `${subscription.currency || 'EUR'} ${subscription.amount_paid}` : 
+                             (subscription.plan_type === 'monthly' ? '€4.99/month' : '€12.99/quarter');
+                const startDate = subscription.start_date ? 
+                                new Date(subscription.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                                'N/A';
+                
+                subscriptionDisplay = `
+                    <div style="margin-top: 0.5rem;">
+                        <div style="color: #27ae60; font-weight: normal; margin-bottom: 0.25rem;">${planName} - Active</div>
+                        <div style="font-size: 0.9rem; color: #4b5563;">
+                            <div>Amount: ${price}</div>
+                            <div>Start: ${startDate}</div>
+                            <div>Method: ${subscription.payment_method || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (subscription && subscription.status === 'cancelled') {
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const endDate = subscription.end_date ? 
+                               new Date(subscription.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                               'N/A';
+                subscriptionDisplay = `${planName} (Cancelled) - Access until ${endDate}`;
+            } else if (subscriptionPlan === 'monthly') {
+                subscriptionDisplay = 'Premium Monthly - $4.99/month';
             } else if (subscriptionPlan === 'quarterly') {
-                subscriptionDisplay = 'Premium Quarterly';
+                subscriptionDisplay = 'Premium Quarterly - $12.99/quarter';
             } else if (subscriptionPlan === 'monthly_cancelled') {
                 subscriptionDisplay = 'Premium Monthly (Cancelled)';
             } else if (subscriptionPlan === 'quarterly_cancelled') {
                 subscriptionDisplay = 'Premium Quarterly (Cancelled)';
+            } else {
+                subscriptionDisplay = 'Free Account';
             }
             
             const modal = document.createElement('div');

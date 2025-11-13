@@ -5,16 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memo Chess - Subscription</title>
     <script>
-        // Check subscription status immediately to prevent flashing
-        (function() {
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-            if (hasActiveSubscription) {
-                // Add CSS to hide subscription tab for subscribers
-                const style = document.createElement('style');
-                style.textContent = '.subscription-tab-li { display: none !important; }';
-                document.head.appendChild(style);
-            }
-        })();
+        // Subscription tab removed - content is now on home page
     </script>
     <style>
         * {
@@ -182,15 +173,6 @@
             transform: translateX(2px);
         }
         
-        /* Initially hide subscription tab only for users with active subscription */
-        .subscription-tab-li {
-            display: block; /* Show by default for free users */
-        }
-        
-        /* Hide only if user has active subscription (set by JavaScript) */
-        .subscription-tab-li.hidden-for-subscriber {
-            display: none;
-        }
 
         .dropdown-icon {
             font-size: 1rem;
@@ -782,7 +764,6 @@
             <li><a href="games.html">Games</a></li>
             <li><a href="puzzles.html">Puzzles</a></li>
             <!-- <li><a href="leaderboard.html">Community</a></li> -->
-            <li class="subscription-tab-li"><a href="#" class="active" id="subscriptionTab">Subscription</a></li>
                     <li class="profile-dropdown">
                         <a href="#" id="profileLink" class="profile-button">Profile</a>
             <div class="dropdown-menu" id="profileDropdown">
@@ -954,17 +935,9 @@
             const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
             const signInMenuItem = document.getElementById('signInMenuItem');
             const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const subscriptionTab = document.getElementById('subscriptionTab');
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
             
-            // Show/hide subscription tab based on subscription status
-            const subscriptionLi = document.querySelector('.subscription-tab-li');
-            if (hasActiveSubscription) {
-                subscriptionLi.classList.add('hidden-for-subscriber');
-            } else {
-                subscriptionLi.classList.remove('hidden-for-subscriber');
-            }
+            // Subscription tab removed - content is now on home page
             
             if (isLoggedIn) {
                 // User is logged in - show profile, account info, and logout options

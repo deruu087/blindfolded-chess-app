@@ -4,16 +4,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memo Chess - My Profile</title>
+    
+    <!-- Supabase JavaScript Library - Load in head for early availability -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script>
-        // Check subscription status immediately to prevent flashing
+        // Subscription tab removed - content is now on home page
+        
+        // Check cached subscription status immediately to prevent flash
         (function() {
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-            if (hasActiveSubscription) {
-                // Add CSS to hide subscription tab for subscribers
-                const style = document.createElement('style');
-                style.textContent = '.subscription-tab-li { display: none !important; }';
-                document.head.appendChild(style);
+            // Always hide both elements initially with CSS
+            const style = document.createElement('style');
+            style.id = 'subscription-initial-hide';
+            style.textContent = `
+                #subscriptionStatus { 
+                    display: none !important; 
+                    visibility: hidden !important; 
+                    opacity: 0 !important;
+                }
+                #subscriptionInfoSubtle { 
+                    display: none !important; 
+                    visibility: hidden !important; 
+                    opacity: 0 !important;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Function to update subscription display
+            function updateSubscriptionDisplay() {
+                const cachedStatus = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+                const statusEl = document.getElementById('subscriptionStatus');
+                const subtleEl = document.getElementById('subscriptionInfoSubtle');
+                
+                if (cachedStatus) {
+                    // User has paid account - keep both hidden and remove from layout
+                    if (statusEl) {
+                        statusEl.style.setProperty('display', 'none', 'important');
+                        statusEl.style.setProperty('visibility', 'hidden', 'important');
+                        statusEl.style.setProperty('height', '0', 'important');
+                        statusEl.style.setProperty('margin', '0', 'important');
+                        statusEl.style.setProperty('padding', '0', 'important');
+                        statusEl.classList.remove('show-subscription');
+                    }
+                    if (subtleEl) {
+                        subtleEl.style.setProperty('display', 'none', 'important');
+                        subtleEl.style.setProperty('visibility', 'hidden', 'important');
+                        subtleEl.style.setProperty('height', '0', 'important');
+                        subtleEl.style.setProperty('margin', '0', 'important');
+                        subtleEl.style.setProperty('padding', '0', 'important');
+                        subtleEl.classList.remove('show-subscription');
+                    }
+                } else {
+                    // User is free - show subscription info
+                    if (statusEl) {
+                        statusEl.style.setProperty('display', 'none', 'important');
+                    }
+                    if (subtleEl) {
+                        subtleEl.classList.add('show-subscription');
+                    }
+                }
             }
+            
+            // Run immediately - don't wait for DOM
+            updateSubscriptionDisplay();
+            
+            // Also run when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', updateSubscriptionDisplay);
+            } else {
+                updateSubscriptionDisplay();
+            }
+            
+            // Run multiple times to catch any late renders
+            setTimeout(updateSubscriptionDisplay, 0);
+            setTimeout(updateSubscriptionDisplay, 10);
+            setTimeout(updateSubscriptionDisplay, 50);
         })();
     </script>
     <style>
@@ -198,15 +263,6 @@
             transform: translateX(2px);
         }
         
-        /* Initially hide subscription tab only for users with active subscription */
-        .subscription-tab-li {
-            display: block; /* Show by default for free users */
-        }
-        
-        /* Hide only if user has active subscription (set by JavaScript) */
-        .subscription-tab-li.hidden-for-subscriber {
-            display: none;
-        }
 
         .dropdown-icon {
             font-size: 1rem;
@@ -301,12 +357,14 @@
         }
 
         .subscription-status {
-            background: #e8f5e8;
-            border: 1px solid #27ae60;
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            margin-bottom: 1.5rem;
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
         }
 
         .subscription-status.free {
@@ -330,14 +388,30 @@
             color: #4b5563;
         }
 
-        /* Subtle subscription info */
+        /* Subtle subscription info - Hidden by default, shown only for free users */
         .subscription-info-subtle {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+        }
+        
+        /* Only show if explicitly enabled with class */
+        .subscription-info-subtle.show-subscription {
+            display: block !important;
+            visibility: visible !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin-bottom: 1.5rem !important;
+            padding: 1rem !important;
+            background: #f8f9fa !important;
+            border: 1px solid #e9ecef !important;
+            border-radius: 8px !important;
+            text-align: center !important;
         }
 
         .subscription-plan-subtle {
@@ -1028,7 +1102,6 @@
                 <li><a href="games.html">Games</a></li>
                 <li><a href="puzzles.html">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
-                <li class="subscription-tab-li"><a href="subscription.html" id="subscriptionTab">Subscription</a></li>
                     <li class="profile-dropdown">
                         <a href="#" id="profileLink" class="profile-button active">Profile</a>
             <div class="dropdown-menu" id="profileDropdown">
@@ -1065,12 +1138,12 @@
                 <h2 class="profile-name" id="userName">Guest User</h2>
                 <p class="profile-email" id="userEmail">guest@example.com</p>
                 
-                <div class="subscription-status free" id="subscriptionStatus">
+                <div class="subscription-status free" id="subscriptionStatus" style="display: none;">
                     <div class="status-text">Free Account</div>
                     <div class="status-details">Upgrade to unlock all content</div>
                 </div>
 
-                <div class="subscription-info-subtle" id="subscriptionInfoSubtle" style="display: none;">
+                <div class="subscription-info-subtle" id="subscriptionInfoSubtle" style="display: none !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important;">
                     <div class="subscription-plan-subtle">
                         <div class="plan-name-subtle" id="planNameSubtle">Free Plan</div>
                         <div class="plan-features-subtle" id="planFeaturesSubtle">
@@ -1155,9 +1228,42 @@
         };
 
         // Initialize profile page
-        function initProfile() {
+        async function initProfile() {
             updateUserInfo();
-            updateSubscriptionStatus();
+            
+            // Force hide subscription UI initially to prevent flash
+            const statusElement = document.getElementById('subscriptionStatus');
+            const subtleElement = document.getElementById('subscriptionInfoSubtle');
+            if (statusElement) {
+                statusElement.style.setProperty('display', 'none', 'important');
+                statusElement.style.setProperty('visibility', 'hidden', 'important');
+            }
+            if (subtleElement) {
+                subtleElement.style.setProperty('display', 'none', 'important');
+                subtleElement.style.setProperty('visibility', 'hidden', 'important');
+            }
+            
+            // Use cached subscription status for instant display, then update from Supabase
+            const cachedStatus = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+            const cachedPlan = localStorage.getItem('cachedSubscriptionPlan') || 'free';
+            
+            if (cachedStatus) {
+                userData.subscription = cachedPlan;
+                // Keep hidden for premium users
+                if (statusElement) {
+                    statusElement.style.setProperty('display', 'none', 'important');
+                }
+                if (subtleElement) {
+                    subtleElement.style.setProperty('display', 'none', 'important');
+                }
+            } else {
+                userData.subscription = 'free';
+                // Show free status only after confirming user is actually free
+                // For now, keep hidden until Supabase confirms
+            }
+            
+            // Then check Supabase and update if different (will update cache)
+            await updateSubscriptionStatus();
             updateStats();
             
             // Update training time every second if timer is running
@@ -1173,15 +1279,58 @@
             document.getElementById('userEmail').textContent = userData.email;
         }
 
-        function updateSubscriptionStatus() {
+        async function updateSubscriptionStatus() {
             const statusElement = document.getElementById('subscriptionStatus');
             const subtleElement = document.getElementById('subscriptionInfoSubtle');
             const planNameSubtle = document.getElementById('planNameSubtle');
             const planFeaturesSubtle = document.getElementById('planFeaturesSubtle');
 
+            // Check Supabase subscription status first
+            let hasActiveSubscription = false;
+            let subscription = null;
+            
+            if (typeof window.hasActiveSubscription === 'function') {
+                try {
+                    hasActiveSubscription = await window.hasActiveSubscription();
+                    // Cache the result in localStorage for faster initial load next time
+                    localStorage.setItem('cachedSubscriptionStatus', hasActiveSubscription ? 'true' : 'false');
+                    
+                    if (hasActiveSubscription && typeof window.getUserSubscription === 'function') {
+                        subscription = await window.getUserSubscription();
+                        // Also cache the subscription plan
+                        if (subscription) {
+                            localStorage.setItem('cachedSubscriptionPlan', subscription.plan_type);
+                        }
+                    }
+                } catch (e) {
+                    console.log('Supabase subscription check failed, using cached value');
+                    // Use cached value if Supabase check fails
+                    hasActiveSubscription = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+                }
+            } else {
+                // Fallback to cached value if Supabase not available yet
+                hasActiveSubscription = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+            }
+
+            // Update userData.subscription based on Supabase or localStorage
+            if (hasActiveSubscription && subscription) {
+                // User has active subscription from Supabase
+                userData.subscription = subscription.plan_type;
+                if (subscription.status === 'cancelled') {
+                    userData.subscription = subscription.plan_type + '_cancelled';
+                }
+            } else if (hasActiveSubscription) {
+                // Has subscription from localStorage
+                const plan = localStorage.getItem('subscriptionPlan') || 'monthly';
+                userData.subscription = plan;
+            } else {
+                // No subscription
+                userData.subscription = 'free';
+            }
+
             // Check if subscription is cancelled and if billing period has ended
-            const isCancelled = localStorage.getItem('subscriptionCancelled') === 'true';
-            const cancellationDate = localStorage.getItem('cancellationDate');
+            const isCancelled = subscription?.status === 'cancelled' || localStorage.getItem('subscriptionCancelled') === 'true';
+            const cancellationDate = subscription?.updated_at || localStorage.getItem('cancellationDate');
             
             if (isCancelled && cancellationDate) {
                 const cancelledDate = new Date(cancellationDate);
@@ -1202,21 +1351,61 @@
                     localStorage.removeItem('subscriptionCancelled');
                     localStorage.removeItem('cancellationDate');
                     userData.subscription = 'free';
+                    hasActiveSubscription = false;
                 }
             }
 
-            // Check if user has premium subscription (all content unlocked)
-            if (userData.subscription === 'monthly' || userData.subscription === 'quarterly' || userData.subscription === 'monthly_cancelled' || userData.subscription === 'quarterly_cancelled') {
-                // Hide subscription info for premium users (including cancelled ones still in billing period)
-                statusElement.style.display = 'none';
-                subtleElement.style.display = 'none';
+            // Update UI display - ensure elements are completely removed from layout for paid users
+            if (hasActiveSubscription) {
+                const statusEl = document.getElementById('subscriptionStatus');
+                const subtleEl = document.getElementById('subscriptionInfoSubtle');
+                if (statusEl) {
+                    statusEl.style.setProperty('display', 'none', 'important');
+                    statusEl.style.setProperty('height', '0', 'important');
+                    statusEl.style.setProperty('margin', '0', 'important');
+                    statusEl.style.setProperty('padding', '0', 'important');
+                }
+                if (subtleEl) {
+                    subtleEl.style.setProperty('display', 'none', 'important');
+                    subtleEl.style.setProperty('height', '0', 'important');
+                    subtleEl.style.setProperty('margin', '0', 'important');
+                    subtleEl.style.setProperty('padding', '0', 'important');
+                    subtleEl.classList.remove('show-subscription');
+                }
+            } else {
+                updateSubscriptionStatusDisplay(hasActiveSubscription);
+            }
+        }
+        
+        // Update subscription status display (separate function for instant updates)
+        function updateSubscriptionStatusDisplay(hasActive = null) {
+            const statusElement = document.getElementById('subscriptionStatus');
+            const subtleElement = document.getElementById('subscriptionInfoSubtle');
+            const planNameSubtle = document.getElementById('planNameSubtle');
+            const planFeaturesSubtle = document.getElementById('planFeaturesSubtle');
+            
+            // Use provided value or check userData
+            let isPremium = false;
+            if (hasActive !== null) {
+                // Use the provided value (from cache or Supabase)
+                isPremium = hasActive;
+            } else {
+                // Fallback to checking userData
+                isPremium = (userData.subscription === 'monthly' || userData.subscription === 'quarterly' || 
+                           userData.subscription === 'monthly_cancelled' || userData.subscription === 'quarterly_cancelled');
+            }
+            
+            if (isPremium) {
+                // Hide subscription info for premium users
+                if (statusElement) statusElement.style.display = 'none';
+                if (subtleElement) subtleElement.style.display = 'none';
             } else {
                 // Show subtle subscription info for free users
-                statusElement.style.display = 'none';
-                subtleElement.style.display = 'block';
+                if (statusElement) statusElement.style.display = 'none';
+                if (subtleElement) subtleElement.style.display = 'block';
                 
-                if (userData.subscription === 'free') {
-                    planNameSubtle.textContent = 'Free Plan';
+                if (planNameSubtle) planNameSubtle.textContent = 'Free Plan';
+                if (planFeaturesSubtle) {
                     planFeaturesSubtle.innerHTML = `
                         <span class="feature-dot available"></span>
                         <span class="feature-dot available"></span>
@@ -1336,9 +1525,6 @@
                 // Update progress bars - pass all completed items, function will filter by type
                 updateProgressBars();
                 
-                // Update leaderboard widget (using all completed items for now)
-                updateLeaderboardWidget(allCompleted);
-                
                 // Update userData to match progress tracker
                 userData.gamesPlayed = allCompleted;
                 userData.trainingHours = progress.totalHours;
@@ -1356,94 +1542,6 @@
             });
         }
 
-        // Update leaderboard widget
-        function updateLeaderboardWidget(completedGames) {
-            // Generate mock data for percentile calculation
-            const mockUsers = generateMockUserData();
-            
-            // Calculate user's percentile
-            const userPercentile = calculateUserPercentile(completedGames, mockUsers);
-            
-            // Update the display
-            updatePercentileDisplay(userPercentile, completedGames);
-        }
-
-        // Generate mock user data for percentile calculation
-        function generateMockUserData() {
-            const users = [];
-            for (let i = 0; i < 1000; i++) {
-                users.push({
-                    gamesCompleted: Math.floor(Math.random() * 50) + 1,
-                    trainingHours: Math.random() * 100,
-                    currentStreak: Math.floor(Math.random() * 30)
-                });
-            }
-            return users.sort((a, b) => b.gamesCompleted - a.gamesCompleted);
-        }
-
-        // Calculate user's percentile ranking
-        function calculateUserPercentile(userGames, allUsers) {
-            let betterUsers = 0;
-            for (let user of allUsers) {
-                if (user.gamesCompleted > userGames) {
-                    betterUsers++;
-                }
-            }
-            
-            const percentile = Math.round((betterUsers / allUsers.length) * 100);
-            const rank = betterUsers + 1;
-            const totalUsers = allUsers.length + 1;
-            
-            return {
-                percentile: 100 - percentile, // Invert to show "top X%"
-                rank,
-                totalUsers,
-                betterUsers
-            };
-        }
-
-        // Update percentile display
-        function updatePercentileDisplay(percentileData, completedGames) {
-            const userPercentile = document.getElementById('userPercentile');
-            const rankText = document.getElementById('rankText');
-            const percentileFill = document.getElementById('percentileFill');
-            const nextMilestone = document.getElementById('nextMilestone');
-            
-            // Update percentile display
-            let percentileText = `Top ${percentileData.percentile}%`;
-            if (percentileData.percentile <= 1) {
-                percentileText = 'Top 1% 🏆';
-            } else if (percentileData.percentile <= 5) {
-                percentileText = 'Top 5% 🥇';
-            } else if (percentileData.percentile <= 10) {
-                percentileText = 'Top 10% 🥈';
-            } else if (percentileData.percentile <= 25) {
-                percentileText = 'Top 25% 🥉';
-            }
-            
-            userPercentile.textContent = percentileText;
-            
-            // Update rank text
-            rankText.innerHTML = `You're ranked #${percentileData.rank} out of ${percentileData.totalUsers} players`;
-            
-            // Update percentile bar (inverted - higher percentile = more filled)
-            const fillPercentage = Math.min(100, Math.max(0, percentileData.percentile));
-            percentileFill.style.width = `${fillPercentage}%`;
-            
-            // Update next milestone
-            if (percentileData.percentile <= 1) {
-                nextMilestone.textContent = '🏆 You are in the top 1%! Amazing achievement!';
-            } else if (percentileData.percentile <= 5) {
-                nextMilestone.textContent = '🥇 Excellent! You are in the top 5% of players!';
-            } else if (percentileData.percentile <= 10) {
-                nextMilestone.textContent = '🥈 Great job! You are in the top 10% of players!';
-            } else if (percentileData.percentile <= 25) {
-                nextMilestone.textContent = '🥉 Good progress! You are in the top 25% of players!';
-            } else {
-                const gamesToTop25 = Math.ceil((100 - percentileData.percentile) / 4);
-                nextMilestone.textContent = `Complete ${gamesToTop25} more games to reach the top 25%!`;
-            }
-        }
 
         // Update progress bars with current completion counts
         async function updateProgressBars() {
@@ -1672,23 +1770,15 @@
         }
 
         // Check login status and update navigation
-        function updateNavigation() {
+        async function updateNavigation() {
             const profileLink = document.getElementById('profileLink');
             const profileMenuItem = document.getElementById('profileMenuItem');
             const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
             const signInMenuItem = document.getElementById('signInMenuItem');
             const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const subscriptionTab = document.getElementById('subscriptionTab');
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
             
-            // Show/hide subscription tab based on subscription status
-            const subscriptionLi = document.querySelector('.subscription-tab-li');
-            if (hasActiveSubscription) {
-                subscriptionLi.classList.add('hidden-for-subscriber');
-            } else {
-                subscriptionLi.classList.remove('hidden-for-subscriber');
-            }
+            // Subscription tab removed - content is now on home page
             
             if (isLoggedIn) {
                 // User is logged in - show profile, account info, and logout options
@@ -1735,16 +1825,101 @@
             }
         }
 
-        function showAccountInfoModal() {
+        async function showAccountInfoModal() {
             const userName = localStorage.getItem('userName') || 'User';
             const userEmail = localStorage.getItem('userEmail') || 'No email provided';
-            const subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            
+            // Get subscription from Supabase first, fallback to localStorage
+            let subscription = null;
+            let subscriptionPlan = 'free';
+            let hasActiveSubscription = false;
+            
+            if (typeof window.getUserSubscription === 'function') {
+                try {
+                    subscription = await window.getUserSubscription();
+                    if (subscription) {
+                        subscriptionPlan = subscription.plan_type;
+                        hasActiveSubscription = subscription.status === 'active';
+                    }
+                } catch (e) {
+                    console.log('Error fetching subscription from Supabase:', e);
+                    // Fallback to localStorage
+                    subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+                }
+            } else {
+                // Fallback to localStorage if Supabase not available
+                subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            }
             
             // Get subscription details
             let subscriptionDetails = '';
             let subscriptionActions = '';
             
-            if (subscriptionPlan === 'monthly') {
+            if (subscription && hasActiveSubscription) {
+                // User has active paid subscription from Supabase
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const price = subscription.amount_paid ? 
+                             `${subscription.currency || 'EUR'} ${subscription.amount_paid}` : 
+                             (subscription.plan_type === 'monthly' ? '€4.99' : '€12.99');
+                const startDate = subscription.start_date ? 
+                                new Date(subscription.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                                'N/A';
+                
+                subscriptionDetails = `
+                    <div class="info-item">
+                        <label>Plan:</label>
+                        <span>${planName}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status:</label>
+                        <span style="color: #27ae60; font-weight: normal;">Active</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Amount Paid:</label>
+                        <span>${price}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Start Date:</label>
+                        <span>${startDate}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Payment Method:</label>
+                        <span>${subscription.payment_method || 'N/A'}</span>
+                    </div>
+                `;
+                subscriptionActions = `
+                    <div class="subscription-actions" style="margin-top: 1rem; text-align: center;">
+                        <a href="#" onclick="cancelSubscription(); return false;" style="color: #6b7280; text-decoration: none; font-size: 0.9rem;">Cancel Subscription</a>
+                    </div>
+                `;
+            } else if (subscription && subscription.status === 'cancelled') {
+                // Cancelled subscription
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const endDate = subscription.end_date ? 
+                               new Date(subscription.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                               'N/A';
+                
+                subscriptionDetails = `
+                    <div class="info-item">
+                        <label>Plan:</label>
+                        <span>${planName} (Cancelled)</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Access until:</label>
+                        <span>${endDate}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status:</label>
+                        <span style="color: #e74c3c;">Cancelled - No renewal</span>
+                    </div>
+                `;
+                subscriptionActions = '';
+            } else if (subscriptionPlan === 'monthly') {
+                // Fallback to localStorage monthly
                 subscriptionDetails = `
                     <div class="info-item">
                         <label>Plan:</label>
@@ -1752,7 +1927,7 @@
                     </div>
                     <div class="info-item">
                         <label>Billing:</label>
-                        <span>$9.99/month</span>
+                        <span>$4.99/month</span>
                     </div>
                     <div class="info-item">
                         <label>Next billing:</label>
@@ -1760,11 +1935,12 @@
                     </div>
                 `;
                 subscriptionActions = `
-                    <div class="subscription-actions">
-                        <button onclick="cancelSubscription()" class="btn btn-secondary">Cancel Subscription</button>
+                    <div class="subscription-actions" style="margin-top: 1rem; text-align: center;">
+                        <a href="#" onclick="cancelSubscription(); return false;" style="color: #6b7280; text-decoration: none; font-size: 0.9rem;">Cancel Subscription</a>
                     </div>
                 `;
             } else if (subscriptionPlan === 'quarterly') {
+                // Fallback to localStorage quarterly
                 subscriptionDetails = `
                     <div class="info-item">
                         <label>Plan:</label>
@@ -1772,7 +1948,7 @@
                     </div>
                     <div class="info-item">
                         <label>Billing:</label>
-                        <span>$24.99/quarter</span>
+                        <span>$12.99/quarter</span>
                     </div>
                     <div class="info-item">
                         <label>Next billing:</label>
@@ -1780,50 +1956,10 @@
                     </div>
                 `;
                 subscriptionActions = `
-                    <div class="subscription-actions">
-                        <button onclick="cancelSubscription()" class="btn btn-secondary">Cancel Subscription</button>
+                    <div class="subscription-actions" style="margin-top: 1rem; text-align: center;">
+                        <a href="#" onclick="cancelSubscription(); return false;" style="color: #6b7280; text-decoration: none; font-size: 0.9rem;">Cancel Subscription</a>
                     </div>
                 `;
-            } else if (subscriptionPlan === 'monthly_cancelled') {
-                const cancellationDate = localStorage.getItem('cancellationDate');
-                const endDate = new Date(cancellationDate);
-                endDate.setMonth(endDate.getMonth() + 1);
-                
-                subscriptionDetails = `
-                    <div class="info-item">
-                        <label>Plan:</label>
-                        <span>Premium Monthly (Cancelled)</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Access until:</label>
-                        <span>${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Status:</label>
-                        <span style="color: #e74c3c;">Cancelled - No renewal</span>
-                    </div>
-                `;
-                subscriptionActions = '';
-            } else if (subscriptionPlan === 'quarterly_cancelled') {
-                const cancellationDate = localStorage.getItem('cancellationDate');
-                const endDate = new Date(cancellationDate);
-                endDate.setMonth(endDate.getMonth() + 3);
-                
-                subscriptionDetails = `
-                    <div class="info-item">
-                        <label>Plan:</label>
-                        <span>Premium Quarterly (Cancelled)</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Access until:</label>
-                        <span>${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Status:</label>
-                        <span style="color: #e74c3c;">Cancelled - No renewal</span>
-                    </div>
-                `;
-                subscriptionActions = '';
             } else {
                 subscriptionDetails = `
                     <div class="info-item">
@@ -2007,6 +2143,115 @@
             </div>
         </div>
     </div>
+
+    <!-- Supabase Configuration -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase Helper Functions -->
+    <script src="supabase-helpers.js"></script>
+    
+    <!-- Supabase Authentication Functions -->
+    <script src="supabase-auth.js"></script>
+    
+    <!-- Initialize Supabase when page loads -->
+    <script>
+        // Wait for all scripts to load, then initialize
+        function initializeSupabase() {
+            // Check if all required functions are available
+            if (typeof supabase === 'undefined') {
+                console.log('⏳ Waiting for Supabase CDN to load...');
+                setTimeout(initializeSupabase, 100);
+                return;
+            }
+            
+            if (typeof initSupabase === 'undefined') {
+                console.log('⏳ Waiting for supabase-config.js to load...');
+                setTimeout(initializeSupabase, 100);
+                return;
+            }
+            
+            console.log('✅ All Supabase scripts loaded');
+            
+            // Initialize Supabase client
+            initSupabase();
+            
+            // Test connection (check if Supabase is working)
+            const client = getSupabase();
+            if (client) {
+                console.log('✅ Supabase is ready to use!');
+                
+                // Set up auth state listener
+                if (typeof setupAuthListener === 'function') {
+                    setupAuthListener();
+                }
+                
+                // Check if user is already signed in and subscription status
+                if (typeof getCurrentUser === 'function') {
+                    getCurrentUser().then(async user => {
+                        if (user) {
+                            console.log('✅ User is already signed in:', user.email);
+                            
+                            // Check subscription status immediately and update cache
+                            if (typeof window.hasActiveSubscription === 'function') {
+                                try {
+                                    const hasActive = await window.hasActiveSubscription();
+                                    // Cache immediately for next page load
+                                    localStorage.setItem('cachedSubscriptionStatus', hasActive ? 'true' : 'false');
+                                    
+                                    if (hasActive && typeof window.getUserSubscription === 'function') {
+                                        const sub = await window.getUserSubscription();
+                                        if (sub) {
+                                            localStorage.setItem('cachedSubscriptionPlan', sub.plan_type);
+                                            // Update userData immediately
+                                            userData.subscription = sub.plan_type;
+                                        }
+                                    }
+                                    
+                                    // Update UI immediately with fresh Supabase data
+                                    updateSubscriptionStatusDisplay(hasActive);
+                                } catch (e) {
+                                    console.log('Subscription check error:', e);
+                                }
+                            }
+                            
+                            // Update navigation and subscription status with Supabase data
+                            updateNavigation();
+                            updateSubscriptionStatus();
+                        } else {
+                            console.log('ℹ️ No user signed in');
+                            // Clear cached subscription if not logged in
+                            localStorage.setItem('cachedSubscriptionStatus', 'false');
+                            updateNavigation();
+                        }
+                    }).catch(err => {
+                        console.log('ℹ️ Not signed in or error:', err);
+                        updateNavigation();
+                    });
+                }
+                
+                // Test database connection (after a short delay to ensure everything is loaded)
+                setTimeout(() => {
+                    if (typeof testDatabaseConnection === 'function') {
+                        testDatabaseConnection();
+                    }
+                }, 500);
+            } else {
+                console.error('❌ Supabase failed to initialize');
+            }
+        }
+        
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('📄 Page loaded, initializing Supabase...');
+                initializeSupabase();
+            });
+        } else {
+            // DOM already loaded
+            console.log('📄 DOM already loaded, initializing Supabase...');
+            initializeSupabase();
+        }
+    </script>
 </body>
 </html>
 
