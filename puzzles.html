@@ -211,21 +211,22 @@
             display: flex;
             justify-content: center;
             margin-bottom: 0;
+            margin-left: -8px;
             border-bottom: 2px solid transparent;
             width: 100%;
         }
 
         .games-tabs .tab {
-            padding: 1rem 2rem;
+            padding: 0.6rem 1rem;
             cursor: pointer;
             font-weight: 600;
             color: #7f8c8d;
             border-bottom: 3px solid transparent;
             transition: all 0.3s ease;
-            font-size: 1.1rem;
+            font-size: 1.04rem;
             flex: 1;
             text-align: center;
-            max-width: 200px;
+            max-width: 150px;
         }
 
         .games-tabs .tab.active {
@@ -2445,22 +2446,8 @@
                 <li><a href="games.html">Games</a></li>
                 <li><a href="puzzles.html" class="active">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
-                    <li class="profile-dropdown">
+                    <li>
                         <a href="#" id="profileLink" class="profile-button">Profile</a>
-                        <div class="dropdown-menu" id="profileDropdown">
-                            <a href="profile.html" class="dropdown-item" id="profileMenuItem">
-                                <span class="dropdown-text">My Profile</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
-                                <span class="dropdown-text">Account Information</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="signInMenuItem">
-                                <span class="dropdown-text">Sign In</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
-                                <span class="dropdown-text">Logout</span>
-                            </a>
-                        </div>
                     </li>
                 </ul>
     </nav>
@@ -2790,64 +2777,40 @@
         let gamesData = null;
         
         // Check login status and update navigation
-        function updateNavigation() {
+        async function updateNavigation() {
             const profileLink = document.getElementById('profileLink');
-            const profileMenuItem = document.getElementById('profileMenuItem');
-            const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
-            const signInMenuItem = document.getElementById('signInMenuItem');
-            const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             
-            // Subscription tab removed - content is now on home page
+            // Use centralized auth check function
+            let authStatus;
+            if (typeof window.checkAuthStatus === 'function') {
+                authStatus = await window.checkAuthStatus();
+            } else {
+                // Fallback if function not available
+                authStatus = {
+                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                    user: null,
+                    email: localStorage.getItem('userEmail'),
+                    name: localStorage.getItem('userName')
+                };
+            }
             
-            if (isLoggedIn) {
-                // User is logged in - show profile, account info, and logout options
-                profileMenuItem.style.display = 'flex';
-                accountInfoMenuItem.style.display = 'flex';
-                logoutMenuItem.style.display = 'flex';
-                signInMenuItem.style.display = 'none';
-                
-                // Set up profile menu item
-                profileMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = 'profile.html';
-                };
-                
-                // Set up account info menu item
-                accountInfoMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    showAccountInfoModal();
-                };
-                
-                // Set up logout menu item
-                logoutMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    logout();
-                };
-                
-                // Profile icon click - go to profile
+            const isLoggedIn = authStatus.isLoggedIn;
+            
+            // Set up profile link behavior
+            if (profileLink) {
+                if (isLoggedIn) {
+                    // User is logged in - go to profile page
                 profileLink.onclick = function(e) {
                     e.preventDefault();
                     window.location.href = 'profile.html';
                 };
             } else {
-                // User is not logged in - show sign in option
-                profileMenuItem.style.display = 'none';
-                accountInfoMenuItem.style.display = 'none';
-                logoutMenuItem.style.display = 'none';
-                signInMenuItem.style.display = 'flex';
-                
-                // Set up sign in menu item
-                signInMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    showSignInModal();
-                };
-                
-                // Profile icon click - show sign in modal
+                    // User is not logged in - show sign in modal
                 profileLink.onclick = function(e) {
                     e.preventDefault();
                     showSignInModal();
                 };
+                }
             }
         }
 
@@ -2956,16 +2919,28 @@
         }
 
         // Confirm logout function
-        function confirmLogout() {
+        async function confirmLogout() {
+            // Sign out from Supabase first
+            if (typeof window.signOut === 'function') {
+                try {
+                    await window.signOut();
+                    console.log('✅ Signed out from Supabase');
+                } catch (error) {
+                    console.error('Error signing out from Supabase:', error);
+                }
+            }
+            
             // Clear user data and localStorage
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userName');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('subscriptionPlan');
             localStorage.removeItem('hasActiveSubscription');
+            localStorage.removeItem('cachedSubscriptionStatus');
+            localStorage.removeItem('cachedSubscriptionPlan');
             
             // Update navigation
-            updateNavigation();
+            await updateNavigation();
             
             // Hide modal
             document.getElementById('logoutConfirmModal').style.display = 'none';
@@ -3065,63 +3040,107 @@
             window.location.href = 'profile.html';
         }
 
-        // Google sign-in handler
-        function signInWithGoogle() {
-            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
-            const mockGoogleUser = {
-                email: 'user@gmail.com',
-                name: 'Google User',
-                id: 'google_' + Math.random().toString(36).substr(2, 9)
-            };
-            
-            // Check if user exists in localStorage
-            const storedEmail = localStorage.getItem('userEmail');
-            const storedPassword = localStorage.getItem('userPassword');
-            
-            if (storedEmail === mockGoogleUser.email && storedPassword === mockGoogleUser.id) {
-                // User exists, sign them in
-                localStorage.setItem('isLoggedIn', 'true');
-                updateNavigation();
-                closeModal();
-                window.location.href = 'profile.html';
+        // Google sign-in handler (works for both sign-in and registration)
+        async function signInWithGoogle() {
+            try {
+                if (typeof window.signInWithGoogle === 'function') {
+                    const result = await window.signInWithGoogle();
+                    
+                    if (result.success && result.url) {
+                        // Redirect to Google OAuth
+                        window.location.href = result.url;
             } else {
-                // User doesn't exist, create account
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', mockGoogleUser.email);
-                localStorage.setItem('userName', mockGoogleUser.name);
-                localStorage.setItem('userPassword', mockGoogleUser.id);
-                localStorage.setItem('authProvider', 'google');
-                updateNavigation();
-                closeModal();
-                window.location.href = 'profile.html';
+                        // Show error
+                        const signInForm = document.getElementById('signInForm');
+                        if (signInForm) {
+                            showError(signInForm, result.error || 'Google sign-in failed. Please try again.');
+                        } else {
+                            alert(result.error || 'Google sign-in failed. Please try again.');
+                        }
+                    }
+                } else {
+                    alert('Google sign-in is not available. Please use email/password.');
+                }
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+                alert('An error occurred with Google sign-in. Please try again.');
             }
         }
 
-        // Google registration handler
-        function registerWithGoogle() {
-            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
-            const mockGoogleUser = {
-                email: 'user@gmail.com',
-                name: 'Google User',
-                id: 'google_' + Math.random().toString(36).substr(2, 9)
-            };
+        // Google registration handler (same as sign-in - Google OAuth handles both)
+        async function registerWithGoogle() {
+            // Google OAuth works for both sign-in and registration
+            // If user exists, they sign in; if not, account is created
+            await signInWithGoogle();
+        }
+        
+        // Handle OAuth callback from Google
+        async function handleOAuthCallback() {
+            // Supabase OAuth uses URL hash fragments (#access_token=... or #error=...)
+            // Check if we have a hash with access_token or error
+            const hash = window.location.hash;
+            const hasOAuthHash = hash && (hash.includes('access_token') || hash.includes('error') || hash.includes('type=recovery'));
             
-            // Check if user already exists
-            const existingEmail = localStorage.getItem('userEmail');
-            if (existingEmail === mockGoogleUser.email) {
-                showSignInModal();
-                return;
-            }
-            
-            // Create account with Google data
+            if (hasOAuthHash && typeof getSupabase === 'function') {
+                const supabase = getSupabase();
+                if (supabase) {
+                    try {
+                        // Wait a bit for Supabase to process the hash
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // Get the session - Supabase should have processed the hash by now
+                        const { data, error } = await supabase.auth.getSession();
+                        
+                        if (!error && data.session && data.session.user) {
+                            console.log('✅ Google OAuth successful!', data.session.user);
+                            
+                            // Store user data in localStorage
+                            const user = data.session.user;
             localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', mockGoogleUser.email);
-            localStorage.setItem('userName', mockGoogleUser.name);
-            localStorage.setItem('userPassword', mockGoogleUser.id); // Use Google ID as password
-            localStorage.setItem('authProvider', 'google');
-            updateNavigation();
+                            localStorage.setItem('userEmail', user.email || '');
+                            const userName = user.user_metadata?.name || 
+                                           user.user_metadata?.full_name || 
+                                           user.email?.split('@')[0] || 
+                                           'User';
+                            localStorage.setItem('userName', userName);
+                            
+                            // Create initial user_progress if new user
+                            if (typeof window.saveUserProgress === 'function') {
+                                try {
+                                    await window.saveUserProgress({
+                                        completedGames: [],
+                                        completedPuzzles: [],
+                                        totalGamesPlayed: 0,
+                                        trainingHours: 0,
+                                        currentStreak: 0
+                                    });
+                                    console.log('✅ Initial user progress created');
+                                } catch (progressError) {
+                                    console.log('Note: Progress may already exist or will be created on first activity', progressError);
+                                }
+                            }
+                            
+                            // Clean up URL (remove hash)
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            
+                            // Update navigation and stay on current page
+                            await updateNavigation();
+                            
+                            // Close modal if open
             closeModal();
-            window.location.href = 'profile.html';
+                            
+                            return true; // Success
+                        } else if (error) {
+                            console.error('OAuth session error:', error);
+                            return false;
+                        }
+                    } catch (error) {
+                        console.error('OAuth callback error:', error);
+                        return false;
+                    }
+                }
+            }
+            return false;
         }
         
         // Initialize tabs functionality
@@ -3172,6 +3191,25 @@
         // Initialize puzzles data on page load
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('DOM loaded, loading puzzles...');
+            
+            // Wait for Supabase to initialize
+            await new Promise(resolve => {
+                if (typeof getSupabase === 'function' && getSupabase()) {
+                    resolve();
+                } else {
+                    setTimeout(resolve, 500);
+                }
+            });
+            
+            // Handle OAuth callback first (if user just signed in with Google)
+            if (typeof handleOAuthCallback === 'function') {
+                await handleOAuthCallback();
+            }
+            
+            // Update navigation (checks Supabase auth)
+            if (typeof updateNavigation === 'function') {
+                await updateNavigation();
+            }
             
             // Initialize tabs
             initializeTabs();
@@ -5605,7 +5643,7 @@
                 
                 // Call showLastMoveCheck to ensure check indicator is properly displayed
                 // Use longer delay (400ms) to ensure animation completes before showing check indicator
-                setTimeout(() => {
+                    setTimeout(() => {
                     removeLastMoveCheck();
                     showLastMoveCheck();
                 }, 400);
@@ -6077,13 +6115,13 @@
                      commentSection.style.display = 'none';
                  }
                  
-                // Reset to initial position
-                currentMoveIndex = 0;
+                 // Reset to initial position
+                 currentMoveIndex = 0;
                 setupInitialPosition();
                 updateMoveButtons();
-                
-                // Update moves display to show only completed moves (none initially)
-                updateChallengeMovesDisplay();
+                 
+                 // Update moves display to show only completed moves (none initially)
+                 updateChallengeMovesDisplay();
                  
                 // Make all pieces invisible
                 const pieces = document.querySelectorAll('.chess-piece');
@@ -6253,7 +6291,7 @@
                  // Record completion in progress tracker
                  // Use recordGameCompletion for both games and puzzles since it's the only completion recording function
                  const difficulty = currentGame.difficulty || 'intermediate';
-                 progressTracker.recordGameCompletion(difficulty, currentGame.id);
+                     progressTracker.recordGameCompletion(difficulty, currentGame.id);
                  
                  // End the current training session
                  progressTracker.endSession();
@@ -6275,19 +6313,19 @@
              }, 100);
          }
 
-        function hideBadge() {
-            const badge = document.getElementById('completion-badge');
-            const overlay = document.getElementById('badge-overlay');
-            
-            // Switch to normal mode to reveal all pieces
-            currentVisualMode = 'normal';
-            switchVisualMode('normal');
-            
-            // Hide badge and overlay
-            badge.classList.remove('show');
-            setTimeout(() => {
-                overlay.classList.remove('show');
-                // Exit challenge mode after hiding badge
+         function hideBadge() {
+             const badge = document.getElementById('completion-badge');
+             const overlay = document.getElementById('badge-overlay');
+             
+             // Switch to normal mode to reveal all pieces
+             currentVisualMode = 'normal';
+             switchVisualMode('normal');
+             
+             // Hide badge and overlay
+             badge.classList.remove('show');
+             setTimeout(() => {
+                 overlay.classList.remove('show');
+                 // Exit challenge mode after hiding badge
                 isChallengeMode = false;
                 const challengeBtn = document.getElementById('challenge-btn');
                 const modeOptions = document.querySelectorAll('.mode-option');
@@ -6325,8 +6363,8 @@
                 showLastMoveCheck();
                 
                 console.log('Challenge mode exited! Final position kept visible.');
-            }, 300);
-        }
+             }, 300);
+         }
 
 
          function updateGameListBadges() {
@@ -6596,5 +6634,32 @@
             </div>
         </div>
     </div>
+    
+    <!-- Supabase JavaScript Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Supabase Configuration -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase Helper Functions -->
+    <script src="supabase-helpers.js"></script>
+    
+    <!-- Supabase Authentication Functions -->
+    <script src="supabase-auth.js"></script>
+    
+    <script>
+        // Initialize Supabase when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Supabase client
+            if (typeof initSupabase === 'function') {
+                initSupabase();
+            }
+            
+            // Handle OAuth callback if present
+            if (typeof handleOAuthCallback === 'function') {
+                await handleOAuthCallback();
+            }
+        });
+    </script>
 </body>
 </html>

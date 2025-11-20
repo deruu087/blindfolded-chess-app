@@ -14,7 +14,7 @@
         // Check cached subscription status immediately to prevent flash
         (function() {
             // Always hide both elements initially with CSS
-            const style = document.createElement('style');
+                const style = document.createElement('style');
             style.id = 'subscription-initial-hide';
             style.textContent = `
                 #subscriptionStatus { 
@@ -28,7 +28,7 @@
                     opacity: 0 !important;
                 }
             `;
-            document.head.appendChild(style);
+                document.head.appendChild(style);
             
             // Function to update subscription display
             function updateSubscriptionDisplay() {
@@ -79,6 +79,60 @@
             setTimeout(updateSubscriptionDisplay, 0);
             setTimeout(updateSubscriptionDisplay, 10);
             setTimeout(updateSubscriptionDisplay, 50);
+        })();
+        
+        // Immediately update profile title and email from localStorage (before Supabase loads)
+        (function() {
+            function updateProfileInstantly() {
+                // Get cached user data
+                const cachedName = localStorage.getItem('userName');
+                const cachedEmail = localStorage.getItem('userEmail');
+                
+                // Update profile title immediately
+                if (cachedName) {
+                    const firstName = cachedName.split(' ')[0];
+                    const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+                    const profileTitle = document.querySelector('.profile-title');
+                    if (profileTitle) {
+                        profileTitle.textContent = welcomeMessage;
+                    }
+                }
+                
+                // Update email immediately
+                if (cachedEmail) {
+                    const emailElement = document.getElementById('userEmail');
+                    if (emailElement) {
+                        emailElement.textContent = cachedEmail;
+                    }
+                }
+                
+                // Try to update stats immediately if progressTracker is available
+                // This will show cached progress data instantly
+                if (typeof window.updateStats === 'function') {
+                    try {
+                        window.updateStats();
+                    } catch (e) {
+                        // Progress tracker might not be loaded yet, that's okay
+                    }
+                }
+            }
+            
+            // Run immediately if DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    updateProfileInstantly();
+                    // Also try after a short delay to ensure progress-tracker.js is loaded
+                    setTimeout(updateProfileInstantly, 100);
+                });
+            } else {
+                updateProfileInstantly();
+                setTimeout(updateProfileInstantly, 100);
+            }
+            
+            // Also run with slight delays to catch elements that load later
+            setTimeout(updateProfileInstantly, 0);
+            setTimeout(updateProfileInstantly, 10);
+            setTimeout(updateProfileInstantly, 50);
         })();
     </script>
     <style>
@@ -175,107 +229,6 @@
             background-color: #1e40af;
         }
 
-        /* Profile Dropdown Styles */
-        .profile-dropdown {
-            position: relative;
-        }
-
-        .profile-icon {
-            display: flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            font-weight: normal;
-            position: relative;
-        }
-
-        .profile-icon:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .profile-dropdown .profile-avatar {
-            font-size: 1.2rem;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-            margin: 0;
-        }
-        
-        .profile-dropdown .profile-avatar img {
-            border-radius: 50%;
-            background: white;
-        }
-
-        .profile-avatar img {
-            border-radius: 50%;
-            background: white;
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            min-width: 180px;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
-            z-index: 1000;
-            border: 1px solid #e9ecef;
-        }
-
-        .profile-dropdown:hover .dropdown-menu {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .dropdown-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            color: #1a1a1a;
-            text-decoration: none;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid #f8f9fa;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .dropdown-item:last-child {
-            border-bottom: none;
-        }
-
-        .dropdown-item:hover {
-            background-color: transparent !important;
-            color: #1a1a1a !important;
-            transform: translateX(2px);
-        }
-        
-
-        .dropdown-icon {
-            font-size: 1rem;
-            margin-right: 10px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .dropdown-text {
-            font-size: 0.9rem;
-            font-weight: normal;
-            color: #1a1a1a;
-        }
 
         .nav-links a.active {
             background-color: #1e3a8a;
@@ -1047,6 +1000,29 @@
             background-color: #374151;
         }
 
+        .btn-logout {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #6b7280;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background-color: #4b5563;
+        }
+
+        .logout-button-container {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
         .google-signup {
             margin-top: 1rem;
             text-align: center;
@@ -1102,29 +1078,13 @@
                 <li><a href="games.html">Games</a></li>
                 <li><a href="puzzles.html">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
-                    <li class="profile-dropdown">
-                        <a href="#" id="profileLink" class="profile-button active">Profile</a>
-            <div class="dropdown-menu" id="profileDropdown">
-                <a href="profile.html" class="dropdown-item" id="profileMenuItem">
-                    <span class="dropdown-text">My Profile</span>
-                </a>
-                <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
-                    <span class="dropdown-text">Account Information</span>
-                </a>
-                <a href="#" class="dropdown-item" id="signInMenuItem">
-                    <span class="dropdown-text">Sign In</span>
-                </a>
-                <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
-                    <span class="dropdown-text">Logout</span>
-                </a>
-            </div>
-                    </li>
+                    <li><a href="profile.html" id="profileLink" class="profile-button active">Profile</a></li>
         </ul>
     </nav>
 
     <div class="main-content">
         <div class="profile-header">
-            <h1 class="profile-title">My Profile</h1>
+            <h1 class="profile-title" id="profileTitle">My Profile</h1>
             <p class="profile-subtitle">
                 Track your progress, monitor completion rates, and manage your chess training journey.
             </p>
@@ -1135,7 +1095,6 @@
                 <div class="profile-avatar">
                     ♟️
                 </div>
-                <h2 class="profile-name" id="userName">Guest User</h2>
                 <p class="profile-email" id="userEmail">guest@example.com</p>
                 
                 <div class="subscription-status free" id="subscriptionStatus" style="display: none;">
@@ -1158,7 +1117,6 @@
                     </div>
                 </div>
 
-
                 <ul class="profile-stats">
                     <li>
                         <span class="stat-label">Games Played</span>
@@ -1177,6 +1135,10 @@
                         <span class="stat-value" id="currentStreak">0 days</span>
                     </li>
                 </ul>
+
+                <div class="logout-button-container">
+                    <button class="btn-logout" id="logoutButton" onclick="window.logout()">Logout</button>
+                </div>
             </div>
 
             <div class="profile-main">
@@ -1201,7 +1163,7 @@
                             </div>
                             <div class="progress-bar-container">
                                 <div class="progress-bar" id="puzzlesProgressBar" style="width: 0%"></div>
-                            </div>
+                                    </div>
                             <div class="progress-goal" id="puzzlesProgressGoal">Goal: Complete all available puzzles</div>
                         </div>
                         
@@ -1213,6 +1175,31 @@
     </div>
 
     <script src="progress-tracker.js"></script>
+    
+    <!-- Early auth check - runs before page renders to prevent flash -->
+    <script>
+        // Check auth status immediately before page renders
+        (function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            // Also check if there's a Supabase session key
+            let hasSupabaseSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('supabase') || key.includes('yaaxydrmuslgzjletzbw') || key.startsWith('sb-'))) {
+                    hasSupabaseSession = true;
+                    break;
+                }
+            }
+            
+            // If not logged in and no Supabase session, redirect immediately to home
+            // The home page will show sign-in modal if needed
+            if (!isLoggedIn && !hasSupabaseSession) {
+                window.location.href = 'index.html';
+                return; // Stop execution
+            }
+        })();
+    </script>
+    
     <script>
         // Initialize progress tracker
         let progressTracker = new ProgressTracker();
@@ -1229,7 +1216,65 @@
 
         // Initialize profile page
         async function initProfile() {
+            // First, check if user is actually logged in using centralized auth check
+            let authStatus;
+            if (typeof window.checkAuthStatus === 'function') {
+                authStatus = await window.checkAuthStatus();
+            } else {
+                // Fallback if function not available
+                authStatus = {
+                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                    user: null,
+                    email: localStorage.getItem('userEmail'),
+                    name: localStorage.getItem('userName')
+                };
+            }
+            
+            // If user is not logged in, redirect to home page immediately
+            if (!authStatus.isLoggedIn) {
+                console.log('User not logged in, redirecting to home page');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // User is logged in - proceed with loading profile data
+            // Update user info immediately from authStatus (instant display)
+            userData.name = authStatus.name || 'User';
+            userData.email = authStatus.email || '';
             updateUserInfo();
+            
+            // Update stats immediately from cached progress (instant display)
+            if (typeof updateStats === 'function') {
+                updateStats();
+            }
+            
+            // Then get fresh data from Supabase (updates in background)
+            if (authStatus.user) {
+                // We already have user data from checkAuthStatus
+                userData.name = authStatus.name;
+                userData.email = authStatus.email;
+                updateUserInfo();
+            } else if (typeof getCurrentUser === 'function') {
+                try {
+                    const user = await getCurrentUser();
+                    if (user) {
+                        // Get name from Supabase user metadata or email
+                        const supabaseName = user.user_metadata?.name || 
+                                          user.user_metadata?.full_name || 
+                                          user.email?.split('@')[0] || 
+                                          'User';
+                        userData.name = supabaseName;
+                        userData.email = user.email || userData.email; // Get real email from Supabase
+                        localStorage.setItem('userName', supabaseName);
+                        localStorage.setItem('userEmail', user.email || '');
+                        
+                        // Update UI again with fresh Supabase data
+                        updateUserInfo();
+                    }
+                } catch (e) {
+                    console.log('Could not get user from Supabase:', e);
+                }
+            }
             
             // Force hide subscription UI initially to prevent flash
             const statusElement = document.getElementById('subscriptionStatus');
@@ -1275,8 +1320,26 @@
         }
 
         function updateUserInfo() {
-            document.getElementById('userName').textContent = userData.name;
-            document.getElementById('userEmail').textContent = userData.email;
+            // Extract first name from full name
+            let firstName = userData.name;
+            if (firstName && firstName.includes(' ')) {
+                firstName = firstName.split(' ')[0]; // Get first word
+            }
+            
+            // Show welcome message with first name
+            const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+            
+            // Update profile header title (replace "My Profile" with welcome message)
+            const profileTitleElement = document.querySelector('.profile-title');
+            if (profileTitleElement) {
+                profileTitleElement.textContent = welcomeMessage;
+            }
+            
+            // Update email (use real email from Supabase, not placeholder)
+            const userEmailElement = document.getElementById('userEmail');
+            if (userEmailElement) {
+                userEmailElement.textContent = userData.email || 'guest@example.com';
+            }
         }
 
         async function updateSubscriptionStatus() {
@@ -1467,7 +1530,8 @@
             console.log('Account reset to free');
         }
 
-        function updateStats() {
+        // Make updateStats available globally for instant updates
+        window.updateStats = function updateStats() {
             // Get progress data from progress tracker
             const progress = progressTracker.getProgressSummary();
             const trainingTime = progressTracker.getDetailedTrainingTime();
@@ -1490,7 +1554,7 @@
                         }).length;
                         
                         // Update the display
-                        document.getElementById('gamesPlayed').textContent = completedGames;
+            document.getElementById('gamesPlayed').textContent = completedGames;
                         document.getElementById('puzzlesCompleted').textContent = completedPuzzles;
                         
                         return { completedGames, completedPuzzles };
@@ -1508,37 +1572,37 @@
             // Get completed counts
             getCompletedCounts().then(({ completedGames, completedPuzzles }) => {
                 const allCompleted = completedGames + completedPuzzles;
-                
-                // Update training time with detailed breakdown
-                const trainingTimeElement = document.getElementById('trainingHours');
-                if (trainingTimeElement) {
-                    trainingTimeElement.innerHTML = `
-                        <div class="training-time-breakdown">
-                            <div class="total-time">${trainingTime.total}</div>
-                            ${trainingTime.isActive ? `<div class="current-session">Current: ${trainingTime.currentSession}</div>` : ''}
-                        </div>
-                    `;
-                }
-                
-                document.getElementById('currentStreak').textContent = progress.currentStreak + ' days';
-                
+            
+            // Update training time with detailed breakdown
+            const trainingTimeElement = document.getElementById('trainingHours');
+            if (trainingTimeElement) {
+                trainingTimeElement.innerHTML = `
+                    <div class="training-time-breakdown">
+                        <div class="total-time">${trainingTime.total}</div>
+                        ${trainingTime.isActive ? `<div class="current-session">Current: ${trainingTime.currentSession}</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('currentStreak').textContent = progress.currentStreak + ' days';
+            
                 // Update progress bars - pass all completed items, function will filter by type
                 updateProgressBars();
-                
-                // Update userData to match progress tracker
+            
+            // Update userData to match progress tracker
                 userData.gamesPlayed = allCompleted;
-                userData.trainingHours = progress.totalHours;
-                userData.currentStreak = progress.currentStreak;
-                
-                console.log('Profile stats updated:', {
-                    completedGames: completedGames,
+            userData.trainingHours = progress.totalHours;
+            userData.currentStreak = progress.currentStreak;
+            
+            console.log('Profile stats updated:', {
+                completedGames: completedGames,
                     completedPuzzles: completedPuzzles,
                     allCompleted: allCompleted,
-                    totalTime: trainingTime.total,
-                    currentSession: trainingTime.currentSession,
-                    isActive: trainingTime.isActive,
-                    currentStreak: progress.currentStreak
-                });
+                totalTime: trainingTime.total,
+                currentSession: trainingTime.currentSession,
+                isActive: trainingTime.isActive,
+                currentStreak: progress.currentStreak
+            });
             });
         }
 
@@ -1603,41 +1667,85 @@
 
         // Logout function - shows confirmation modal
         function logout() {
-            document.getElementById('logoutConfirmModal').style.display = 'block';
+            console.log('Logout function called');
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                console.log('Modal found, showing it');
+                modal.style.display = 'block';
+            } else {
+                console.error('Logout modal not found!');
+            }
         }
+        
+        // Make logout function globally accessible
+        window.logout = logout;
 
-        // Confirm logout function
-        function confirmLogout() {
-            // Clear user data and localStorage
+        // Confirm logout function - using the working version from puzzles.html
+        async function confirmLogout() {
+            console.log('confirmLogout function called!');
+            
+            // Hide modal first
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            // Clear user data and localStorage FIRST
+            console.log('Clearing localStorage...');
             localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
+            localStorage.removeItem('userEmail');
             localStorage.removeItem('subscriptionPlan');
             localStorage.removeItem('hasActiveSubscription');
+            localStorage.removeItem('cachedSubscriptionStatus');
+            localStorage.removeItem('cachedSubscriptionPlan');
             
-            // Reset user data
-            userData = {
-                name: "Guest User",
-                email: "guest@example.com",
-                subscription: "free",
-                gamesPlayed: 0,
-                puzzlesSolved: 0,
-                trainingHours: 0,
-                currentStreak: 0
-            };
-            initProfile();
+            // CRITICAL: Clear ALL Supabase localStorage keys
+            console.log('Clearing Supabase localStorage keys...');
+            const supabaseProjectId = 'yaaxydrmuslgzjletzbw';
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('supabase') || key.includes(supabaseProjectId) || key.startsWith('sb-'))) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => {
+                console.log('Removing Supabase key:', key);
+                localStorage.removeItem(key);
+            });
             
-            // Hide modal
-            document.getElementById('logoutConfirmModal').style.display = 'none';
+            // Also try to sign out from Supabase directly (non-blocking)
+            if (typeof getSupabase === 'function') {
+                const supabase = getSupabase();
+                if (supabase) {
+                    console.log('Calling supabase.auth.signOut() directly...');
+                    supabase.auth.signOut().catch(() => {
+                        // Ignore errors, we've already cleared localStorage
+                    });
+                }
+            }
             
-            // Redirect to home page
+            // Redirect to home page - this will automatically refresh/load the page fresh
+            console.log('Redirecting to index.html...');
             window.location.href = 'index.html';
         }
+        
+        // Make confirmLogout globally accessible (for onclick handlers)
+        window.confirmLogout = confirmLogout;
+        console.log('confirmLogout function registered globally');
 
         // Cancel logout function
         function cancelLogout() {
-            document.getElementById('logoutConfirmModal').style.display = 'none';
+            console.log('Cancel logout called');
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
+        
+        // Make cancelLogout globally accessible (for onclick handlers)
+        window.cancelLogout = cancelLogout;
 
         // Modal functions
         function showSignInModal() {
@@ -1710,119 +1818,141 @@
             window.location.reload();
         }
 
-        // Google sign-in handler
-        function signInWithGoogle() {
-            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
-            const mockGoogleUser = {
-                email: 'user@gmail.com',
-                name: 'Google User',
-                id: 'google_' + Math.random().toString(36).substr(2, 9)
-            };
-            
-            // Check if user exists in localStorage
-            const storedEmail = localStorage.getItem('userEmail');
-            const storedPassword = localStorage.getItem('userPassword');
-            
-            if (storedEmail === mockGoogleUser.email && storedPassword === mockGoogleUser.id) {
-                // User exists, sign them in
-                localStorage.setItem('isLoggedIn', 'true');
-                updateNavigation();
-                closeModal();
-                window.location.reload();
+        // Google sign-in handler (works for both sign-in and registration)
+        async function signInWithGoogle() {
+            try {
+                if (typeof window.signInWithGoogle === 'function') {
+                    const result = await window.signInWithGoogle();
+                    
+                    if (result.success && result.url) {
+                        // Redirect to Google OAuth
+                        window.location.href = result.url;
             } else {
-                // User doesn't exist, create account
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', mockGoogleUser.email);
-                localStorage.setItem('userName', mockGoogleUser.name);
-                localStorage.setItem('userPassword', mockGoogleUser.id);
-                localStorage.setItem('authProvider', 'google');
-                updateNavigation();
-                closeModal();
-                window.location.reload();
+                        // Show error
+                        const signInForm = document.getElementById('signInForm');
+                        if (signInForm) {
+                            showError(signInForm, result.error || 'Google sign-in failed. Please try again.');
+                        } else {
+                            alert(result.error || 'Google sign-in failed. Please try again.');
+                        }
+                    }
+                } else {
+                    alert('Google sign-in is not available. Please use email/password.');
+                }
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+                alert('An error occurred with Google sign-in. Please try again.');
             }
         }
 
-        // Google registration handler
-        function registerWithGoogle() {
-            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
-            const mockGoogleUser = {
-                email: 'user@gmail.com',
-                name: 'Google User',
-                id: 'google_' + Math.random().toString(36).substr(2, 9)
-            };
+        // Google registration handler (same as sign-in - Google OAuth handles both)
+        async function registerWithGoogle() {
+            // Google OAuth works for both sign-in and registration
+            // If user exists, they sign in; if not, account is created
+            await signInWithGoogle();
+        }
+        
+        // Handle OAuth callback from Google
+        async function handleOAuthCallback() {
+            // Supabase OAuth uses URL hash fragments (#access_token=...)
+            // Check if we have a hash with access_token
+            const hash = window.location.hash;
+            const hasOAuthHash = hash && (hash.includes('access_token') || hash.includes('error'));
             
-            // Check if user already exists
-            const existingEmail = localStorage.getItem('userEmail');
-            if (existingEmail === mockGoogleUser.email) {
-                showSignInModal();
-                return;
-            }
-            
-            // Create account with Google data
+            if (hasOAuthHash && typeof getSupabase === 'function') {
+                const supabase = getSupabase();
+                if (supabase) {
+                    try {
+                        // Supabase automatically handles the hash and creates session
+                        // Just get the session to verify
+                        const { data, error } = await supabase.auth.getSession();
+                        
+                        if (!error && data.session && data.session.user) {
+                            console.log('✅ Google OAuth successful!', data.session.user);
+                            
+                            // Store user data
+                            const user = data.session.user;
             localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', mockGoogleUser.email);
-            localStorage.setItem('userName', mockGoogleUser.name);
-            localStorage.setItem('userPassword', mockGoogleUser.id); // Use Google ID as password
-            localStorage.setItem('authProvider', 'google');
-            updateNavigation();
+                            localStorage.setItem('userEmail', user.email || '');
+                            const userName = user.user_metadata?.name || 
+                                          user.user_metadata?.full_name || 
+                                          user.email?.split('@')[0] || 
+                                          'User';
+                            localStorage.setItem('userName', userName);
+                            
+                            // Create initial user_progress if new user
+                            if (typeof window.saveUserProgress === 'function') {
+                                try {
+                                    await window.saveUserProgress({
+                                        completedGames: [],
+                                        completedPuzzles: [],
+                                        totalGamesPlayed: 0,
+                                        trainingHours: 0,
+                                        currentStreak: 0
+                                    });
+                                    console.log('✅ Initial user progress created');
+                                } catch (progressError) {
+                                    console.log('Note: Progress may already exist or will be created on first activity', progressError);
+                                }
+                            }
+                            
+                            // Clean up URL (remove hash)
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            
+                            // Update navigation and reload to show profile
+                            await updateNavigation();
+                            await initProfile();
+                            
+                            // Close modal if open
             closeModal();
-            window.location.reload();
+                        } else if (error) {
+                            console.error('OAuth session error:', error);
+                        }
+                    } catch (error) {
+                        console.error('OAuth callback error:', error);
+                    }
+                }
+            }
         }
 
         // Check login status and update navigation
         async function updateNavigation() {
             const profileLink = document.getElementById('profileLink');
-            const profileMenuItem = document.getElementById('profileMenuItem');
-            const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
-            const signInMenuItem = document.getElementById('signInMenuItem');
-            const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             
-            // Subscription tab removed - content is now on home page
+            // Check both localStorage and Supabase authentication
+            let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             
-            if (isLoggedIn) {
-                // User is logged in - show profile, account info, and logout options
-                profileMenuItem.style.display = 'flex';
-                accountInfoMenuItem.style.display = 'flex';
-                logoutMenuItem.style.display = 'flex';
-                signInMenuItem.style.display = 'none';
-                
-                profileMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = 'profile.html';
-                };
-                
-                accountInfoMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    showAccountInfoModal();
-                };
-                
-                logoutMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    logout();
-                };
-                
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = 'profile.html';
-                };
+            // Also check Supabase session (more reliable for OAuth)
+            if (typeof getCurrentUser === 'function') {
+                try {
+                    const user = await getCurrentUser();
+                    if (user) {
+                        isLoggedIn = true;
+                        // Always update localStorage and userData with real Supabase data
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', user.email || '');
+                        const userName = user.user_metadata?.name || 
+                                      user.user_metadata?.full_name || 
+                                      user.email?.split('@')[0] || 
+                                      'User';
+                        localStorage.setItem('userName', userName);
+                        userData.name = userName;
+                        userData.email = user.email || ''; // Always use real email from Supabase
             } else {
-                // User is not logged in - show sign in option
-                profileMenuItem.style.display = 'none';
-                accountInfoMenuItem.style.display = 'none';
-                logoutMenuItem.style.display = 'none';
-                signInMenuItem.style.display = 'flex';
-                
-                signInMenuItem.onclick = function(e) {
-                    e.preventDefault();
-                    showSignInModal();
-                };
-                
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    showSignInModal();
-                };
+                        // No Supabase user, clear localStorage if it says logged in
+                        if (isLoggedIn && !localStorage.getItem('userEmail')) {
+                            isLoggedIn = false;
+                            localStorage.setItem('isLoggedIn', 'false');
+                        }
+                    }
+                } catch (e) {
+                    console.log('Error checking Supabase auth in navigation:', e);
+                    // Fall back to localStorage check
+                }
             }
+            
+            // Profile link is now just a simple link - no dropdown menu
+            // If user is logged out and clicks profile, they'll be redirected to sign in by initProfile()
         }
 
         async function showAccountInfoModal() {
@@ -2028,9 +2158,25 @@
         }
 
         // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            initProfile();
-            updateNavigation();
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Wait for Supabase to initialize before checking auth
+            await new Promise(resolve => {
+                if (typeof getSupabase === 'function' && getSupabase()) {
+                    resolve();
+                } else {
+                    // Wait a bit for Supabase to load
+                    setTimeout(resolve, 500);
+                }
+            });
+            
+            // Handle OAuth callback first (if user just signed in with Google)
+            await handleOAuthCallback();
+            
+            // Update navigation (checks Supabase auth)
+            await updateNavigation();
+            
+            // Then initialize profile
+            await initProfile();
             
             // Set up modal event listeners
             document.querySelectorAll('.close').forEach(closeBtn => {
@@ -2042,6 +2188,12 @@
                 const signInModal = document.getElementById('signInModal');
                 const registerModal = document.getElementById('registerModal');
                 const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+                
+                // Don't close if clicking inside the modal content
+                if (logoutConfirmModal && logoutConfirmModal.contains(event.target) && event.target !== logoutConfirmModal) {
+                    return; // Click is inside modal content, don't close
+                }
+                
                 if (event.target === signInModal) {
                     closeModal();
                 }
@@ -2058,6 +2210,9 @@
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', cancelSubscription);
             }
+            
+            // Logout button already has onclick="window.logout()" in HTML, no need for event listener
+            // Confirm logout button uses onclick="confirmLogout()" directly in HTML
         });
     </script>
 
@@ -2138,8 +2293,8 @@
                 Are you sure you want to log out? You'll need to sign in again to access your account.
             </div>
             <div class="logout-confirm-buttons">
-                <button class="btn-logout-confirm btn-logout-yes" onclick="confirmLogout()">Yes, Logout</button>
-                <button class="btn-logout-confirm btn-logout-no" onclick="cancelLogout()">Cancel</button>
+                <button class="btn-logout-confirm btn-logout-yes" onclick="if(typeof window.confirmLogout === 'function') { window.confirmLogout(); } else { console.error('confirmLogout not found!'); }">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no" onclick="if(typeof window.cancelLogout === 'function') { window.cancelLogout(); } else { console.error('cancelLogout not found!'); }">Cancel</button>
             </div>
         </div>
     </div>

@@ -8,6 +8,33 @@
     <meta name="author" content="Memo Chess">
     <title>Memo Chess - Master Chess Visualization & Memory Training</title>
     <link rel="icon" type="image/png" href="images/chess-board.png">
+    
+    <!-- Hide page immediately if OAuth callback detected -->
+    <script>
+        // Check if this is an OAuth callback and hide page immediately
+        (function() {
+            const hash = window.location.hash;
+            const isOAuthCallback = hash && hash.includes('access_token');
+            if (isOAuthCallback) {
+                // Inject CSS to hide body immediately (before body renders)
+                const style = document.createElement('style');
+                style.textContent = 'body { display: none !important; }';
+                document.head.appendChild(style);
+                
+                // Also hide body when it loads
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (document.body) {
+                        document.body.style.display = 'none';
+                    }
+                });
+                // Try to hide immediately if body exists
+                if (document.body) {
+                    document.body.style.display = 'none';
+                }
+            }
+        })();
+    </script>
+    
     <script>
         // Subscription tab removed - content is now on home page
     </script>
@@ -102,10 +129,6 @@
             background-color: #e5e7eb;
         }
 
-        /* Profile Dropdown Styles */
-        .profile-dropdown {
-            position: relative;
-        }
 
         .profile-icon {
             display: flex;
@@ -164,6 +187,19 @@
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
+        }
+
+        /* Only show dropdown when user is logged in */
+        .profile-dropdown:not(.logged-in):hover .dropdown-menu {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: translateY(-10px) !important;
+            pointer-events: none !important;
+        }
+        
+        /* Also hide dropdown by default when not logged in */
+        .profile-dropdown:not(.logged-in) .dropdown-menu {
+            display: none !important;
         }
 
         .dropdown-item {
@@ -1067,25 +1103,8 @@
                 <ul class="nav-links">
                     <li><a href="index.html" class="active">Home</a></li>
                 <li><a href="games.html">Games</a></li>
-                <li><a href="puzzles.html">Puzzles</a></li>
-                <!-- <li><a href="leaderboard.html">Community</a></li> -->
-                    <li class="profile-dropdown">
-                        <a href="#" id="profileLink" class="profile-button">Profile</a>
-                        <div class="dropdown-menu" id="profileDropdown">
-                            <a href="profile.html" class="dropdown-item" id="profileMenuItem">
-                                <span class="dropdown-text">My Profile</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="accountInfoMenuItem" style="display: none;">
-                                <span class="dropdown-text">Account Information</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="signInMenuItem">
-                                <span class="dropdown-text">Sign In</span>
-                            </a>
-                            <a href="#" class="dropdown-item" id="logoutMenuItem" style="display: none;">
-                                <span class="dropdown-text">Logout</span>
-                            </a>
-                        </div>
-                    </li>
+            <li><a href="puzzles.html">Puzzles</a></li>
+            <li><a href="profile.html" id="profileLink" class="profile-button">Profile</a></li>
                 </ul>
     </nav>
 
@@ -1094,8 +1113,8 @@
             <div class="hero-content">
                 <div class="hero-text">
                      <h1 class="hero-title">Welcome to Memo Chess</h1>
-                     <p class="hero-subtitle">
-                         This website is dedicated to help you memorise historical chess games and will also train your chess visualisation skills.
+            <p class="hero-subtitle">
+                         This website is designed to help you memorize chess openings, learn famous historical games, and develop strong visualization skills so you can play games and solve puzzles without relying on a physical board. This training method was created to help you improve your chess rating as quickly and efficiently as possible.
                      </p>
                 </div>
                 
@@ -1527,11 +1546,22 @@
         // Check login status and update navigation
         async function updateNavigation() {
             const profileLink = document.getElementById('profileLink');
-            const profileMenuItem = document.getElementById('profileMenuItem');
-            const accountInfoMenuItem = document.getElementById('accountInfoMenuItem');
-            const signInMenuItem = document.getElementById('signInMenuItem');
-            const logoutMenuItem = document.getElementById('logoutMenuItem');
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            // Use centralized auth check function
+            let authStatus;
+            if (typeof window.checkAuthStatus === 'function') {
+                authStatus = await window.checkAuthStatus();
+            } else {
+                // Fallback if function not available
+                authStatus = {
+                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                    user: null,
+                    email: localStorage.getItem('userEmail'),
+                    name: localStorage.getItem('userName')
+                };
+            }
+            
+            const isLoggedIn = authStatus.isLoggedIn;
             
             // Check subscription status from Supabase (if available) or localStorage as fallback
             let hasActiveSubscription = false;
@@ -1548,67 +1578,20 @@
                 hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
             }
             
-            // Subscription tab removed - content is now on home page
-            
-            if (isLoggedIn) {
-                // User is logged in - show profile, account info, and logout options
-                if (profileMenuItem) profileMenuItem.style.display = 'flex';
-                if (accountInfoMenuItem) accountInfoMenuItem.style.display = 'flex';
-                if (logoutMenuItem) logoutMenuItem.style.display = 'flex';
-                if (signInMenuItem) signInMenuItem.style.display = 'none';
-                
-                // Set up profile menu item
-                if (profileMenuItem) {
-                    profileMenuItem.onclick = function(e) {
-                        e.preventDefault();
-                        window.location.href = 'profile.html';
-                    };
-                }
-                
-                // Set up account info menu item
-                if (accountInfoMenuItem) {
-                    accountInfoMenuItem.onclick = function(e) {
-                        e.preventDefault();
-                        showAccountInfoModal();
-                    };
-                }
-                
-                // Set up logout menu item
-                if (logoutMenuItem) {
-                    logoutMenuItem.onclick = function(e) {
-                        e.preventDefault();
-                        logout();
-                    };
-                }
-                
-                // Profile icon click - go to profile
-                if (profileLink) {
-                    profileLink.onclick = function(e) {
-                        e.preventDefault();
-                        window.location.href = 'profile.html';
-                    };
-                }
-            } else {
-                // User is not logged in - show sign in option
-                if (profileMenuItem) profileMenuItem.style.display = 'none';
-                if (accountInfoMenuItem) accountInfoMenuItem.style.display = 'none';
-                if (logoutMenuItem) logoutMenuItem.style.display = 'none';
-                if (signInMenuItem) signInMenuItem.style.display = 'flex';
-                
-                // Set up sign in menu item
-                if (signInMenuItem) {
-                    signInMenuItem.onclick = function(e) {
-                        e.preventDefault();
-                        showSignInModal();
-                    };
-                }
-                
-                // Profile icon click - show sign in modal
-                if (profileLink) {
-                    profileLink.onclick = function(e) {
-                        e.preventDefault();
-                        showSignInModal();
-                    };
+            // Set up profile link behavior
+            if (profileLink) {
+                if (isLoggedIn) {
+                    // User is logged in - ensure link goes to profile page
+                    profileLink.href = 'profile.html';
+                    // Remove any onclick handlers that might prevent navigation
+                    profileLink.onclick = null;
+                } else {
+                    // User is not logged in - show sign in modal when clicked
+                    profileLink.href = '#';
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
                 }
             }
         }
@@ -1721,13 +1704,27 @@
         }
 
         // Confirm logout function
-        function confirmLogout() {
+        async function confirmLogout() {
+            // Sign out from Supabase if available
+            if (typeof signOutUser === 'function') {
+                try {
+                    await signOutUser();
+                    console.log('Signed out from Supabase');
+                } catch (e) {
+                    console.log('Error signing out from Supabase:', e);
+                }
+            }
+            
             // Clear user data and localStorage
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userName');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('subscriptionPlan');
             localStorage.removeItem('hasActiveSubscription');
+            localStorage.removeItem('cachedSubscriptionStatus');
+            localStorage.removeItem('cachedSubscriptionPlan');
+            localStorage.removeItem('pendingSubscription');
+            localStorage.removeItem('pendingSubscriptionPlan');
             
             // Update navigation
             updateNavigation();
@@ -1774,12 +1771,68 @@
         }
 
         // Sign in form handler
-        function handleSignIn(event) {
+        async function handleSignIn(event) {
             event.preventDefault();
-            const email = document.getElementById('signInEmail').value;
+            const email = document.getElementById('signInEmail').value.trim();
             const password = document.getElementById('signInPassword').value;
             
-            // Check if user exists in localStorage
+            // Get form elements for error display
+            const signInForm = document.getElementById('signInForm');
+            const errorMessage = signInForm.querySelector('.error-message');
+            
+            // Remove any existing error messages
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            // Validate inputs
+            if (!email || !password) {
+                showError(signInForm, 'Please enter both email and password');
+                return;
+            }
+            
+            // Show loading state
+            const submitButton = signInForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing In...';
+            
+            try {
+                // Sign in with Supabase
+                if (typeof signInWithEmail === 'function') {
+                    const result = await signInWithEmail(email, password);
+                    
+                    if (result.success && result.user) {
+                        console.log('✅ Sign in successful!', result.user);
+                        
+                        // Hide page content immediately to prevent flash
+                        document.body.style.display = 'none';
+                        
+                        // Store user data in localStorage
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', result.user.email || email);
+                        localStorage.setItem('userName', result.user.user_metadata?.name || result.user.user_metadata?.full_name || 'User');
+                        
+                        // Check if there's a pending subscription
+                        const pendingPlan = localStorage.getItem('pendingSubscription');
+                        if (pendingPlan) {
+                            // User was trying to subscribe before signing in
+                            localStorage.removeItem('pendingSubscription');
+                            // Redirect to subscription flow
+                            redirectToDodoPayments(pendingPlan);
+                        } else {
+                            // Redirect to profile immediately after sign-in (no delay)
+                            window.location.replace('profile.html');
+                        }
+                    } else {
+                        // Sign in failed
+                        showError(signInForm, result.error || 'Invalid email or password. Please try again.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+                } else {
+                    // Supabase not available - fallback to localStorage (for testing)
+                    console.warn('Supabase not available, using localStorage fallback');
             const storedEmail = localStorage.getItem('userEmail');
             const storedPassword = localStorage.getItem('userPassword');
             
@@ -1788,98 +1841,199 @@
                 updateNavigation();
                 closeModal();
                 window.location.href = 'profile.html';
+                    } else {
+                        showError(signInForm, 'Invalid email or password');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+                }
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showError(signInForm, error.message || 'An error occurred. Please try again.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
             }
         }
 
         // Register form handler
-        function handleRegister(event) {
+        async function handleRegister(event) {
             event.preventDefault();
-            const email = document.getElementById('registerEmail').value;
+            const email = document.getElementById('registerEmail').value.trim();
             const password = document.getElementById('registerPassword').value;
-            const name = document.getElementById('registerName').value;
+            const name = document.getElementById('registerName').value.trim();
             
-            // Check if email already exists
-            const existingEmail = localStorage.getItem('userEmail');
-            if (existingEmail === email) {
-                showSignInModal();
+            // Get form elements for error display
+            const registerForm = document.getElementById('registerForm');
+            const errorMessage = registerForm.querySelector('.error-message');
+            
+            // Remove any existing error messages
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            // Validate inputs
+            if (!email || !password || !name) {
+                showError(registerForm, 'Please fill in all fields');
                 return;
             }
             
-            // Create new account
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('userName', name);
-            localStorage.setItem('userPassword', password);
-            updateNavigation();
-            closeModal();
-            window.location.href = 'profile.html';
-        }
-
-        // Google sign-in handler
-        function signInWithGoogle() {
-            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
-            const mockGoogleUser = {
-                email: 'user@gmail.com',
-                name: 'Google User',
-                id: 'google_' + Math.random().toString(36).substr(2, 9)
-            };
+            if (password.length < 6) {
+                showError(registerForm, 'Password must be at least 6 characters');
+                return;
+            }
             
-            // Check if user exists in localStorage
-            const storedEmail = localStorage.getItem('userEmail');
-            const storedPassword = localStorage.getItem('userPassword');
+            // Show loading state
+            const submitButton = registerForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Creating Account...';
             
-            if (storedEmail === mockGoogleUser.email && storedPassword === mockGoogleUser.id) {
-                // User exists, sign them in
+            try {
+                // Register with Supabase
+                if (typeof signUpWithEmail === 'function') {
+                    const result = await signUpWithEmail(email, password, name);
+                    
+                    if (result.success) {
+                        console.log('✅ Registration successful!', result.user);
+                        
+                        // Store user data in localStorage
                 localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', email);
+                        localStorage.setItem('userName', name);
+                        
+                        // Create initial user_progress record in Supabase
+                        if (result.user && typeof window.saveUserProgress === 'function') {
+                            try {
+                                await window.saveUserProgress({
+                                    completedGames: [],
+                                    completedPuzzles: [],
+                                    totalGamesPlayed: 0,
+                                    trainingHours: 0,
+                                    currentStreak: 0
+                                });
+                                console.log('✅ Initial user progress created');
+                            } catch (progressError) {
+                                console.log('Note: Could not create initial progress (will be created on first activity)', progressError);
+                            }
+                        }
+                        
+                        // Update navigation
                 updateNavigation();
                 closeModal();
+                        
+                        // Check if there's a pending subscription
+                        const pendingPlan = localStorage.getItem('pendingSubscription');
+                        if (pendingPlan) {
+                            // User was trying to subscribe before registering
+                            localStorage.removeItem('pendingSubscription');
+                            // Redirect to subscription flow
+                            redirectToDodoPayments(pendingPlan);
+                        } else {
+                            // Redirect to profile
                 window.location.href = 'profile.html';
+                        }
             } else {
-                // User doesn't exist, create account
+                        // Registration failed
+                        showError(registerForm, result.error || 'Registration failed. Please try again.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+                } else {
+                    // Supabase not available - fallback to localStorage (for testing)
+                    console.warn('Supabase not available, using localStorage fallback');
                 localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', mockGoogleUser.email);
-                localStorage.setItem('userName', mockGoogleUser.name);
-                localStorage.setItem('userPassword', mockGoogleUser.id);
-                localStorage.setItem('authProvider', 'google');
+                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('userName', name);
+                    localStorage.setItem('userPassword', password);
                 updateNavigation();
                 closeModal();
                 window.location.href = 'profile.html';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showError(registerForm, error.message || 'An error occurred. Please try again.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+            }
+        }
+        
+        // Helper function to show error messages
+        function showError(form, message) {
+            // Remove existing error
+            const existingError = form.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Create error element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.color = '#e74c3c';
+            errorDiv.style.marginTop = '0.5rem';
+            errorDiv.style.fontSize = '0.9rem';
+            errorDiv.textContent = message;
+            
+            // Insert before submit button
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.parentElement.insertBefore(errorDiv, submitButton);
+        }
+
+        // Google sign-in handler (works for both sign-in and registration)
+        async function signInWithGoogle() {
+            try {
+                if (typeof window.signInWithGoogle === 'function') {
+                    const result = await window.signInWithGoogle();
+                    
+                    if (result.success && result.url) {
+                        // Redirect to Google OAuth
+                        window.location.href = result.url;
+                    } else {
+                        // Show error
+                        const signInForm = document.getElementById('signInForm');
+                        if (signInForm) {
+                            showError(signInForm, result.error || 'Google sign-in failed. Please try again.');
+                        } else {
+                            alert(result.error || 'Google sign-in failed. Please try again.');
+                        }
+                    }
+                } else {
+                    alert('Google sign-in is not available. Please use email/password.');
+                }
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+                alert('An error occurred with Google sign-in. Please try again.');
             }
         }
 
-        // Google registration handler
-        function registerWithGoogle() {
-            // Simulate Google OAuth flow (replace with actual Google OAuth implementation)
-            const mockGoogleUser = {
-                email: 'user@gmail.com',
-                name: 'Google User',
-                id: 'google_' + Math.random().toString(36).substr(2, 9)
-            };
-            
-            // Check if user already exists
-            const existingEmail = localStorage.getItem('userEmail');
-            if (existingEmail === mockGoogleUser.email) {
-                showSignInModal();
-                return;
-            }
-            
-            // Create account with Google data
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', mockGoogleUser.email);
-            localStorage.setItem('userName', mockGoogleUser.name);
-            localStorage.setItem('userPassword', mockGoogleUser.id); // Use Google ID as password
-            localStorage.setItem('authProvider', 'google');
-            updateNavigation();
-            closeModal();
-            window.location.href = 'profile.html';
+        // Google registration handler (same as sign-in - Google OAuth handles both)
+        async function registerWithGoogle() {
+            // Google OAuth works for both sign-in and registration
+            // If user exists, they sign in; if not, account is created
+            await signInWithGoogle();
         }
 
         // Subscription functions
-        function subscribe(plan) {
-            // Check if user is authenticated
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        async function subscribe(plan) {
+            // Use centralized auth check function
+            let authStatus;
+            if (typeof window.checkAuthStatus === 'function') {
+                authStatus = await window.checkAuthStatus();
+            } else {
+                // Fallback if function not available
+                authStatus = {
+                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                    user: null,
+                    email: localStorage.getItem('userEmail'),
+                    name: localStorage.getItem('userName')
+                };
+            }
+            
+            const isLoggedIn = authStatus.isLoggedIn;
             
             if (!isLoggedIn) {
+                // User is not logged in - show sign-in modal
+                console.log('User not logged in. Showing sign-in modal.');
+                
                 // Store the selected plan and show sign-in modal
                 localStorage.setItem('pendingSubscription', plan);
                 showSignInModal();
@@ -1887,6 +2041,7 @@
             }
             
             // User is authenticated, redirect to Dodo Payments checkout
+            console.log('User is properly logged in, redirecting to Dodo Payments');
             redirectToDodoPayments(plan);
         }
 
@@ -1947,10 +2102,89 @@
             });
         }
 
+        // Handle OAuth callback from Google
+        async function handleOAuthCallback() {
+            // Supabase OAuth uses URL hash fragments (#access_token=... or #error=...)
+            // Check if we have a hash with access_token or error
+            const hash = window.location.hash;
+            const hasOAuthHash = hash && (hash.includes('access_token') || hash.includes('error') || hash.includes('type=recovery'));
+            
+            if (hasOAuthHash && typeof getSupabase === 'function') {
+                const supabase = getSupabase();
+                if (supabase) {
+                    try {
+                        // Wait a bit for Supabase to process the hash
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // Get the session - Supabase should have processed the hash by now
+                        const { data, error } = await supabase.auth.getSession();
+                        
+                        if (!error && data.session && data.session.user) {
+                            console.log('✅ Google OAuth successful!', data.session.user);
+                            
+                            // Hide page content immediately to prevent flash
+                            if (document.body) {
+                                document.body.style.display = 'none';
+                            }
+                            
+                            // Store user data in localStorage
+                            const user = data.session.user;
+                            localStorage.setItem('isLoggedIn', 'true');
+                            localStorage.setItem('userEmail', user.email || '');
+                            const userName = user.user_metadata?.name || 
+                                           user.user_metadata?.full_name || 
+                                           user.email?.split('@')[0] || 
+                                           'User';
+                            localStorage.setItem('userName', userName);
+                            
+                            // Create initial user_progress if new user
+                            if (typeof window.saveUserProgress === 'function') {
+                                try {
+                                    await window.saveUserProgress({
+                                        completedGames: [],
+                                        completedPuzzles: [],
+                                        totalGamesPlayed: 0,
+                                        trainingHours: 0,
+                                        currentStreak: 0
+                                    });
+                                    console.log('✅ Initial user progress created');
+                                } catch (progressError) {
+                                    console.log('Note: Progress may already exist or will be created on first activity', progressError);
+                                }
+                            }
+                            
+                            // Clean up URL (remove hash)
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            
+                            // Check for pending subscription
+                            const pendingPlan = localStorage.getItem('pendingSubscription');
+                            if (pendingPlan) {
+                                localStorage.removeItem('pendingSubscription');
+                                redirectToDodoPayments(pendingPlan);
+                            } else {
+                                // Redirect to profile immediately after Google sign-in (no delay)
+                                window.location.replace('profile.html');
+                            }
+                            
+                            return true; // Success
+                        } else if (error) {
+                            console.error('OAuth session error:', error);
+                            return false;
+                        }
+                    } catch (error) {
+                        console.error('OAuth callback error:', error);
+                        return false;
+                    }
+                }
+            }
+            return false;
+        }
+
         // Load statistics when page loads
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Don't handle OAuth here - it will be handled after Supabase initializes
+            // Just load page content
             loadStatistics();
-            updateNavigation();
             initFAQ();
             
             // Add event listeners for forms
@@ -2010,7 +2244,7 @@
     
     <!-- Initialize Supabase when page loads -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             // Initialize Supabase client
             initSupabase();
             
@@ -2022,17 +2256,37 @@
                 // Set up auth state listener
                 setupAuthListener();
                 
-                // Check if user is already signed in
-                getCurrentUser().then(user => {
-                    if (user) {
-                        console.log('✅ User is already signed in:', user.email);
-                        // Update navigation with Supabase subscription status
-                        updateNavigation();
-                    } else {
-                        console.log('ℹ️ No user signed in');
-                        updateNavigation();
+                // Handle OAuth callback FIRST (if user just signed in with Google)
+                // This must happen after Supabase is initialized
+                if (typeof handleOAuthCallback === 'function') {
+                    await handleOAuthCallback();
+                }
+                
+                // Check if we just logged out
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('loggedout') === 'true') {
+                    console.log('User just logged out, clearing any remaining session...');
+                    // Force clear session
+                    if (typeof window.signOut === 'function') {
+                        window.signOut().catch(() => {});
                     }
-                });
+                    // Clear URL parameter
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Update navigation to show logged out state
+                    updateNavigation();
+                } else {
+                    // Check if user is already signed in
+                    getCurrentUser().then(user => {
+                        if (user) {
+                            console.log('✅ User is already signed in:', user.email);
+                            // Update navigation with Supabase subscription status
+                            updateNavigation();
+                        } else {
+                            console.log('ℹ️ No user signed in');
+                            updateNavigation();
+                        }
+                    });
+                }
                 
                 // Test database connection (after a short delay to ensure everything is loaded)
                 setTimeout(() => {
