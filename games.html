@@ -191,7 +191,7 @@
             font-weight: 500;
             color: #1a1a1a;
         }
-
+ok
         .nav-links a.active {
             background-color: #1e3a8a;
             color: #ffffff;
@@ -2876,16 +2876,16 @@
             if (profileLink) {
                 if (isLoggedIn) {
                     // User is logged in - go to profile page
-                    profileLink.onclick = function(e) {
-                        e.preventDefault();
-                        window.location.href = 'profile.html';
-                    };
-                } else {
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = 'profile.html';
+                };
+            } else {
                     // User is not logged in - show sign in modal
-                    profileLink.onclick = function(e) {
-                        e.preventDefault();
-                        showSignInModal();
-                    };
+                profileLink.onclick = function(e) {
+                    e.preventDefault();
+                    showSignInModal();
+                };
                 }
             }
         }
@@ -3110,7 +3110,7 @@
                             
                             // Store user data in localStorage
                             const user = data.session.user;
-                            localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('isLoggedIn', 'true');
                             localStorage.setItem('userEmail', user.email || '');
                             const userName = user.user_metadata?.name || 
                                            user.user_metadata?.full_name || 
@@ -3143,13 +3143,8 @@
                                 localStorage.removeItem('pendingSubscription');
                                 redirectToDodoPayments(pendingPlan);
                             } else {
-                                // Update navigation and stay on current page
-                                await updateNavigation();
-                                // Close modal if open
-                                const signInModal = document.getElementById('signInModal');
-                                const registerModal = document.getElementById('registerModal');
-                                if (signInModal) signInModal.style.display = 'none';
-                                if (registerModal) registerModal.style.display = 'none';
+                                // Redirect to profile immediately after Google sign-in
+                                window.location.replace('profile.html');
                             }
                             
                             return true; // Success

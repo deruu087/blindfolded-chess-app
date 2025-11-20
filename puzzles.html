@@ -3096,7 +3096,7 @@
                             
                             // Store user data in localStorage
                             const user = data.session.user;
-            localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('isLoggedIn', 'true');
                             localStorage.setItem('userEmail', user.email || '');
                             const userName = user.user_metadata?.name || 
                                            user.user_metadata?.full_name || 
@@ -3123,11 +3123,17 @@
                             // Clean up URL (remove hash)
                             window.history.replaceState({}, document.title, window.location.pathname);
                             
-                            // Update navigation and stay on current page
-                            await updateNavigation();
-                            
-                            // Close modal if open
-            closeModal();
+                            // Check for pending subscription
+                            const pendingPlan = localStorage.getItem('pendingSubscription');
+                            if (pendingPlan) {
+                                localStorage.removeItem('pendingSubscription');
+                                if (typeof redirectToDodoPayments === 'function') {
+                                    redirectToDodoPayments(pendingPlan);
+                                }
+                            } else {
+                                // Redirect to profile immediately after Google sign-in
+                                window.location.replace('profile.html');
+                            }
                             
                             return true; // Success
                         } else if (error) {
