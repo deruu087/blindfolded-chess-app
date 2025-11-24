@@ -19,7 +19,9 @@ class ProgressTracker {
             startTime: null,
             totalTime: 0,
             idleTimer: null,
-            idleTimeout: 10 * 1000 // 10 seconds
+            idleTimeout: 10 * 1000, // 10 seconds
+            lastSupabaseSave: 0, // Track when we last saved to Supabase
+            supabaseSaveInterval: 2 * 60 * 1000 // Save to Supabase every 2 minutes
         };
         this.achievements = this.initializeAchievements();
         this.init();
@@ -60,6 +62,8 @@ class ProgressTracker {
             
             // Completed games tracking
             completedGames: [],
+            // Games completed in challenge/test mode (from "By Moves" tab)
+            challengeModeCompletions: [],
             
             // Skill Metrics
             accuracy: 0,
@@ -89,9 +93,33 @@ class ProgressTracker {
         if (!this.trainingTimer.isRunning) {
             this.trainingTimer.isRunning = true;
             this.trainingTimer.startTime = Date.now();
+            this.trainingTimer.lastSupabaseSave = Date.now();
             console.log('Training timer started');
+            // Start periodic saves to Supabase
+            this.startPeriodicSupabaseSave();
         }
         this.resetTrainingIdleTimer();
+    }
+    
+    // Periodically save training time to Supabase while timer is running
+    startPeriodicSupabaseSave() {
+        // Clear any existing interval
+        if (this.trainingTimer.supabaseSaveIntervalId) {
+            clearInterval(this.trainingTimer.supabaseSaveIntervalId);
+        }
+        
+        // Save to Supabase every 2 minutes while training
+        this.trainingTimer.supabaseSaveIntervalId = setInterval(() => {
+            if (this.trainingTimer.isRunning) {
+                console.log('💾 Periodic save: Saving training time to Supabase...');
+                this.saveToSupabase('game', null, false);
+                this.trainingTimer.lastSupabaseSave = Date.now();
+            } else {
+                // Stop interval if timer is not running
+                clearInterval(this.trainingTimer.supabaseSaveIntervalId);
+                this.trainingTimer.supabaseSaveIntervalId = null;
+            }
+        }, this.trainingTimer.supabaseSaveInterval);
     }
 
     // Stop training timer
@@ -103,6 +131,13 @@ class ProgressTracker {
             this.trainingTimer.isRunning = false;
             this.trainingTimer.startTime = null;
             this.saveUserProgress();
+            // Also save to Supabase when timer stops
+            this.saveToSupabase('game', null, false);
+            // Stop periodic save interval
+            if (this.trainingTimer.supabaseSaveIntervalId) {
+                clearInterval(this.trainingTimer.supabaseSaveIntervalId);
+                this.trainingTimer.supabaseSaveIntervalId = null;
+            }
             console.log('Training timer stopped. Session time:', this.formatTime(sessionTime));
         }
         this.clearTrainingIdleTimer();
@@ -380,20 +415,149 @@ class ProgressTracker {
     }
 
     // Record a game completion
-    recordGameCompletion(difficulty = 'intermediate', gameId = null) {
+    // type: 'game' or 'puzzle' - determines which array to add to
+    // inChallengeMode: true if completed in test/challenge mode
+    recordGameCompletion(difficulty = 'intermediate', gameId = null, type = 'game', inChallengeMode = false) {
         this.userProgress.totalGamesPlayed++;
         this.userProgress.gamesByDifficulty[difficulty]++;
         
         // Add to completed games list if gameId provided
         if (gameId && !this.userProgress.completedGames.includes(gameId)) {
             this.userProgress.completedGames.push(gameId);
-            console.log('Added game to completed list:', gameId);
+            console.log(`Added ${type} to completed list:`, gameId);
             console.log('Completed games now:', this.userProgress.completedGames);
+        }
+        
+        // Track challenge mode completions separately (for "By Moves" games only)
+        if (inChallengeMode && gameId && type === 'game' && !this.userProgress.challengeModeCompletions.includes(gameId)) {
+            this.userProgress.challengeModeCompletions.push(gameId);
+            console.log(`Added game to challenge mode completions:`, gameId);
         }
         
         // Streak is now only updated on daily login, not on game completion
         this.saveUserProgress();
+        
+        // Also save to Supabase (source of truth)
+        this.saveToSupabase(type, gameId, inChallengeMode);
+        
         this.checkForNewAchievements();
+    }
+    
+    // Save progress to Supabase
+    async saveToSupabase(completedType = 'game', gameId = null, inChallengeMode = false) {
+        if (typeof window.saveUserProgress === 'function') {
+            try {
+                // Fetch games.json to separate games from puzzles
+                let completedGames = [];
+                let completedPuzzles = [];
+                
+                try {
+                    // Fetch both games.json and puzzles.json to get all items
+                    const [gamesResponse, puzzlesResponse] = await Promise.all([
+                        fetch('/games/games.json'),
+                        fetch('/games/puzzles.json')
+                    ]);
+                    
+                    let allItems = [];
+                    
+                    // Load games
+                    if (gamesResponse.ok) {
+                        const gamesData = await gamesResponse.json();
+                        if (gamesData && gamesData.games) {
+                            allItems = allItems.concat(gamesData.games);
+                        }
+                    }
+                    
+                    // Load puzzles
+                    if (puzzlesResponse.ok) {
+                        const puzzlesData = await puzzlesResponse.json();
+                        if (puzzlesData && puzzlesData.puzzles) {
+                            allItems = allItems.concat(puzzlesData.puzzles);
+                        }
+                    }
+                    
+                    if (allItems.length > 0) {
+                        console.log('🔍 Separating games and puzzles. Total completed items:', this.userProgress.completedGames.length);
+                        console.log('🔍 Completed item IDs:', this.userProgress.completedGames);
+                        console.log('🔍 Current completion type:', completedType, 'gameId:', gameId);
+                        console.log('🔍 Total items loaded (games + puzzles):', allItems.length);
+                        
+                        // Separate completed items by type
+                        this.userProgress.completedGames.forEach(id => {
+                            const item = allItems.find(g => g.id === id);
+                            if (item) {
+                                console.log(`🔍 Found game/puzzle: ${id}, type: ${item.type}`);
+                                if (item.type === 'game') {
+                                    if (!completedGames.includes(id)) {
+                                        completedGames.push(id);
+                                    }
+                                } else if (item.type === 'puzzle') {
+                                    if (!completedPuzzles.includes(id)) {
+                                        completedPuzzles.push(id);
+                                        console.log(`✅ Added puzzle to completedPuzzles: ${id}`);
+                                    }
+                                }
+                            } else {
+                                console.warn(`⚠️ Game/puzzle not found in games.json or puzzles.json: ${id}`);
+                            }
+                        });
+                        
+                        console.log('📊 Separated results:', {
+                            completedGames: completedGames.length,
+                            completedPuzzles: completedPuzzles.length,
+                            gamesList: completedGames,
+                            puzzlesList: completedPuzzles
+                        });
+                    }
+                } catch (fetchError) {
+                    console.error('Error fetching games.json/puzzles.json to separate types:', fetchError);
+                    // Fallback: save all as games if we can't fetch
+                    completedGames = [...this.userProgress.completedGames];
+                }
+                
+                // Get challenge mode completions (games from "By Moves" completed in test mode)
+                const challengeModeGames = this.userProgress.challengeModeCompletions || [];
+                
+                // Calculate current training hours (include active session if timer is running)
+                let totalTrainingHours = this.userProgress.totalTrainingHours || 0;
+                if (this.trainingTimer.isRunning && this.trainingTimer.startTime) {
+                    const currentSessionHours = (Date.now() - this.trainingTimer.startTime) / (1000 * 60 * 60);
+                    totalTrainingHours += currentSessionHours;
+                }
+                
+                const progressData = {
+                    completedGames: completedGames,
+                    completedPuzzles: completedPuzzles,
+                    challengeModeCompletions: challengeModeGames,
+                    totalGamesPlayed: this.userProgress.totalGamesPlayed || 0,
+                    trainingHours: totalTrainingHours,
+                    currentStreak: this.userProgress.currentStreak || 0
+                };
+                
+                console.log('💾 Saving to Supabase with data:', {
+                    completedGames: completedGames,
+                    completedPuzzles: completedPuzzles,
+                    challengeModeCompletions: challengeModeGames,
+                    totalGamesPlayed: this.userProgress.totalGamesPlayed,
+                    trainingHours: totalTrainingHours
+                });
+                
+                const result = await window.saveUserProgress(progressData);
+                if (result) {
+                    console.log('✅ Progress saved to Supabase:', {
+                        games: completedGames.length,
+                        puzzles: completedPuzzles.length,
+                        total: this.userProgress.totalGamesPlayed,
+                        trainingHours: totalTrainingHours.toFixed(2),
+                        puzzlesList: completedPuzzles
+                    });
+                } else {
+                    console.log('⚠️ Failed to save progress to Supabase');
+                }
+            } catch (error) {
+                console.error('Error saving to Supabase:', error);
+            }
+        }
     }
 
 

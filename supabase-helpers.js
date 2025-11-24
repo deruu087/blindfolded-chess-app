@@ -26,10 +26,18 @@ async function getUserProgress() {
         .single();
 
     if (error) {
+        // Check if it's a "no rows" error (user has no progress record yet)
+        if (error.code === 'PGRST116') {
+            console.log('No progress record found for user (this is normal for new users)');
+            return null; // Return null to indicate no record exists
+        }
         console.error('Error fetching progress:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
         return null;
     }
 
+    console.log('✅ Successfully fetched progress from Supabase:', data);
     return data;
 }
 
@@ -51,9 +59,25 @@ async function saveUserProgress(progressData) {
         return false;
     }
 
+    // Get user's name and email for display in table
+    const userName = user.user_metadata?.name || 
+                     user.user_metadata?.full_name || 
+                     user.email?.split('@')[0] || 
+                     'User';
+    const userEmail = user.email || '';
+
     // Prepare data to save
+    console.log('💾 saveUserProgress called with:', {
+        completedGames: progressData.completedGames?.length || 0,
+        completedPuzzles: progressData.completedPuzzles?.length || 0,
+        completedPuzzlesList: progressData.completedPuzzles || [],
+        challengeModeCompletions: progressData.challengeModeCompletions?.length || 0
+    });
+    
     const dataToSave = {
         user_id: user.id,
+        user_name: userName,
+        user_email: userEmail,
         completed_games: progressData.completedGames || [],
         completed_puzzles: progressData.completedPuzzles || [],
         total_games_played: progressData.totalGamesPlayed || 0,
@@ -62,6 +86,23 @@ async function saveUserProgress(progressData) {
         last_activity_date: new Date().toISOString().split('T')[0], // Today's date
         updated_at: new Date().toISOString()
     };
+    
+    console.log('💾 Data to save to Supabase:', {
+        completed_games: dataToSave.completed_games,
+        completed_puzzles: dataToSave.completed_puzzles
+    });
+    
+    // Include challenge_mode_completions if provided
+    // Note: This column must exist in the Supabase table for this to work
+    // Run the SQL migration: add-challenge-mode-completions-column.sql
+    if (progressData.challengeModeCompletions !== undefined) {
+        try {
+            dataToSave.challenge_mode_completions = progressData.challengeModeCompletions || [];
+        } catch (e) {
+            // Column doesn't exist yet - skip it
+            console.warn('⚠️ challenge_mode_completions column not found in database. Run SQL migration to add it.');
+        }
+    }
 
     // Try to update existing record, or insert new one
     const { data, error } = await supabase

@@ -2447,7 +2447,7 @@
                 <li><a href="puzzles.html" class="active">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
                     <li>
-                        <a href="#" id="profileLink" class="profile-button">Profile</a>
+                        <a href="profile.html" id="profileLink" class="profile-button">Profile</a>
                     </li>
                 </ul>
     </nav>
@@ -2799,17 +2799,17 @@
             // Set up profile link behavior
             if (profileLink) {
                 if (isLoggedIn) {
-                    // User is logged in - go to profile page
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = 'profile.html';
-                };
-            } else {
-                    // User is not logged in - show sign in modal
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    showSignInModal();
-                };
+                    // User is logged in - ensure link goes to profile page
+                    profileLink.href = 'profile.html';
+                    // Remove any onclick handlers that might prevent navigation
+                    profileLink.onclick = null;
+                } else {
+                    // User is not logged in - show sign in modal when clicked
+                    profileLink.href = '#';
+                    profileLink.onclick = function(e) {
+                        e.preventDefault();
+                        showSignInModal();
+                    };
                 }
             }
         }
@@ -6294,10 +6294,10 @@
                  completedChallenges.add(currentGame.id);
                  console.log('completedChallenges after adding:', completedChallenges);
                  
-                 // Record completion in progress tracker
-                 // Use recordGameCompletion for both games and puzzles since it's the only completion recording function
-                 const difficulty = currentGame.difficulty || 'intermediate';
-                     progressTracker.recordGameCompletion(difficulty, currentGame.id);
+                // Record completion in progress tracker
+                // Pass 'puzzle' as the type so it's saved correctly to Supabase
+                const difficulty = currentGame.difficulty || 'intermediate';
+                progressTracker.recordGameCompletion(difficulty, currentGame.id, 'puzzle');
                  
                  // End the current training session
                  progressTracker.endSession();

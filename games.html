@@ -191,7 +191,7 @@
             font-weight: 500;
             color: #1a1a1a;
         }
-ok
+
         .nav-links a.active {
             background-color: #1e3a8a;
             color: #ffffff;
@@ -230,8 +230,8 @@ ok
         }
 
         .games-tabs .tab.active {
-            color: #1e3a8a;
-            border-bottom-color: #1e3a8a;
+            color: #1e3a8a !important;
+            border-bottom: 3px solid #1e3a8a !important;
         }
 
         .games-tabs .tab:hover {
@@ -2462,7 +2462,7 @@ ok
                 <li><a href="puzzles.html">Puzzles</a></li>
                 <!-- <li><a href="leaderboard.html">Community</a></li> -->
                     <li>
-                        <a href="#" id="profileLink" class="profile-button">Profile</a>
+                        <a href="profile.html" id="profileLink" class="profile-button">Profile</a>
                     </li>
                 </ul>
     </nav>
@@ -2875,17 +2875,17 @@ ok
             // Set up profile link behavior
             if (profileLink) {
                 if (isLoggedIn) {
-                    // User is logged in - go to profile page
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    window.location.href = 'profile.html';
-                };
-            } else {
-                    // User is not logged in - show sign in modal
-                profileLink.onclick = function(e) {
-                    e.preventDefault();
-                    showSignInModal();
-                };
+                    // User is logged in - ensure link goes to profile page
+                    profileLink.href = 'profile.html';
+                    // Remove any onclick handlers that might prevent navigation
+                    profileLink.onclick = null;
+                } else {
+                    // User is not logged in - show sign in modal when clicked
+                    profileLink.href = '#';
+                    profileLink.onclick = function(e) {
+                        e.preventDefault();
+                        showSignInModal();
+                    };
                 }
             }
         }
@@ -6640,11 +6640,12 @@ ok
              if (currentGame) {
                  completedChallenges.add(currentGame.id);
                  
-                 // Record completion in progress tracker based on type
-                 const difficulty = currentGame.difficulty || 'intermediate';
-                 if (currentGame.type === 'game') {
-                     progressTracker.recordGameCompletion(difficulty, currentGame.id);
-                 }
+                // Record completion in progress tracker based on type
+                // Pass isChallengeMode to track if completed in test mode
+                const difficulty = currentGame.difficulty || 'intermediate';
+                if (currentGame.type === 'game') {
+                    progressTracker.recordGameCompletion(difficulty, currentGame.id, 'game', isChallengeMode);
+                }
                  
                  // End the current training session
                  progressTracker.endSession();
