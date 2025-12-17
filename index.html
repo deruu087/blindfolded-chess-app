@@ -1199,7 +1199,7 @@
                     <li>Progress tracking</li>
                     <li>Priority support</li>
                 </ul>
-                <button class="subscribe-btn" onclick="subscribe('monthly')">
+                <button class="subscribe-btn" onclick="subscribe('monthly')" data-plan="monthly">
                     Subscribe Monthly
                 </button>
             </div>
@@ -1215,7 +1215,7 @@
                     <li></li>
                     <li></li>
                 </ul>
-                <button class="subscribe-btn" onclick="subscribe('quarterly')">
+                <button class="subscribe-btn" onclick="subscribe('quarterly')" data-plan="quarterly">
                     Subscribe 3 Months
                 </button>
             </div>
@@ -2079,6 +2079,8 @@
 
         // Redirect to Dodo Payments checkout
         function redirectToDodoPayments(plan) {
+            console.log('redirectToDodoPayments called with plan:', plan);
+            
             // Check if we're in test mode (you can set this to true/false or detect automatically)
             const isTestMode = true; // Set to false for production
             
@@ -2112,13 +2114,55 @@
             console.log('Plan:', plan);
             console.log('Product ID:', productId);
             console.log('User email:', userEmail);
+            console.log('Checkout URL:', checkoutUrl);
             
             // Redirect to Dodo Payments checkout
-            window.location.href = checkoutUrl;
+            try {
+                window.location.href = checkoutUrl;
+                console.log('Redirect initiated');
+            } catch (error) {
+                console.error('Error redirecting:', error);
+                alert('Error redirecting to payment: ' + error.message);
+            }
         }
         
         // Make redirectToDodoPayments globally accessible
         window.redirectToDodoPayments = redirectToDodoPayments;
+        
+        // Add event listeners as backup for subscribe buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Setting up subscribe button event listeners...');
+            
+            // Find all subscribe buttons
+            const subscribeButtons = document.querySelectorAll('.subscribe-btn');
+            console.log('Found subscribe buttons:', subscribeButtons.length);
+            
+            subscribeButtons.forEach(button => {
+                // Check if button has onclick attribute
+                const onclickAttr = button.getAttribute('onclick');
+                console.log('Button onclick:', onclickAttr);
+                
+                // Add click event listener as backup
+                button.addEventListener('click', function(e) {
+                    console.log('Subscribe button clicked via event listener');
+                    const plan = this.getAttribute('data-plan') || 
+                                (onclickAttr && onclickAttr.includes('monthly') ? 'monthly' : 'quarterly');
+                    console.log('Plan detected:', plan);
+                    
+                    // Call subscribe function
+                    if (typeof window.subscribe === 'function') {
+                        console.log('Calling window.subscribe...');
+                        window.subscribe(plan).catch(error => {
+                            console.error('Error in subscribe:', error);
+                            alert('Error: ' + error.message);
+                        });
+                    } else {
+                        console.error('window.subscribe function not found!');
+                        alert('Subscribe function not available. Please refresh the page.');
+                    }
+                });
+            });
+        });
 
         // FAQ Accordion functionality
         function initFAQ() {
