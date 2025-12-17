@@ -2028,36 +2028,54 @@
 
         // Subscription functions
         async function subscribe(plan) {
-            // Use centralized auth check function
-            let authStatus;
-            if (typeof window.checkAuthStatus === 'function') {
-                authStatus = await window.checkAuthStatus();
-            } else {
-                // Fallback if function not available
-                authStatus = {
-                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                    user: null,
-                    email: localStorage.getItem('userEmail'),
-                    name: localStorage.getItem('userName')
-                };
-            }
-            
-            const isLoggedIn = authStatus.isLoggedIn;
-            
-            if (!isLoggedIn) {
-                // User is not logged in - show sign-in modal
-                console.log('User not logged in. Showing sign-in modal.');
+            console.log('Subscribe function called with plan:', plan);
+            try {
+                // Use centralized auth check function
+                let authStatus;
+                if (typeof window.checkAuthStatus === 'function') {
+                    console.log('Checking auth status...');
+                    authStatus = await window.checkAuthStatus();
+                    console.log('Auth status:', authStatus);
+                } else {
+                    console.warn('checkAuthStatus not available, using localStorage fallback');
+                    // Fallback if function not available
+                    authStatus = {
+                        isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                        user: null,
+                        email: localStorage.getItem('userEmail'),
+                        name: localStorage.getItem('userName')
+                    };
+                }
                 
-                // Store the selected plan and show sign-in modal
-                localStorage.setItem('pendingSubscription', plan);
-                showSignInModal();
-                return;
+                const isLoggedIn = authStatus.isLoggedIn;
+                console.log('Is logged in:', isLoggedIn);
+                
+                if (!isLoggedIn) {
+                    // User is not logged in - show sign-in modal
+                    console.log('User not logged in. Showing sign-in modal.');
+                    
+                    // Store the selected plan and show sign-in modal
+                    localStorage.setItem('pendingSubscription', plan);
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    } else {
+                        console.error('showSignInModal function not found!');
+                        alert('Please sign in first to subscribe.');
+                    }
+                    return;
+                }
+                
+                // User is authenticated, redirect to Dodo Payments checkout
+                console.log('User is properly logged in, redirecting to Dodo Payments');
+                redirectToDodoPayments(plan);
+            } catch (error) {
+                console.error('Error in subscribe function:', error);
+                alert('Error: ' + error.message);
             }
-            
-            // User is authenticated, redirect to Dodo Payments checkout
-            console.log('User is properly logged in, redirecting to Dodo Payments');
-            redirectToDodoPayments(plan);
         }
+        
+        // Make subscribe function globally accessible
+        window.subscribe = subscribe;
 
         // Redirect to Dodo Payments checkout
         function redirectToDodoPayments(plan) {
@@ -2091,10 +2109,16 @@
             localStorage.setItem('pendingSubscriptionPlan', plan);
             
             console.log('Redirecting to Dodo Payments:', checkoutUrl);
+            console.log('Plan:', plan);
+            console.log('Product ID:', productId);
+            console.log('User email:', userEmail);
             
             // Redirect to Dodo Payments checkout
             window.location.href = checkoutUrl;
         }
+        
+        // Make redirectToDodoPayments globally accessible
+        window.redirectToDodoPayments = redirectToDodoPayments;
 
         // FAQ Accordion functionality
         function initFAQ() {
