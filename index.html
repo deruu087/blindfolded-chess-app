@@ -462,7 +462,7 @@
         }
 
         .pricing-card.featured::before {
-            content: "Most Popular";
+            content: "Best Deal";
             position: absolute;
             top: -10px;
             left: 50%;
@@ -510,6 +510,10 @@
             color: #27ae60;
             font-weight: normal;
             margin-right: 0.5rem;
+        }
+
+        .plan-features li:empty::before {
+            content: "";
         }
 
         .subscribe-btn {
@@ -1186,7 +1190,7 @@
         <div class="pricing-container">
             <div class="pricing-card">
                 <h3 class="plan-name">Monthly</h3>
-                <div class="plan-price">$4.99</div>
+                <div class="plan-price">$3.49</div>
                 <div class="plan-period">per month</div>
                 <ul class="plan-features">
                     <li>Unlimited access to all games</li>
@@ -1202,14 +1206,14 @@
 
             <div class="pricing-card featured">
                 <h3 class="plan-name">3 Months</h3>
-                <div class="plan-price">$12.99</div>
-                <div class="plan-period">per 3 months (Save 13%)</div>
+                <div class="plan-price">$8.90</div>
+                <div class="plan-period">per 3 months (Save 15%)</div>
                 <ul class="plan-features">
                     <li>Everything in Monthly</li>
-                    <li>Save $2 per 3 months</li>
-                    <li>Exclusive quarterly content</li>
+                    <li>Save 15% vs monthly billing</li>
                     <li>Priority feature requests</li>
-                    <li>Advanced analytics</li>
+                    <li></li>
+                    <li></li>
                 </ul>
                 <button class="subscribe-btn" onclick="subscribe('quarterly')">
                     Subscribe 3 Months
@@ -1631,8 +1635,8 @@
                                subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
                                subscription.plan_type;
                 const price = subscription.amount_paid ? 
-                             `${subscription.currency || 'EUR'} ${subscription.amount_paid}` : 
-                             (subscription.plan_type === 'monthly' ? '€4.99/month' : '€12.99/quarter');
+                             `${subscription.currency || 'USD'} ${subscription.amount_paid}` : 
+                             (subscription.plan_type === 'monthly' ? '$3.49/month' : '$8.90/quarter');
                 const startDate = subscription.start_date ? 
                                 new Date(subscription.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
                                 'N/A';
@@ -1656,9 +1660,9 @@
                                'N/A';
                 subscriptionDisplay = `${planName} (Cancelled) - Access until ${endDate}`;
             } else if (subscriptionPlan === 'monthly') {
-                subscriptionDisplay = 'Premium Monthly - $4.99/month';
+                subscriptionDisplay = 'Premium Monthly - $3.49/month';
             } else if (subscriptionPlan === 'quarterly') {
-                subscriptionDisplay = 'Premium Quarterly - $12.99/quarter';
+                subscriptionDisplay = 'Premium Quarterly - $8.90/quarter';
             } else if (subscriptionPlan === 'monthly_cancelled') {
                 subscriptionDisplay = 'Premium Monthly (Cancelled)';
             } else if (subscriptionPlan === 'quarterly_cancelled') {
@@ -1725,6 +1729,8 @@
             localStorage.removeItem('cachedSubscriptionPlan');
             localStorage.removeItem('pendingSubscription');
             localStorage.removeItem('pendingSubscriptionPlan');
+            // CRITICAL: Clear progress data to prevent data leakage between accounts
+            localStorage.removeItem('chessProgress');
             
             // Update navigation
             updateNavigation();
@@ -1804,6 +1810,10 @@
                     
                     if (result.success && result.user) {
                         console.log('✅ Sign in successful!', result.user);
+                        
+                        // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
+                        localStorage.removeItem('chessProgress');
+                        console.log('🔒 Cleared localStorage progress on sign in');
                         
                         // Hide page content immediately to prevent flash
                         document.body.style.display = 'none';
@@ -1895,6 +1905,10 @@
                     
                     if (result.success) {
                         console.log('✅ Registration successful!', result.user);
+                        
+                        // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
+                        localStorage.removeItem('chessProgress');
+                        console.log('🔒 Cleared localStorage progress for new account');
                         
                         // Store user data in localStorage
                 localStorage.setItem('isLoggedIn', 'true');

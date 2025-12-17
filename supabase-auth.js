@@ -204,6 +204,10 @@ function setupAuthListener() {
         if (event === 'SIGNED_IN' && session && session.user) {
             console.log('User signed in:', session.user.email);
             
+            // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
+            localStorage.removeItem('chessProgress');
+            console.log('🔒 Cleared localStorage progress on auth state change (SIGNED_IN)');
+            
             // Update localStorage immediately
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userEmail', session.user.email || '');
@@ -224,6 +228,8 @@ function setupAuthListener() {
                 localStorage.setItem('isLoggedIn', 'false');
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userName');
+                // CRITICAL: Clear progress data to prevent data leakage between accounts
+                localStorage.removeItem('chessProgress');
             }
             
             // Update navigation or UI as needed

@@ -108,13 +108,10 @@
                 
                 // Try to update stats immediately if progressTracker is available
                 // This will show cached progress data instantly
-                if (typeof window.updateStats === 'function') {
-                    try {
-                        window.updateStats();
-                    } catch (e) {
-                        // Progress tracker might not be loaded yet, that's okay
-                    }
-                }
+                // NOTE: This runs BEFORE initProfile() loads Supabase data, so it will use localStorage fallback
+                // initProfile() will call updateStats() again with Supabase data
+                // Don't call updateStats() here - wait for initProfile() to load Supabase data first
+                // This prevents the table from showing "No data available" before data loads
             }
             
             // Run immediately if DOM is ready
@@ -309,6 +306,34 @@
             margin-bottom: 1.5rem;
         }
 
+        .profile-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+        }
+
+        .profile-link {
+            color: #4b5563;
+            text-decoration: none;
+            font-size: 0.95rem;
+            padding: 0.5rem 0;
+            text-align: center;
+            transition: color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .profile-link:hover {
+            color: #374151;
+            text-decoration: underline;
+        }
+
+        .profile-link.active {
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+
         .subscription-status {
             display: none !important;
             visibility: hidden !important;
@@ -474,9 +499,13 @@
             border-radius: 12px;
             padding: 2rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            height: 400px;
+            height: auto;
             display: flex;
             flex-direction: column;
+        }
+
+        #progress-section {
+            min-height: 400px;
         }
 
         .section-title {
@@ -1019,8 +1048,6 @@
 
         .logout-button-container {
             margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid #e5e7eb;
         }
 
         .google-signup {
@@ -1097,6 +1124,12 @@
                 </div>
                 <p class="profile-email" id="userEmail">guest@example.com</p>
                 
+                <div class="profile-links">
+                    <a href="#progress" class="profile-link active" data-tab="progress">Progress</a>
+                    <a href="#billings" class="profile-link" data-tab="billings">Billings</a>
+                    <a href="#contact" class="profile-link" data-tab="contact">Contact Us</a>
+                </div>
+                
                 <div class="subscription-status free" id="subscriptionStatus" style="display: none;">
                     <div class="status-text">Free Account</div>
                     <div class="status-details">Upgrade to unlock all content</div>
@@ -1117,32 +1150,13 @@
                     </div>
                 </div>
 
-                <ul class="profile-stats">
-                    <li>
-                        <span class="stat-label">Games Completed</span>
-                        <span class="stat-value" id="gamesPlayed">0</span>
-                    </li>
-                    <li>
-                        <span class="stat-label">Puzzles Completed</span>
-                        <span class="stat-value" id="puzzlesCompleted">0</span>
-                    </li>
-                    <li>
-                        <span class="stat-label">Training Time</span>
-                        <span class="stat-value" id="trainingHours">0</span>
-                    </li>
-                    <li>
-                        <span class="stat-label">Current Streak</span>
-                        <span class="stat-value" id="currentStreak">0 days</span>
-                    </li>
-                </ul>
-
                 <div class="logout-button-container">
                     <button class="btn-logout" id="logoutButton" onclick="window.logout()">Logout</button>
                 </div>
             </div>
 
             <div class="profile-main">
-                <div class="profile-section">
+                <div class="profile-section" id="progress-section">
                     <h3 class="section-title">Progress</h3>
                     <div class="progress-section">
                         <div class="progress-item">
@@ -1163,10 +1177,41 @@
                             </div>
                             <div class="progress-bar-container">
                                 <div class="progress-bar" id="puzzlesProgressBar" style="width: 0%"></div>
-                                    </div>
+                            </div>
                             <div class="progress-goal" id="puzzlesProgressGoal">Goal: Complete all available puzzles</div>
                         </div>
                         
+                        <div class="progress-item">
+                            <div class="progress-header">
+                                <div class="progress-title">Training Time</div>
+                                <div class="progress-count" id="trainingTimeProgress">0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-item">
+                            <div class="progress-header">
+                                <div class="progress-title">Current Streak</div>
+                                <div class="progress-count" id="currentStreakProgress">0 days</div>
+                            </div>
+                            <div class="progress-goal">Keep your streak going!</div>
+                        </div>
+                    </div>
+                    
+                </div>
+
+                <div class="profile-section" id="billings-section" style="display: none;">
+                    <h3 class="section-title">Billings</h3>
+                    <div class="billings-content">
+                        <!-- Billings content will go here -->
+                    </div>
+                </div>
+
+                <div class="profile-section" id="contact-section" style="display: none;">
+                    <h3 class="section-title">Contact Us</h3>
+                    <div class="contact-content">
+                        <p style="color: #4b5563; line-height: 1.7; margin-top: 1rem;">
+                            For all support inquiries, including billing issues, receipts, and general assistance, please email <a href="mailto:hi@memo-chess.com" style="color: #1e3a8a; text-decoration: none;">hi@memo-chess.com</a>
+                        </p>
                     </div>
                 </div>
 
@@ -1174,7 +1219,380 @@
         </div>
     </div>
 
+    <!-- Supabase Configuration - MUST load before any page scripts -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase Helper Functions - MUST load before any page scripts -->
+    <script src="supabase-helpers.js"></script>
+    
+    <!-- Supabase Authentication Functions - MUST load before any page scripts -->
+    <script src="supabase-auth.js"></script>
+    
     <script src="progress-tracker.js"></script>
+    
+    <!-- Tab switching functionality -->
+    <script>
+        // Tab switching functionality
+        function initProfileTabs() {
+            const profileLinks = document.querySelectorAll('.profile-link[data-tab]');
+            const sections = {
+                progress: document.getElementById('progress-section'),
+                billings: document.getElementById('billings-section'),
+                contact: document.getElementById('contact-section')
+            };
+
+            // Function to switch tabs
+            function switchTab(tabName, saveToStorage = true) {
+                // Remove active class from all links
+                profileLinks.forEach(l => l.classList.remove('active'));
+                
+                // Hide all sections
+                Object.values(sections).forEach(section => {
+                    if (section) section.style.display = 'none';
+                });
+                
+                // Show selected section
+                if (sections[tabName]) {
+                    sections[tabName].style.display = 'block';
+                    
+                    // Add active class to corresponding link
+                    const activeLink = document.querySelector(`.profile-link[data-tab="${tabName}"]`);
+                    if (activeLink) {
+                        activeLink.classList.add('active');
+                    }
+                    
+                    // Load billing info if billings tab is clicked
+                    if (tabName === 'billings') {
+                        loadBillingInfo();
+                    }
+                    
+                    // Save to localStorage
+                    if (saveToStorage) {
+                        localStorage.setItem('profileActiveTab', tabName);
+                        // Update URL hash
+                        window.location.hash = tabName;
+                    }
+                }
+            }
+
+            // Restore active tab on page load
+            function restoreActiveTab() {
+                // Check URL hash first (preserves tab on refresh)
+                const hash = window.location.hash.replace('#', '');
+                let activeTab = null;
+                
+                if (hash && ['progress', 'billings', 'contact'].includes(hash)) {
+                    // URL hash takes priority (user clicked a link or refreshed with hash)
+                    activeTab = hash;
+                } else {
+                    // No hash - check if this is a refresh (referrer is profile.html)
+                    const isRefresh = document.referrer && document.referrer.includes('profile.html');
+                    const savedTab = localStorage.getItem('profileActiveTab');
+                    
+                    if (isRefresh && savedTab && ['progress', 'billings', 'contact'].includes(savedTab)) {
+                        // Refresh without hash - restore saved tab and update hash
+                        activeTab = savedTab;
+                        window.location.hash = savedTab;
+                    } else {
+                        // External navigation or no saved tab - default to progress
+                        activeTab = 'progress';
+                        // Clear saved tab if coming from external navigation
+                        if (!isRefresh) {
+                            localStorage.removeItem('profileActiveTab');
+                        }
+                    }
+                }
+                
+                switchTab(activeTab, false);
+            }
+
+            // Add click handlers
+            profileLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tabName = this.getAttribute('data-tab');
+                    switchTab(tabName, true);
+                });
+            });
+
+            // Restore tab on page load
+            restoreActiveTab();
+        }
+
+        // Initialize tabs when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initProfileTabs);
+        } else {
+            initProfileTabs();
+        }
+
+        // Load and display billing information
+        async function loadBillingInfo() {
+            const billingsContent = document.querySelector('#billings-section .billings-content');
+            if (!billingsContent) return;
+
+            // Show loading state
+            billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+
+            try {
+                // Get subscription from Supabase
+                let subscription = null;
+                if (typeof window.getUserSubscription === 'function') {
+                    subscription = await window.getUserSubscription();
+                }
+
+                // MOCK DATA: Use mock subscription if no real subscription exists
+                // TODO: Remove this mock data when integrating real-time data
+                if (!subscription) {
+                    const today = new Date();
+                    const nextMonth = new Date(today);
+                    nextMonth.setMonth(nextMonth.getMonth() + 1);
+                    
+                    subscription = {
+                        plan_type: 'monthly',
+                        status: 'active',
+                        start_date: today.toISOString().split('T')[0],
+                        end_date: null,
+                        amount_paid: 3.52,
+                        currency: 'EUR',
+                        payment_method: 'dodo_payments'
+                    };
+                }
+
+                // Format dates helper
+                const formatDate = (date) => {
+                    if (!date) return 'N/A';
+                    return date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                    });
+                };
+
+                // Calculate next payment date
+                let nextPaymentDate = null;
+                if (subscription && subscription.status === 'active' && subscription.start_date) {
+                    const startDate = new Date(subscription.start_date);
+                    const now = new Date();
+                    const monthsToAdd = subscription.plan_type === 'monthly' ? 1 : 3;
+                    
+                    // Find next payment date
+                    let nextPayment = new Date(startDate);
+                    while (nextPayment <= now) {
+                        nextPayment.setMonth(nextPayment.getMonth() + monthsToAdd);
+                    }
+                    nextPaymentDate = nextPayment;
+                }
+
+                // Prepare subscription data
+                const subscriptionType = subscription?.plan_type === 'monthly' ? 'Monthly' : 
+                                       subscription?.plan_type === 'quarterly' ? 'Quarterly' : 
+                                       'Monthly';
+                
+                const isActive = subscription?.status === 'active';
+                const statusText = isActive ? 'Active' : 'Not active';
+                const statusColor = isActive ? '#27ae60' : '#9ca3af';
+                
+                const amount = subscription?.amount_paid ? 
+                             `${subscription.currency || 'EUR'} ${subscription.amount_paid.toFixed(2)}` : 
+                             (subscription?.plan_type === 'monthly' ? '€3.52' : '€8.90');
+                
+                const billingFrequency = subscription?.plan_type === 'monthly' ? 'billed monthly' : 'billed quarterly';
+                const nextBillingDateText = nextPaymentDate ? formatDate(nextPaymentDate) : 'N/A';
+
+                // Fetch payment history
+                let paymentHistory = [];
+                if (typeof window.getPaymentHistory === 'function') {
+                    try {
+                        paymentHistory = await window.getPaymentHistory();
+                    } catch (error) {
+                        console.error('Error fetching payment history:', error);
+                    }
+                }
+
+                // MOCK DATA: Add mock payment history if empty
+                // TODO: Remove this mock data when integrating real-time data
+                if (paymentHistory.length === 0 && subscription) {
+                    const today = new Date();
+                    paymentHistory = [{
+                        amount: subscription.amount_paid || 3.52,
+                        currency: subscription.currency || 'EUR',
+                        status: 'paid',
+                        date: subscription.start_date || today.toISOString().split('T')[0],
+                        invoice_url: 'https://checkout.dodopayments.com/account'
+                    }];
+                }
+
+                // Build payment history table HTML
+                let paymentHistoryHTML = '';
+                if (paymentHistory.length > 0) {
+                    paymentHistoryHTML = `
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e5e7eb;">
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Amount</th>
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Status</th>
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Date</th>
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Invoice</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${paymentHistory.map(payment => {
+                                        const paymentDate = payment.date ? formatDate(new Date(payment.date)) : 'N/A';
+                                        const paymentAmount = payment.amount ? 
+                                            `${payment.currency || 'EUR'} ${parseFloat(payment.amount).toFixed(2)}` : 
+                                            'N/A';
+                                        return `
+                                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                                <td style="padding: 0.75rem 1rem; color: #4b5563; font-size: 0.9rem;">${paymentAmount}</td>
+                                                <td style="padding: 0.75rem 1rem; color: #4b5563; font-size: 0.9rem;">
+                                                    <span style="color: #27ae60; font-weight: 500;">Paid</span>
+                                                </td>
+                                                <td style="padding: 0.75rem 1rem; color: #4b5563; font-size: 0.9rem;">${paymentDate}</td>
+                                                <td style="padding: 0.75rem 1rem;">
+                                                    <a href="${payment.invoice_url || 'https://checkout.dodopayments.com/account'}" target="_blank" style="color: #1e3a8a; text-decoration: none; font-weight: 500; font-size: 0.9rem;">
+                                                        Invoice →
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    paymentHistoryHTML = `
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                        <p style="color: #9ca3af; font-size: 0.9rem;">No payment history available.</p>
+                    `;
+                }
+
+                // Build HTML with 2 divs
+                let billingHTML = `
+                    <!-- First div: Subscription details with cancel button -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <!-- Left side: Subscription info -->
+                        <div style="flex: 1;">
+                            <!-- Line 1: Monthly/Quarterly (bold) -->
+                            <div style="font-weight: bold; font-size: 1.1rem; color: #1e3a8a; margin-bottom: 0.5rem;">
+                                ${subscriptionType}
+                            </div>
+                            <!-- Line 2: Active/Not active -->
+                            <div style="margin-bottom: 0.5rem;">
+                                <span style="color: ${statusColor}; font-size: 0.95rem;">
+                                    ${statusText}
+                                </span>
+                            </div>
+                            <!-- Line 3: Amount + billed text -->
+                            <div style="margin-bottom: 0.5rem; color: #4b5563; font-size: 0.95rem;">
+                                ${amount} ${billingFrequency}
+                            </div>
+                            <!-- Line 4: Next billing date -->
+                            <div style="color: #4b5563; font-size: 0.95rem;">
+                                Next billing date: ${nextBillingDateText}
+                            </div>
+                        </div>
+                        <!-- Right side: Cancel subscription button -->
+                        <div style="margin-left: 2rem;">
+                            ${isActive ? `
+                                <button id="cancelSubscriptionBtn" style="background-color: #f3f4f6; color: #ef4444; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s;">
+                                    Cancel Subscription
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Second div: Payment History -->
+                    <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        ${paymentHistoryHTML}
+                    </div>
+                `;
+
+                // If no subscription, show empty state
+                if (!subscription) {
+                    billingHTML = `
+                        <!-- First div: No subscription -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 1.1rem; color: #1e3a8a; margin-bottom: 0.5rem;">
+                                    -
+                                </div>
+                                <div style="margin-bottom: 0.5rem;">
+                                    <span style="color: #9ca3af; font-size: 0.95rem;">
+                                        Not active
+                                    </span>
+                                </div>
+                                <div style="margin-bottom: 0.5rem; color: #4b5563; font-size: 0.95rem;">
+                                    €0.00 billed monthly
+                                </div>
+                                <div style="color: #4b5563; font-size: 0.95rem;">
+                                    Next billing date: N/A
+                                </div>
+                            </div>
+                            <div style="margin-left: 2rem;">
+                                <!-- No cancel button when not subscribed -->
+                            </div>
+                        </div>
+                        
+                        <!-- Second div: Payment History -->
+                        <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                            <p style="color: #9ca3af; font-size: 0.9rem;">No payment history available.</p>
+                        </div>
+                    `;
+                }
+
+                billingsContent.innerHTML = billingHTML;
+
+                // Add cancel subscription handler
+                const cancelBtn = document.getElementById('cancelSubscriptionBtn');
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', async function() {
+                        if (confirm('Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period.')) {
+                            if (typeof window.cancelSubscription === 'function') {
+                                try {
+                                    const result = await window.cancelSubscription();
+                                    if (result.success) {
+                                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                                        // Reload billing info to show updated status
+                                        loadBillingInfo();
+                                    } else {
+                                        alert('Error cancelling subscription. Please try again or contact support.');
+                                    }
+                                } catch (error) {
+                                    console.error('Error cancelling subscription:', error);
+                                    alert('Error cancelling subscription. Please try again or contact support.');
+                                }
+                            } else {
+                                alert('Cancel subscription function not available. Please contact support.');
+                            }
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error loading billing info:', error);
+                // Show error state
+                billingsContent.innerHTML = `
+                    <!-- First div: Error state -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="flex: 1; color: #ef4444;">
+                            Error loading billing information. Please try again later.
+                        </div>
+                    </div>
+                    
+                    <!-- Second div: Payment History -->
+                    <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                        <p style="color: #9ca3af; font-size: 0.9rem;">Error loading payment history. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
     
     <!-- Early auth check - runs before page renders to prevent flash -->
     <script>
@@ -1206,6 +1624,9 @@
         
         // Store Supabase progress data globally so updateStats can use it
         let globalSupabaseProgress = null;
+
+        // Tab switching functionality is handled in the earlier script block
+        // This duplicate function has been removed to avoid conflicts
         
         // User data from localStorage
         let userData = {
@@ -1219,6 +1640,8 @@
 
         // Initialize profile page
         async function initProfile() {
+            console.log('🚀🚀🚀 initProfile() STARTED - THIS SHOULD APPEAR IN CONSOLE 🚀🚀🚀');
+            try {
             // First, check if user is actually logged in using centralized auth check
             let authStatus;
             if (typeof window.checkAuthStatus === 'function') {
@@ -1246,174 +1669,66 @@
             userData.email = authStatus.email || '';
             updateUserInfo();
             
-            // Load progress from Supabase FIRST (Supabase is source of truth, not localStorage)
-            let supabaseProgressData = null;
-            if (typeof window.getUserProgress === 'function') {
-                try {
-                    console.log('🔄 Fetching progress from Supabase...');
-                    supabaseProgressData = await window.getUserProgress();
-                    globalSupabaseProgress = supabaseProgressData; // Store globally
-                    
-                    console.log('📊 Supabase response:', supabaseProgressData);
-                    
-                    if (supabaseProgressData) {
-                        console.log('✅ Loaded progress from Supabase (source of truth):', supabaseProgressData);
-                        console.log('Supabase completed_games:', supabaseProgressData.completed_games);
-                        console.log('Supabase completed_puzzles:', supabaseProgressData.completed_puzzles);
-                        console.log('Supabase total_games_played:', supabaseProgressData.total_games_played);
-                        console.log('Supabase training_hours:', supabaseProgressData.training_hours);
-                        console.log('Supabase current_streak:', supabaseProgressData.current_streak);
-                        
-                        // IMPORTANT: Override localStorage with Supabase data (Supabase is source of truth)
-                        if (supabaseProgressData.completed_games) {
-                            progressTracker.userProgress.completedGames = supabaseProgressData.completed_games;
-                        } else {
-                            progressTracker.userProgress.completedGames = [];
-                        }
-                        if (supabaseProgressData.completed_puzzles) {
-                            // Merge puzzles into completedGames for progressTracker (it uses one array)
-                            const allCompleted = [...(supabaseProgressData.completed_games || []), ...supabaseProgressData.completed_puzzles];
-                            progressTracker.userProgress.completedGames = allCompleted;
-                        }
-                        if (supabaseProgressData.total_games_played !== undefined) {
-                            progressTracker.userProgress.totalGamesPlayed = supabaseProgressData.total_games_played;
-                        } else {
-                            progressTracker.userProgress.totalGamesPlayed = 0;
-                        }
-                        if (supabaseProgressData.training_hours !== undefined) {
-                            progressTracker.userProgress.totalTrainingHours = supabaseProgressData.training_hours;
-                        } else {
-                            progressTracker.userProgress.totalTrainingHours = 0;
-                        }
-                        if (supabaseProgressData.current_streak !== undefined) {
-                            progressTracker.userProgress.currentStreak = supabaseProgressData.current_streak;
-                        } else {
-                            progressTracker.userProgress.currentStreak = 0;
-                        }
-                        // Save to localStorage as cache (but Supabase is source of truth)
-                        progressTracker.saveUserProgress();
-                    } else {
-                        console.log('⚠️ No progress record found in Supabase for this user');
-                        console.log('This means: user_progress table has no row for your user_id');
-                        
-                        // Check if localStorage has any progress data to sync
-                        const hasLocalProgress = progressTracker.userProgress.completedGames.length > 0 || 
-                                                progressTracker.userProgress.totalGamesPlayed > 0 ||
-                                                progressTracker.userProgress.totalTrainingHours > 0 ||
-                                                progressTracker.userProgress.currentStreak > 0;
-                        
-                        if (hasLocalProgress) {
-                            console.log('📤 Syncing localStorage data to Supabase...');
-                            console.log('LocalStorage data:', {
-                                completedGames: progressTracker.userProgress.completedGames,
-                                totalGamesPlayed: progressTracker.userProgress.totalGamesPlayed,
-                                trainingHours: progressTracker.userProgress.totalTrainingHours,
-                                streak: progressTracker.userProgress.currentStreak
-                            });
-                            
-                            // Sync localStorage data to Supabase
-                            if (typeof window.saveUserProgress === 'function') {
-                                try {
-                                    // Separate games and puzzles from completedGames array
-                                    const completedGames = [];
-                                    const completedPuzzles = [];
-                                    const challengeModeCompletions = progressTracker.userProgress.challengeModeCompletions || [];
-                                    
-                                    // Fetch games.json to separate by type
-                                    try {
-                                        const response = await fetch('/games/games.json');
-                                        const gamesData = await response.json();
-                                        if (gamesData && gamesData.games) {
-                                            progressTracker.userProgress.completedGames.forEach(id => {
-                                                const game = gamesData.games.find(g => g.id === id);
-                                                if (game) {
-                                                    if (game.type === 'game') {
-                                                        if (!completedGames.includes(id)) {
-                                                            completedGames.push(id);
-                                                        }
-                                                    } else if (game.type === 'puzzle') {
-                                                        if (!completedPuzzles.includes(id)) {
-                                                            completedPuzzles.push(id);
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    } catch (fetchError) {
-                                        console.error('Error fetching games.json:', fetchError);
-                                        // Fallback: assume all are games
-                                        completedGames.push(...progressTracker.userProgress.completedGames);
-                                    }
-                                    
-                                    const syncProgress = {
-                                        completedGames: completedGames,
-                                        completedPuzzles: completedPuzzles,
-                                        challengeModeCompletions: challengeModeCompletions,
-                                        totalGamesPlayed: progressTracker.userProgress.totalGamesPlayed || 0,
-                                        trainingHours: progressTracker.userProgress.totalTrainingHours || 0,
-                                        currentStreak: progressTracker.userProgress.currentStreak || 0
-                                    };
-                                    
-                                    const saved = await window.saveUserProgress(syncProgress);
-                                    if (saved) {
-                                        console.log('✅ Synced localStorage data to Supabase successfully!');
-                                        // Reload from Supabase
-                                        supabaseProgressData = await window.getUserProgress();
-                                        globalSupabaseProgress = supabaseProgressData;
-                                        console.log('📊 Reloaded from Supabase:', supabaseProgressData);
-                                    } else {
-                                        console.error('❌ Failed to sync to Supabase');
-                                    }
-                                } catch (syncError) {
-                                    console.error('Error syncing to Supabase:', syncError);
-                                }
-                            }
-                        } else {
-                            console.log('Creating initial empty progress record in Supabase...');
-                            
-                            // Create initial empty progress record in Supabase
-                            if (typeof window.saveUserProgress === 'function') {
-                                try {
-                                    const initialProgress = {
-                                        completedGames: [],
-                                        completedPuzzles: [],
-                                        challengeModeCompletions: [],
-                                        totalGamesPlayed: 0,
-                                        trainingHours: 0,
-                                        currentStreak: 0
-                                    };
-                                    const saved = await window.saveUserProgress(initialProgress);
-                                    if (saved) {
-                                        console.log('✅ Created initial progress record in Supabase');
-                                        // Reload from Supabase
-                                        supabaseProgressData = await window.getUserProgress();
-                                        globalSupabaseProgress = supabaseProgressData;
-                                        console.log('📊 Reloaded from Supabase:', supabaseProgressData);
-                                    }
-                                } catch (createError) {
-                                    console.error('Error creating initial progress:', createError);
-                                }
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error('❌ Error loading progress from Supabase:', e);
-                    console.error('Error details:', e.message, e.stack);
-                    // Only fall back to localStorage if Supabase fails
-                    console.log('⚠️ Falling back to localStorage as backup (Supabase error)');
-                }
-            } else {
-                console.warn('⚠️ window.getUserProgress is not available - Supabase helpers not loaded?');
+            // SIMPLIFIED: Load Supabase data - Wait for Supabase to be ready first
+            // Step 1: Wait for Supabase scripts to load
+            console.log('⏳ Waiting for Supabase scripts to load...');
+            let attempts = 0;
+            while ((typeof window.getSupabase !== 'function' || typeof window.getUserProgress !== 'function') && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
             }
             
-            // Update stats using Supabase data (source of truth)
-            // IMPORTANT: Set globalSupabaseProgress FIRST, then call updateStats
-            globalSupabaseProgress = supabaseProgressData;
+            // Step 2: Wait for Supabase client to be initialized
+            if (typeof window.getSupabase === 'function') {
+                console.log('⏳ Waiting for Supabase client to initialize...');
+                attempts = 0;
+                let supabaseReady = false;
+                while (attempts < 50) {
+                    const supabase = window.getSupabase();
+                    if (supabase) {
+                        supabaseReady = true;
+                        console.log('✅ Supabase client is ready');
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!supabaseReady) {
+                    console.error('❌ Supabase client not initialized after waiting');
+                    await updateStats(null);
+                    return;
+                }
+            } else {
+                console.error('❌ getSupabase is not available');
+                await updateStats(null);
+                return;
+            }
             
-            if (typeof updateStats === 'function') {
-                // Always pass the Supabase data to ensure it's used
-                updateStats(supabaseProgressData); // Pass Supabase data directly
-                console.log('📊 Called updateStats with Supabase data, training_hours:', supabaseProgressData?.training_hours);
+            // Step 3: Now try to get user progress
+            if (typeof window.getUserProgress === 'function') {
+                try {
+                    console.log('🔄 Loading Supabase data for profile...');
+                    const supabaseProgress = await window.getUserProgress();
+                    console.log('📊 getUserProgress() returned:', supabaseProgress);
+                    
+                    if (supabaseProgress) {
+                        console.log('✅ Got Supabase data:', supabaseProgress);
+                        globalSupabaseProgress = supabaseProgress;
+                        
+                        // Update stats
+                        await updateStats(supabaseProgress);
+                    } else {
+                        console.log('⚠️ No Supabase data - getUserProgress() returned null');
+                        await updateStats(null);
+                    }
+                } catch (e) {
+                    console.error('❌ Error loading Supabase data:', e);
+                    await updateStats(null);
+                }
+            } else {
+                console.warn('⚠️ window.getUserProgress is not a function');
+                updateStats(null);
             }
             
             // Then get fresh data from Supabase (updates in background)
@@ -1442,6 +1757,13 @@
                 } catch (e) {
                     console.log('Could not get user from Supabase:', e);
                 }
+            }
+            
+            console.log('✅ initProfile() COMPLETED');
+            } catch (error) {
+                console.error('❌ ERROR in initProfile():', error);
+                console.error('Error stack:', error.stack);
+                throw error; // Re-throw to see it in console
             }
             
             // Force hide subscription UI initially to prevent flash
@@ -1477,8 +1799,6 @@
             
             // Then check Supabase and update if different (will update cache)
             await updateSubscriptionStatus();
-            // Update stats - will use globalSupabaseProgress if available
-            updateStats(globalSupabaseProgress);
             
             // Update training time every second if timer is running
             setInterval(function() {
@@ -1700,212 +2020,122 @@
             console.log('Account reset to free');
         }
 
-        // Make updateStats available globally for instant updates
-        // supabaseData: progress data from Supabase (source of truth)
-        window.updateStats = function updateStats(supabaseData = null) {
-            // Use passed parameter first, then global Supabase data, then null
-            // This ensures we use the most recent data
-            const supabaseProgress = supabaseData || globalSupabaseProgress || null;
+        // SIMPLIFIED: Simple function to update profile stats from Supabase data
+        window.updateStats = async function updateStats(supabaseData = null) {
+            // If no data provided, try to fetch from Supabase
+            let supabaseProgress = supabaseData || globalSupabaseProgress;
             
-            // Use Supabase data as source of truth, fallback to localStorage only if Supabase unavailable
-            let completedGamesArray = [];
-            let completedPuzzlesArray = [];
-            let challengeModeCompletionsArray = [];
-            let totalGamesPlayed = 0;
-            let trainingHours = 0;
-            let currentStreak = 0;
-            
-            if (supabaseProgress) {
-                // Use Supabase data (source of truth)
-                completedGamesArray = supabaseProgress.completed_games || [];
-                completedPuzzlesArray = supabaseProgress.completed_puzzles || [];
-                challengeModeCompletionsArray = supabaseProgress.challenge_mode_completions || [];
-                totalGamesPlayed = supabaseProgress.total_games_played || 0;
-                trainingHours = supabaseProgress.training_hours || 0;
-                currentStreak = supabaseProgress.current_streak || 0;
-                console.log('✅ Using Supabase data (source of truth):', {
-                    completedGames: completedGamesArray.length,
-                    completedPuzzles: completedPuzzlesArray.length,
-                    totalGamesPlayed,
-                    trainingHours: trainingHours,
-                    trainingHoursRaw: supabaseProgress.training_hours,
-                    currentStreak,
-                    completedGamesArray: completedGamesArray,
-                    completedPuzzlesArray: completedPuzzlesArray,
-                    fullData: supabaseProgress
-                });
-            } else {
-                // Fallback to localStorage only if Supabase data not available
-                completedGamesArray = progressTracker.userProgress.completedGames || [];
-                challengeModeCompletionsArray = progressTracker.userProgress.challengeModeCompletions || [];
-                totalGamesPlayed = progressTracker.userProgress.totalGamesPlayed || 0;
-                trainingHours = progressTracker.userProgress.totalTrainingHours || 0;
-                currentStreak = progressTracker.userProgress.currentStreak || 0;
-                console.warn('⚠️ Using localStorage fallback (Supabase data not available)');
-            }
-            
-            // Get progress data from progress tracker for training time
-            const progress = progressTracker.getProgressSummary();
-            const trainingTime = progressTracker.getDetailedTrainingTime();
-            
-            // Count completed games and puzzles separately
-            async function getCompletedCounts() {
+            // If still null, try fetching directly (with waitForSupabase fallback)
+            if (!supabaseProgress && typeof window.getUserProgress === 'function') {
                 try {
-                    // Fetch both games.json and puzzles.json to get all items
-                    const [gamesResponse, puzzlesResponse] = await Promise.all([
-                        fetch(`/games/games.json?t=${Date.now()}`),
-                        fetch(`/games/puzzles.json?t=${Date.now()}`)
-                    ]);
-                    
-                    let allItems = [];
-                    
-                    // Load games
-                    if (gamesResponse.ok) {
-                        const gamesData = await gamesResponse.json();
-                        if (gamesData && gamesData.games) {
-                            allItems = allItems.concat(gamesData.games);
-                        }
+                    supabaseProgress = await window.getUserProgress();
+                    if (supabaseProgress) {
+                        globalSupabaseProgress = supabaseProgress;
                     }
-                    
-                    // Load puzzles
-                    if (puzzlesResponse.ok) {
-                        const puzzlesData = await puzzlesResponse.json();
-                        if (puzzlesData && puzzlesData.puzzles) {
-                            allItems = allItems.concat(puzzlesData.puzzles);
-                        }
-                    }
-                    
-                    if (allItems.length > 0) {
-                        console.log('🔍 getCompletedCounts - Total items loaded:', allItems.length);
-                        console.log('🔍 completedPuzzlesArray:', completedPuzzlesArray);
-                        console.log('🔍 challengeModeCompletionsArray:', challengeModeCompletionsArray);
-                        
-                        // Count games from "By Moves" tab that were completed in challenge/test mode
-                        // Games from "By Moves" are organized by move count (not custom, not from GM tab, not from Openings tab)
-                        const gamesByMoves = challengeModeCompletionsArray.filter(gameId => {
-                            const game = allItems.find(g => g.id === gameId);
-                            // Must be a game (not puzzle), not custom, and completed in challenge mode
-                            return game && 
-                                   game.type === 'game' && 
-                                   !gameId.startsWith('custom-game-') &&
-                                   // Games from "By Moves" are those organized by move count
-                                   // (they appear in shortGames, mediumGames, or longGames categories)
-                                   (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
-                        }).length;
-                        
-                        // Count puzzles with difficulty levels only (easy, intermediate, advanced, epic)
-                        const validDifficulties = ['easy', 'intermediate', 'advanced', 'epic'];
-                        let completedPuzzles = 0;
-                        
-                        if (completedPuzzlesArray.length > 0) {
-                            // Use completedPuzzlesArray from Supabase
-                            completedPuzzles = completedPuzzlesArray.filter(gameId => {
-                                const puzzle = allItems.find(g => g.id === gameId);
-                                const isValid = puzzle && 
-                                               puzzle.type === 'puzzle' && 
-                                               puzzle.difficulty && 
-                                               validDifficulties.includes(puzzle.difficulty.toLowerCase());
-                                if (puzzle) {
-                                    console.log(`🔍 Puzzle ${gameId}: type=${puzzle.type}, difficulty=${puzzle.difficulty}, valid=${isValid}`);
-                                } else {
-                                    console.warn(`⚠️ Puzzle not found in allItems: ${gameId}`);
-                                }
-                                return isValid;
-                            }).length;
-                            console.log('✅ Completed puzzles count from Supabase array:', completedPuzzles);
-                        } else {
-                            // Fallback: check completedGamesArray for puzzles (for backward compatibility)
-                            completedPuzzles = completedGamesArray.filter(gameId => {
-                                const puzzle = allItems.find(g => g.id === gameId);
-                                return puzzle && 
-                                       puzzle.type === 'puzzle' && 
-                                       puzzle.difficulty && 
-                                       validDifficulties.includes(puzzle.difficulty.toLowerCase());
-                            }).length;
-                        }
-                        
-                        const completedGames = gamesByMoves;
-                        
-                        console.log('📊 Final counts:', {
-                            completedGames,
-                            completedPuzzles,
-                            gamesByMoves
-                        });
-                        
-                        // Update the display
-                        document.getElementById('gamesPlayed').textContent = completedGames;
-                        document.getElementById('puzzlesCompleted').textContent = completedPuzzles;
-                        
-                        return { completedGames, completedPuzzles };
-                    }
-                } catch (error) {
-                    console.error('Error getting completed counts:', error);
-                    // Fallback
-                    const allCompleted = completedGamesArray.length;
-                    document.getElementById('gamesPlayed').textContent = allCompleted;
-                    document.getElementById('puzzlesCompleted').textContent = '0';
-                    return { completedGames: allCompleted, completedPuzzles: 0 };
+                } catch (e) {
+                    console.warn('Could not fetch Supabase data:', e);
                 }
             }
             
-            // Get completed counts
-            getCompletedCounts().then(({ completedGames, completedPuzzles }) => {
-                const allCompleted = completedGames + completedPuzzles;
+            // Get data from Supabase or use empty defaults
+            const completedGamesArray = supabaseProgress?.completed_games || [];
+            const completedPuzzlesArray = supabaseProgress?.completed_puzzles || [];
+            const trainingHours = supabaseProgress?.training_hours ?? 0;
+            const currentStreak = supabaseProgress?.current_streak ?? 0;
             
-            // Update training time with detailed breakdown
-            // trainingHours is set from supabaseProgress if available, or from localStorage if not
-            // Always use trainingHours if it was set (regardless of source), otherwise use progress tracker
-            const hoursToDisplay = (trainingHours !== undefined && trainingHours !== null) ? trainingHours : progress.totalHours;
-            const trainingTimeElement = document.getElementById('trainingHours');
-            if (trainingTimeElement) {
-                // Format hours for display
-                const hours = Math.floor(hoursToDisplay);
-                const minutes = Math.floor((hoursToDisplay - hours) * 60);
-                const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-                
-                console.log('🕐 Training time display:', {
-                    supabaseProgress: !!supabaseProgress,
+            console.log('📊 updateStats called with:', {
+                hasData: !!supabaseProgress,
+                completed_games: completedGamesArray,
+                completed_puzzles: completedPuzzlesArray,
+                training_hours: trainingHours,
+                training_hours_raw: supabaseProgress?.training_hours,
+                current_streak: currentStreak
+            });
+            
+            // Debug: Log the training hours calculation (trainingEl will be defined later)
+            const trainingEl = document.getElementById('trainingHours');
+            if (trainingEl) {
+                console.log('🕐 Training time calculation:', {
                     trainingHours: trainingHours,
-                    progressTotalHours: progress.totalHours,
-                    hoursToDisplay: hoursToDisplay,
-                    timeString: timeString
+                    hours: Math.floor(trainingHours),
+                    minutes: Math.floor((trainingHours - Math.floor(trainingHours)) * 60),
+                    timeString: trainingHours > 0 ? `${Math.floor(trainingHours)}h ${Math.floor((trainingHours - Math.floor(trainingHours)) * 60)}m` : `${Math.floor((trainingHours - Math.floor(trainingHours)) * 60)}m`
                 });
-                
-                trainingTimeElement.innerHTML = `
-                    <div class="training-time-breakdown">
-                        <div class="total-time">${timeString}</div>
-                        ${trainingTime.isActive ? `<div class="current-session">Current: ${trainingTime.currentSession}</div>` : ''}
-                    </div>
-                `;
             }
             
-            // Use Supabase streak if available, otherwise use progress tracker
-            // Check supabaseProgress (the actual loaded data) not supabaseData (parameter)
-            const streakToDisplay = supabaseProgress ? currentStreak : progress.currentStreak;
-            document.getElementById('currentStreak').textContent = streakToDisplay + ' days';
+            // Don't call updateSupabaseDataTable from updateStats - it's already called directly after getUserProgress()
+            // This prevents it from being called with null or wrong data
             
-                // Update progress bars - pass all completed items, function will filter by type
+            // Load games and puzzles to validate counts
+            try {
+                const [gamesResponse, puzzlesResponse] = await Promise.all([
+                    fetch(`/games/games.json?t=${Date.now()}`),
+                    fetch(`/games/puzzles.json?t=${Date.now()}`)
+                ]);
+                
+                let allItems = [];
+                if (gamesResponse.ok) {
+                    const gamesData = await gamesResponse.json();
+                    if (gamesData?.games) allItems = allItems.concat(gamesData.games);
+                }
+                if (puzzlesResponse.ok) {
+                    const puzzlesData = await puzzlesResponse.json();
+                    if (puzzlesData?.puzzles) allItems = allItems.concat(puzzlesData.puzzles);
+                }
+                
+                // Count games from "By Moves" (not custom, has valid move count)
+                        const completedGames = completedGamesArray.filter(gameId => {
+                    const game = allItems.find(g => g.id === gameId);
+                    return game && game.type === 'game' && !gameId.startsWith('custom-game-') &&
+                           (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
+                        }).length;
+                        
+                // Count puzzles with valid difficulty
+                const validDifficulties = ['easy', 'intermediate', 'advanced', 'epic'];
+                const completedPuzzles = completedPuzzlesArray.filter(gameId => {
+                    const puzzle = allItems.find(g => g.id === gameId);
+                    return puzzle && puzzle.type === 'puzzle' && puzzle.difficulty &&
+                           validDifficulties.includes(puzzle.difficulty.toLowerCase());
+                            }).length;
+                        
+                // Update UI directly
+                const gamesEl = document.getElementById('gamesPlayed');
+                const puzzlesEl = document.getElementById('puzzlesCompleted');
+                
+                if (gamesEl) {
+                    gamesEl.textContent = completedGames;
+                    console.log('✅ Updated Games Completed:', completedGames);
+                }
+                if (puzzlesEl) {
+                    puzzlesEl.textContent = completedPuzzles;
+                    console.log('✅ Updated Puzzles Completed:', completedPuzzles);
+                }
+                
+                // Update training time in Progress section (always update, regardless of sidebar elements)
+                const totalMinutes = Math.round(trainingHours * 60);
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                
+                const trainingTimeProgressEl = document.getElementById('trainingTimeProgress');
+                if (trainingTimeProgressEl) {
+                    trainingTimeProgressEl.textContent = timeString;
+                    console.log('✅ Updated Training Time in Progress:', timeString, '(from', trainingHours, 'hours)');
+                }
+                
+                // Update current streak in Progress section (always update, regardless of sidebar elements)
+                const currentStreakProgressEl = document.getElementById('currentStreakProgress');
+                if (currentStreakProgressEl) {
+                    const streakText = currentStreak === 1 ? '1 day' : `${currentStreak} days`;
+                    currentStreakProgressEl.textContent = streakText;
+                    console.log('✅ Updated Current Streak in Progress:', streakText);
+                }
+                
+                // Update progress bars
                 updateProgressBars();
-            
-            // Update userData to match Supabase data (source of truth)
-                userData.gamesPlayed = allCompleted;
-            userData.trainingHours = supabaseProgress ? trainingHours : progress.totalHours;
-            userData.currentStreak = supabaseProgress ? currentStreak : progress.currentStreak;
-            
-            console.log('Profile stats updated (from Supabase):', {
-                source: supabaseProgress ? 'Supabase' : 'localStorage (fallback)',
-                completedGames: completedGames,
-                    completedPuzzles: completedPuzzles,
-                    allCompleted: allCompleted,
-                totalTime: trainingTime.total,
-                currentSession: trainingTime.currentSession,
-                isActive: trainingTime.isActive,
-                currentStreak: supabaseProgress ? currentStreak : progress.currentStreak,
-                trainingHours: supabaseProgress ? trainingHours : progress.totalHours,
-                supabaseTrainingHours: trainingHours,
-                localStorageTrainingHours: progress.totalHours
-            });
-            });
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
         }
 
 
@@ -1975,26 +2205,33 @@
                     }
                     
                     if (supabaseProgress) {
-                        const challengeModeArray = supabaseProgress.challenge_mode_completions || [];
-                        const puzzlesArray = supabaseProgress.completed_puzzles || [];
-                        
+                        // Use completed_games from Supabase (already filtered to "By Moves" games in test mode)
+                                const gamesArray = supabaseProgress.completed_games || [];
+                                const puzzlesArray = supabaseProgress.completed_puzzles || [];
+                                
                         console.log('📊 Progress bars - Supabase data:', {
-                            challengeModeCompletions: challengeModeArray,
+                            completedGames: gamesArray,
                             completedPuzzles: puzzlesArray
                         });
                         
                         // Count games from "By Moves" tab completed in challenge/test mode
-                        completedGames = challengeModeArray.filter(gameId => {
+                        // Use completed_games array (already filtered)
+                                completedGames = gamesArray.filter(gameId => {
                             const game = allItems.find(g => g.id === gameId);
-                            return game && 
-                                   game.type === 'game' && 
-                                   !gameId.startsWith('custom-game-') &&
-                                   (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
-                        }).length;
-                        
+                            const isValid = game && 
+                                           game.type === 'game' && 
+                                           !gameId.startsWith('custom-game-') &&
+                                           (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
+                            if (game) {
+                                console.log(`📊 Progress bar - Game ${gameId}: type=${game.type}, moves=${game.moves}, valid=${isValid}`);
+                            }
+                            return isValid;
+                                }).length;
+                        console.log('📊 Progress bars - Completed games count:', completedGames);
+                                
                         // Count puzzles with difficulty levels only
-                        completedPuzzles = puzzlesArray.length > 0 
-                            ? puzzlesArray.filter(gameId => {
+                                completedPuzzles = puzzlesArray.length > 0 
+                                    ? puzzlesArray.filter(gameId => {
                                 const puzzle = allItems.find(g => g.id === gameId);
                                 const isValid = puzzle && 
                                                puzzle.type === 'puzzle' && 
@@ -2006,7 +2243,7 @@
                                 return isValid;
                             }).length
                             : 0;
-                    } else {
+            } else {
                         // Fallback to localStorage - only count games from "By Moves" completed in challenge mode
                         const challengeModeArray = progressTracker.userProgress.challengeModeCompletions || [];
                         completedGames = challengeModeArray.filter(gameId => {
@@ -2028,8 +2265,8 @@
                     }
                     
                     console.log('Progress bar debug:');
-                    console.log('All games:', data.games.map(g => ({ name: g.name, type: g.type })));
-                    console.log('Games (type=game):', data.games.filter(game => game.type === 'game').map(g => g.name));
+                    console.log('All items:', allItems.map(g => ({ name: g.name, type: g.type })));
+                    console.log('Games (type=game):', allItems.filter(game => game.type === 'game').map(g => g.name));
                     console.log('Total games:', totalGames);
                     console.log('Total puzzles:', totalPuzzles);
                     console.log('Completed games:', completedGames);
@@ -2097,6 +2334,9 @@
             localStorage.removeItem('hasActiveSubscription');
             localStorage.removeItem('cachedSubscriptionStatus');
             localStorage.removeItem('cachedSubscriptionPlan');
+            // CRITICAL: Clear progress data to prevent data leakage between accounts
+            localStorage.removeItem('chessProgress');
+            console.log('✅ Cleared chessProgress from localStorage');
             
             // CRITICAL: Clear ALL Supabase localStorage keys
             console.log('Clearing Supabase localStorage keys...');
@@ -2556,25 +2796,68 @@
         }
 
         // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', async function() {
+        console.log('📜 Profile page script loaded - version 2.0');
+        
+        async function initializeProfilePage() {
+            console.log('🚀 Starting profile page initialization...');
+            
             // Wait for Supabase to initialize before checking auth
-            await new Promise(resolve => {
-                if (typeof getSupabase === 'function' && getSupabase()) {
-                    resolve();
-                } else {
-                    // Wait a bit for Supabase to load
-                    setTimeout(resolve, 500);
-                }
-            });
-            
+            console.log('⏳ Waiting for Supabase to initialize...');
+            console.log('🔍 Checking getSupabase:', typeof getSupabase, typeof getSupabase === 'function' ? getSupabase() : 'not a function');
+            try {
+                const supabaseReady = await new Promise(resolve => {
+                    const checkSupabase = () => {
+                        if (typeof getSupabase === 'function') {
+                            const client = getSupabase();
+                            console.log('🔍 getSupabase() returned:', client);
+                            if (client) {
+                                console.log('✅ Supabase is ready (immediate)');
+                                resolve(true);
+                                return;
+                            }
+                        }
+                        console.log('⏳ Supabase not ready yet, waiting 500ms...');
+                        // Wait a bit for Supabase to load
+                        setTimeout(() => {
+                            console.log('⏰ setTimeout callback fired');
+                            const client = typeof getSupabase === 'function' ? getSupabase() : null;
+                            console.log('🔍 After 500ms, getSupabase() returned:', client);
+                            console.log('✅ Supabase wait complete (after 500ms)');
+                            resolve(true);
+                        }, 500);
+                    };
+                    checkSupabase();
+                });
+                
+                console.log('✅ Promise resolved, supabaseReady:', supabaseReady);
+                console.log('✅ Continuing after promise...');
+                
+                console.log('🔄 Handling OAuth callback...');
             // Handle OAuth callback first (if user just signed in with Google)
+                if (typeof handleOAuthCallback === 'function') {
             await handleOAuthCallback();
+                    console.log('✅ OAuth callback handled');
+                } else {
+                    console.warn('⚠️ handleOAuthCallback not available');
+                }
             
+            console.log('🔄 Updating navigation...');
             // Update navigation (checks Supabase auth)
+            if (typeof updateNavigation === 'function') {
             await updateNavigation();
+                console.log('✅ Navigation updated');
+            } else {
+                console.warn('⚠️ updateNavigation not available');
+            }
             
+                console.log('🔄 Calling initProfile()...');
             // Then initialize profile
             await initProfile();
+                console.log('✅ initProfile() completed');
+            } catch (error) {
+                console.error('❌ ERROR in initializeProfilePage:', error);
+                console.error('Error stack:', error.stack);
+            }
             
             // Set up modal event listeners
             document.querySelectorAll('.close').forEach(closeBtn => {
@@ -2611,7 +2894,21 @@
             
             // Logout button already has onclick="window.logout()" in HTML, no need for event listener
             // Confirm logout button uses onclick="confirmLogout()" directly in HTML
-        });
+        }
+        
+        // Run immediately if DOM is already loaded, otherwise wait for DOMContentLoaded
+        console.log('📜 Script execution reached - document.readyState:', document.readyState);
+        if (document.readyState === 'loading') {
+            console.log('⏳ DOM still loading, adding DOMContentLoaded listener...');
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('✅ DOMContentLoaded fired, calling initializeProfilePage()');
+                initializeProfilePage();
+            });
+        } else {
+            // DOM already loaded, run immediately
+            console.log('📄 DOM already loaded, calling initializeProfilePage() immediately...');
+            initializeProfilePage();
+        }
     </script>
 
     <!-- Sign In Modal -->
@@ -2697,113 +2994,98 @@
         </div>
     </div>
 
-    <!-- Supabase Configuration -->
-    <script src="supabase-config.js"></script>
-    
-    <!-- Supabase Helper Functions -->
-    <script src="supabase-helpers.js"></script>
-    
-    <!-- Supabase Authentication Functions -->
-    <script src="supabase-auth.js"></script>
-    
     <!-- Initialize Supabase when page loads -->
     <script>
-        // Wait for all scripts to load, then initialize
-        function initializeSupabase() {
-            // Check if all required functions are available
-            if (typeof supabase === 'undefined') {
-                console.log('⏳ Waiting for Supabase CDN to load...');
-                setTimeout(initializeSupabase, 100);
-                return;
-            }
-            
-            if (typeof initSupabase === 'undefined') {
-                console.log('⏳ Waiting for supabase-config.js to load...');
-                setTimeout(initializeSupabase, 100);
-                return;
-            }
-            
-            console.log('✅ All Supabase scripts loaded');
-            
+        // Initialize Supabase when page loads - consistent with games.html
+        document.addEventListener('DOMContentLoaded', async function() {
             // Initialize Supabase client
-            initSupabase();
-            
-            // Test connection (check if Supabase is working)
-            const client = getSupabase();
-            if (client) {
-                console.log('✅ Supabase is ready to use!');
-                
-                // Set up auth state listener
-                if (typeof setupAuthListener === 'function') {
-                    setupAuthListener();
-                }
-                
-                // Check if user is already signed in and subscription status
-                if (typeof getCurrentUser === 'function') {
-                    getCurrentUser().then(async user => {
-                        if (user) {
-                            console.log('✅ User is already signed in:', user.email);
-                            
-                            // Check subscription status immediately and update cache
-                            if (typeof window.hasActiveSubscription === 'function') {
-                                try {
-                                    const hasActive = await window.hasActiveSubscription();
-                                    // Cache immediately for next page load
-                                    localStorage.setItem('cachedSubscriptionStatus', hasActive ? 'true' : 'false');
-                                    
-                                    if (hasActive && typeof window.getUserSubscription === 'function') {
-                                        const sub = await window.getUserSubscription();
-                                        if (sub) {
-                                            localStorage.setItem('cachedSubscriptionPlan', sub.plan_type);
-                                            // Update userData immediately
-                                            userData.subscription = sub.plan_type;
-                                        }
-                                    }
-                                    
-                                    // Update UI immediately with fresh Supabase data
-                                    updateSubscriptionStatusDisplay(hasActive);
-                                } catch (e) {
-                                    console.log('Subscription check error:', e);
-                                }
-                            }
-                            
-                            // Update navigation and subscription status with Supabase data
-                            updateNavigation();
-                            updateSubscriptionStatus();
-                        } else {
-                            console.log('ℹ️ No user signed in');
-                            // Clear cached subscription if not logged in
-                            localStorage.setItem('cachedSubscriptionStatus', 'false');
-                            updateNavigation();
-                        }
-                    }).catch(err => {
-                        console.log('ℹ️ Not signed in or error:', err);
-                        updateNavigation();
-                    });
-                }
-                
-                // Test database connection (after a short delay to ensure everything is loaded)
-                setTimeout(() => {
-                    if (typeof testDatabaseConnection === 'function') {
-                        testDatabaseConnection();
-                    }
-                }, 500);
-            } else {
-                console.error('❌ Supabase failed to initialize');
+            if (typeof initSupabase === 'function') {
+                initSupabase();
             }
-        }
-        
-        // Start initialization when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('📄 Page loaded, initializing Supabase...');
-                initializeSupabase();
-            });
-        } else {
-            // DOM already loaded
-            console.log('📄 DOM already loaded, initializing Supabase...');
-            initializeSupabase();
-        }
+            
+            // Load Supabase data for profile
+            if (typeof window.getUserProgress === 'function') {
+                try {
+                    const supabaseProgress = await window.getUserProgress();
+                    if (supabaseProgress) {
+                        console.log('✅ Got Supabase data:', supabaseProgress);
+                        globalSupabaseProgress = supabaseProgress;
+                        
+                        // Update stats
+                        await updateStats(supabaseProgress);
+                    } else {
+                        console.log('⚠️ getUserProgress() returned null');
+                        await updateStats(null);
+                    }
+                } catch (error) {
+                    console.error('Error loading progress from Supabase:', error);
+                }
+            }
+            
+            // Handle OAuth callback if present (must happen after Supabase is initialized)
+            if (typeof handleOAuthCallback === 'function') {
+                await handleOAuthCallback();
+            }
+            
+            // Update navigation after OAuth callback
+            if (typeof updateNavigation === 'function') {
+                await updateNavigation();
+            }
+            
+            // Set up auth state listener
+            if (typeof setupAuthListener === 'function') {
+                setupAuthListener();
+            }
+            
+            // Check if user is already signed in and subscription status
+            if (typeof getCurrentUser === 'function') {
+                getCurrentUser().then(async user => {
+                    if (user) {
+                        console.log('✅ User is already signed in:', user.email);
+                        
+                        // Check subscription status immediately and update cache
+                        if (typeof window.hasActiveSubscription === 'function') {
+                            try {
+                                const hasActive = await window.hasActiveSubscription();
+                                // Cache immediately for next page load
+                                localStorage.setItem('cachedSubscriptionStatus', hasActive ? 'true' : 'false');
+                                
+                                if (hasActive && typeof window.getUserSubscription === 'function') {
+                                    const sub = await window.getUserSubscription();
+                                    if (sub) {
+                                        localStorage.setItem('cachedSubscriptionPlan', sub.plan_type);
+                                        // Update userData immediately
+                                        userData.subscription = sub.plan_type;
+                                    }
+                                }
+                                
+                                // Update UI immediately with fresh Supabase data
+                                updateSubscriptionStatusDisplay(hasActive);
+                            } catch (e) {
+                                console.log('Subscription check error:', e);
+                            }
+                        }
+                        
+                        // Update navigation and subscription status with Supabase data
+                        updateNavigation();
+                        updateSubscriptionStatus();
+                    } else {
+                        console.log('ℹ️ No user signed in');
+                        // Clear cached subscription if not logged in
+                        localStorage.setItem('cachedSubscriptionStatus', 'false');
+                        updateNavigation();
+                    }
+                }).catch(err => {
+                    console.log('ℹ️ Not signed in or error:', err);
+                    updateNavigation();
+                });
+            }
+            
+            // Test database connection
+            if (typeof testDatabaseConnection === 'function') {
+                testDatabaseConnection();
+            }
+        });
     </script>
 </body>
 </html>

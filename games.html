@@ -2608,6 +2608,25 @@
                              <div class="mode-option" data-mode="empty">Empty</div>
                              <button class="test-btn" id="challenge-btn">Test</button>
                          </div>
+                         
+                         <!-- Supabase Data Table -->
+                         <div class="supabase-data-section" style="margin: 1rem 0; padding: 1rem; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                             <h3 style="margin-bottom: 0.75rem; color: #1e3a8a; font-size: 1rem;">Supabase Data (Raw)</h3>
+                             <table id="supabaseDataTable" class="supabase-data-table" style="width: 100%; border-collapse: collapse;">
+                                 <thead>
+                                     <tr style="background-color: #f3f4f6; border-bottom: 2px solid #d1d5db;">
+                                         <th style="padding: 0.75rem; text-align: left; border: 1px solid #d1d5db; font-size: 0.875rem;">Field</th>
+                                         <th style="padding: 0.75rem; text-align: left; border: 1px solid #d1d5db; font-size: 0.875rem;">Value</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody id="supabaseDataTableBody">
+                                     <tr>
+                                         <td style="padding: 0.75rem; border: 1px solid #d1d5db; font-weight: 500;">Loading...</td>
+                                         <td style="padding: 0.75rem; border: 1px solid #d1d5db;">-</td>
+                                     </tr>
+                                 </tbody>
+                             </table>
+                         </div>
                      </div>
                     <div class="moves-panel" id="moves-panel">
                         <div class="game-header" id="game-header" style="display: none;">
@@ -2952,6 +2971,8 @@
             localStorage.removeItem('userEmail');
             localStorage.removeItem('subscriptionPlan');
             localStorage.removeItem('hasActiveSubscription');
+            // CRITICAL: Clear progress data to prevent data leakage between accounts
+            localStorage.removeItem('chessProgress');
             
             // Update navigation
             updateNavigation();
@@ -3279,12 +3300,146 @@
                 gamesData = { games: [] };
             }
             
-            // Load completed challenges from progress tracker
+            // Load completed challenges from Supabase FIRST (for logged-in users)
+            // Then fall back to progress tracker
+            if (typeof window.getUserProgress === 'function') {
+                try {
+                    const supabaseProgress = await window.getUserProgress();
+                    if (supabaseProgress) {
+                        console.log('✅ Loading completed games/puzzles from Supabase for badges...');
+                        console.log('Supabase completed_games:', supabaseProgress.completed_games);
+                        console.log('Supabase completed_puzzles:', supabaseProgress.completed_puzzles);
+                        
+                        // Update progressTracker with Supabase data
+                        if (supabaseProgress.completed_games) {
+                            progressTracker.userProgress.completedGames = supabaseProgress.completed_games;
+                        }
+                        if (supabaseProgress.completed_puzzles) {
+                            // Merge puzzles into completedGames for badge display
+                            const allCompleted = [...(supabaseProgress.completed_games || []), ...supabaseProgress.completed_puzzles];
+                            progressTracker.userProgress.completedGames = allCompleted;
+                        }
+                        if (supabaseProgress.challenge_mode_completions) {
+                            progressTracker.userProgress.challengeModeCompletions = supabaseProgress.challenge_mode_completions;
+                        }
+                        if (supabaseProgress.completed_puzzles) {
+                            progressTracker.userProgress.puzzleChallengeCompletions = supabaseProgress.completed_puzzles;
+                        }
+                        if (supabaseProgress.training_hours !== undefined) {
+                            progressTracker.userProgress.totalTrainingHours = supabaseProgress.training_hours;
+                        }
+                        if (supabaseProgress.current_streak !== undefined) {
+                            progressTracker.userProgress.currentStreak = supabaseProgress.current_streak;
+                        }
+                        
+                        console.log('✅ Updated progressTracker from Supabase:', {
+                            completedGames: progressTracker.userProgress.completedGames,
+                            challengeModeCompletions: progressTracker.userProgress.challengeModeCompletions,
+                            puzzleChallengeCompletions: progressTracker.userProgress.puzzleChallengeCompletions
+                        });
+                        
+                        // Update Supabase data table
+                        updateSupabaseDataTable(supabaseProgress);
+                    } else {
+                        // No data - update table to show null
+                        updateSupabaseDataTable(null);
+                    }
+                } catch (error) {
+                    console.error('Error loading progress from Supabase:', error);
+                    updateSupabaseDataTable(null);
+                }
+            } else {
+                updateSupabaseDataTable(null);
+            }
+            
+            // Load completed challenges from progress tracker (now includes Supabase data)
             completedChallenges = loadCompletedChallenges();
             console.log('Loaded completed challenges:', completedChallenges);
+            console.log('Completed challenges array:', Array.from(completedChallenges));
             
             // Update the game buttons display
             updateGameButtons();
+            
+            // Function to update the Supabase data table
+            function updateSupabaseDataTable(supabaseData) {
+                const tbody = document.getElementById('supabaseDataTableBody');
+                if (!tbody) {
+                    console.warn('⚠️ supabaseDataTableBody not found in games.html');
+                    return;
+                }
+                
+                if (!supabaseData) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid #d1d5db; font-weight: 500;">Status</td>
+                            <td style="padding: 0.75rem; border: 1px solid #d1d5db; color: #ef4444;">No data available</td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // Format the data for display
+                const rows = [];
+                
+                // User ID
+                if (supabaseData.user_id) {
+                    rows.push({
+                        field: 'user_id',
+                        value: supabaseData.user_id
+                    });
+                }
+                
+                // Completed Games
+                rows.push({
+                    field: 'completed_games',
+                    value: Array.isArray(supabaseData.completed_games) 
+                        ? `[${supabaseData.completed_games.length} items] ${JSON.stringify(supabaseData.completed_games)}`
+                        : String(supabaseData.completed_games || 'null')
+                });
+                
+                // Completed Puzzles
+                rows.push({
+                    field: 'completed_puzzles',
+                    value: Array.isArray(supabaseData.completed_puzzles)
+                        ? `[${supabaseData.completed_puzzles.length} items] ${JSON.stringify(supabaseData.completed_puzzles)}`
+                        : String(supabaseData.completed_puzzles || 'null')
+                });
+                
+                // Training Hours
+                rows.push({
+                    field: 'training_hours',
+                    value: supabaseData.training_hours !== null && supabaseData.training_hours !== undefined
+                        ? String(supabaseData.training_hours)
+                        : 'null'
+                });
+                
+                // Current Streak
+                rows.push({
+                    field: 'current_streak',
+                    value: supabaseData.current_streak !== null && supabaseData.current_streak !== undefined
+                        ? String(supabaseData.current_streak)
+                        : 'null'
+                });
+                
+                // Add any other fields that might exist
+                Object.keys(supabaseData).forEach(key => {
+                    if (!['user_id', 'completed_games', 'completed_puzzles', 'training_hours', 'current_streak'].includes(key)) {
+                        const value = supabaseData[key];
+                        rows.push({
+                            field: key,
+                            value: typeof value === 'object' ? JSON.stringify(value) : String(value || 'null')
+                        });
+                    }
+                });
+                
+                // Build table rows
+                tbody.innerHTML = rows.map(row => `
+                    <tr>
+                        <td style="padding: 0.75rem; border: 1px solid #d1d5db; font-weight: 500; background-color: #f9fafb; font-size: 0.875rem;">${row.field}</td>
+                        <td style="padding: 0.75rem; border: 1px solid #d1d5db; font-family: monospace; font-size: 0.75rem; word-break: break-all; max-width: 500px;">${row.value}</td>
+                    </tr>
+                `).join('');
+            }
             updateNavigation();
             
             // Update completion badges after games are loaded

@@ -2938,6 +2938,8 @@
             localStorage.removeItem('hasActiveSubscription');
             localStorage.removeItem('cachedSubscriptionStatus');
             localStorage.removeItem('cachedSubscriptionPlan');
+            // CRITICAL: Clear progress data to prevent data leakage between accounts
+            localStorage.removeItem('chessProgress');
             
             // Update navigation
             await updateNavigation();
@@ -3250,6 +3252,54 @@
                 console.log('Advanced puzzles:', advancedPuzzles.length);
                 console.log('Epic puzzles:', epicPuzzles.length);
                 
+                // Load completed challenges from Supabase FIRST (for logged-in users)
+                // Then fall back to progress tracker
+                if (typeof window.getUserProgress === 'function') {
+                    try {
+                        const supabaseProgress = await window.getUserProgress();
+                        if (supabaseProgress) {
+                            console.log('✅ Loading completed games/puzzles from Supabase for badges...');
+                            console.log('Supabase completed_games:', supabaseProgress.completed_games);
+                            console.log('Supabase completed_puzzles:', supabaseProgress.completed_puzzles);
+                            
+                            // Update progressTracker with Supabase data
+                            if (supabaseProgress.completed_games) {
+                                progressTracker.userProgress.completedGames = supabaseProgress.completed_games;
+                            }
+                            if (supabaseProgress.completed_puzzles) {
+                                // Merge puzzles into completedGames for badge display
+                                const allCompleted = [...(supabaseProgress.completed_games || []), ...supabaseProgress.completed_puzzles];
+                                progressTracker.userProgress.completedGames = allCompleted;
+                            }
+                            if (supabaseProgress.challenge_mode_completions) {
+                                progressTracker.userProgress.challengeModeCompletions = supabaseProgress.challenge_mode_completions;
+                            }
+                            if (supabaseProgress.completed_puzzles) {
+                                progressTracker.userProgress.puzzleChallengeCompletions = supabaseProgress.completed_puzzles;
+                            }
+                            if (supabaseProgress.training_hours !== undefined) {
+                                progressTracker.userProgress.totalTrainingHours = supabaseProgress.training_hours;
+                            }
+                            if (supabaseProgress.current_streak !== undefined) {
+                                progressTracker.userProgress.currentStreak = supabaseProgress.current_streak;
+                            }
+                            
+                            console.log('✅ Updated progressTracker from Supabase:', {
+                                completedGames: progressTracker.userProgress.completedGames,
+                                challengeModeCompletions: progressTracker.userProgress.challengeModeCompletions,
+                                puzzleChallengeCompletions: progressTracker.userProgress.puzzleChallengeCompletions
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error loading progress from Supabase:', error);
+                    }
+                }
+                
+                // Load completed challenges from progress tracker (now includes Supabase data)
+                completedChallenges = loadCompletedChallenges();
+                console.log('Loaded completed challenges:', completedChallenges);
+                console.log('Completed challenges array:', Array.from(completedChallenges));
+                
                 // Update all tabs with the same puzzle data
                 const tabPrefixes = ['', 'gm-games-'];
                 
@@ -3274,9 +3324,10 @@
                 puzzlesData = { puzzles: [] };
             }
             
-            // Load completed challenges from progress tracker
+            // Load completed challenges from progress tracker (now includes Supabase data if loaded above)
             completedChallenges = loadCompletedChallenges();
             console.log('Loaded completed challenges:', completedChallenges);
+            console.log('Completed challenges array:', Array.from(completedChallenges));
             
             // Update the game buttons display
             updateGameButtons();
@@ -6295,9 +6346,9 @@
                  console.log('completedChallenges after adding:', completedChallenges);
                  
                 // Record completion in progress tracker
-                // Pass 'puzzle' as the type so it's saved correctly to Supabase
+                // Pass 'puzzle' as the type and isChallengeMode flag so it's saved correctly to Supabase
                 const difficulty = currentGame.difficulty || 'intermediate';
-                progressTracker.recordGameCompletion(difficulty, currentGame.id, 'puzzle');
+                progressTracker.recordGameCompletion(difficulty, currentGame.id, 'puzzle', isChallengeMode);
                  
                  // End the current training session
                  progressTracker.endSession();

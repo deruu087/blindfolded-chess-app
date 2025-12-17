@@ -116,13 +116,18 @@
                     if (user) {
                         // Create or update subscription in Supabase
                         if (typeof window.createOrUpdateSubscription === 'function') {
+                            // Get amount from URL or use default based on plan
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const amount = urlParams.get('amount') || (planType === 'monthly' ? 3.52 : 8.90);
+                            const currency = urlParams.get('currency') || 'EUR';
+                            
                             const subscriptionData = {
                                 plan_type: planType,
                                 status: 'active',
                                 start_date: new Date().toISOString().split('T')[0],
                                 end_date: null, // No end date for recurring subscriptions
-                                amount_paid: planType === 'monthly' ? 3.45 : 12.99, // Update with actual price
-                                currency: 'USD',
+                                amount_paid: parseFloat(amount),
+                                currency: currency,
                                 payment_method: 'dodo_payments'
                             };
                             

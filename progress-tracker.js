@@ -36,6 +36,8 @@ class ProgressTracker {
     }
 
     // Load user progress from localStorage
+    // IMPORTANT: For logged-in users, Supabase is the source of truth, not localStorage
+    // localStorage is only used as a temporary cache or for offline mode
     loadUserProgress() {
         const defaultProgress = {
             // Basic Stats
@@ -64,6 +66,10 @@ class ProgressTracker {
             completedGames: [],
             // Games completed in challenge/test mode (from "By Moves" tab)
             challengeModeCompletions: [],
+            // Puzzles completed in challenge/test mode (from "By Difficulty" tab)
+            puzzleChallengeCompletions: [],
+            // Puzzles completed in challenge/test mode (from "By Difficulty" tab)
+            puzzleChallengeCompletions: [],
             
             // Skill Metrics
             accuracy: 0,
@@ -79,13 +85,35 @@ class ProgressTracker {
             averageSessionLength: 0
         };
 
+        // CRITICAL: If user is logged in, DO NOT load from localStorage
+        // Supabase is the source of truth for logged-in users
+        // Only use localStorage for offline/guest mode
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (isLoggedIn) {
+            // User is logged in - start with empty progress, will be loaded from Supabase
+            console.log('🔒 User is logged in - starting with empty progress (will load from Supabase)');
+            return defaultProgress;
+        }
+
+        // Only use localStorage if user is NOT logged in (guest mode)
         const stored = localStorage.getItem('chessProgress');
         return stored ? { ...defaultProgress, ...JSON.parse(stored) } : defaultProgress;
     }
 
     // Save user progress to localStorage
+    // IMPORTANT: For logged-in users, DO NOT save to localStorage
+    // Supabase is the source of truth for all user-specific progress
+    // localStorage is only used for guest/offline mode
     saveUserProgress() {
-        localStorage.setItem('chessProgress', JSON.stringify(this.userProgress));
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (!isLoggedIn) {
+            // Only save to localStorage for guest/offline mode
+            localStorage.setItem('chessProgress', JSON.stringify(this.userProgress));
+        } else {
+            // For logged-in users, progress is saved to Supabase only
+            // localStorage is not used for user-specific state
+            console.log('🔒 User is logged in - skipping localStorage save (Supabase is source of truth)');
+        }
     }
 
     // Start training timer when user clicks on games pages
@@ -421,7 +449,7 @@ class ProgressTracker {
         this.userProgress.totalGamesPlayed++;
         this.userProgress.gamesByDifficulty[difficulty]++;
         
-        // Add to completed games list if gameId provided
+        // Add to completed games list if gameId provided (for general tracking)
         if (gameId && !this.userProgress.completedGames.includes(gameId)) {
             this.userProgress.completedGames.push(gameId);
             console.log(`Added ${type} to completed list:`, gameId);
@@ -429,9 +457,32 @@ class ProgressTracker {
         }
         
         // Track challenge mode completions separately (for "By Moves" games only)
-        if (inChallengeMode && gameId && type === 'game' && !this.userProgress.challengeModeCompletions.includes(gameId)) {
-            this.userProgress.challengeModeCompletions.push(gameId);
-            console.log(`Added game to challenge mode completions:`, gameId);
+        if (inChallengeMode && gameId && type === 'game') {
+            if (!this.userProgress.challengeModeCompletions.includes(gameId)) {
+                this.userProgress.challengeModeCompletions.push(gameId);
+                console.log(`✅ Added game to challenge mode completions:`, gameId);
+                console.log(`📊 challengeModeCompletions now:`, this.userProgress.challengeModeCompletions);
+            } else {
+                console.log(`⚠️ Game already in challengeModeCompletions:`, gameId);
+            }
+        } else {
+            console.log(`🔍 Not adding to challengeModeCompletions:`, {
+                inChallengeMode,
+                gameId,
+                type,
+                reason: !inChallengeMode ? 'not in challenge mode' : type !== 'game' ? 'not a game' : 'no gameId'
+            });
+        }
+        
+        // Track puzzle challenge mode completions (for "By Difficulty" puzzles only)
+        if (inChallengeMode && gameId && type === 'puzzle') {
+            if (!this.userProgress.puzzleChallengeCompletions) {
+                this.userProgress.puzzleChallengeCompletions = [];
+            }
+            if (!this.userProgress.puzzleChallengeCompletions.includes(gameId)) {
+                this.userProgress.puzzleChallengeCompletions.push(gameId);
+                console.log(`Added puzzle to challenge mode completions:`, gameId);
+            }
         }
         
         // Streak is now only updated on daily login, not on game completion
@@ -477,30 +528,58 @@ class ProgressTracker {
                     }
                     
                     if (allItems.length > 0) {
-                        console.log('🔍 Separating games and puzzles. Total completed items:', this.userProgress.completedGames.length);
-                        console.log('🔍 Completed item IDs:', this.userProgress.completedGames);
-                        console.log('🔍 Current completion type:', completedType, 'gameId:', gameId);
-                        console.log('🔍 Total items loaded (games + puzzles):', allItems.length);
+                        console.log('🔍 Filtering games and puzzles for Supabase columns...');
+                        console.log('🔍 challengeModeCompletions:', this.userProgress.challengeModeCompletions);
+                        console.log('🔍 puzzleChallengeCompletions:', this.userProgress.puzzleChallengeCompletions);
                         
-                        // Separate completed items by type
-                        this.userProgress.completedGames.forEach(id => {
-                            const item = allItems.find(g => g.id === id);
-                            if (item) {
-                                console.log(`🔍 Found game/puzzle: ${id}, type: ${item.type}`);
-                                if (item.type === 'game') {
-                                    if (!completedGames.includes(id)) {
-                                        completedGames.push(id);
+                        // completed_games: Only games from "By Moves" completed in test mode
+                        // Use challengeModeCompletions array (already filtered to "By Moves" games in test mode)
+                        console.log('🔍 Processing challengeModeCompletions for completed_games:', this.userProgress.challengeModeCompletions);
+                        this.userProgress.challengeModeCompletions.forEach(gameId => {
+                            console.log(`🔍 Checking game: ${gameId}`);
+                            const game = allItems.find(g => g.id === gameId);
+                            if (game) {
+                                console.log(`✅ Found game in allItems: ${gameId}, type: ${game.type}, moves: ${game.moves}`);
+                                if (game.type === 'game') {
+                                    // Verify it's from "By Moves" (not custom, has moves count)
+                                    const isNotCustom = !gameId.startsWith('custom-game-');
+                                    const hasValidMoves = (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
+                                    console.log(`🔍 Game ${gameId} checks: isNotCustom=${isNotCustom}, hasValidMoves=${hasValidMoves}`);
+                                    if (isNotCustom && hasValidMoves) {
+                                        if (!completedGames.includes(gameId)) {
+                                            completedGames.push(gameId);
+                                            console.log(`✅ Added game to completed_games (By Moves, test mode): ${gameId}`);
+                                        } else {
+                                            console.log(`⚠️ Game already in completedGames: ${gameId}`);
+                                        }
+                                    } else {
+                                        console.warn(`⚠️ Game ${gameId} filtered out: isNotCustom=${isNotCustom}, hasValidMoves=${hasValidMoves}`);
                                     }
-                                } else if (item.type === 'puzzle') {
-                                    if (!completedPuzzles.includes(id)) {
-                                        completedPuzzles.push(id);
-                                        console.log(`✅ Added puzzle to completedPuzzles: ${id}`);
-                                    }
+                                } else {
+                                    console.warn(`⚠️ Item ${gameId} is not a game, type: ${game.type}`);
                                 }
                             } else {
-                                console.warn(`⚠️ Game/puzzle not found in games.json or puzzles.json: ${id}`);
+                                console.warn(`⚠️ Game not found in allItems: ${gameId}`);
                             }
                         });
+                        
+                        // completed_puzzles: Only puzzles from "By Difficulty" completed in test mode
+                        // Use puzzleChallengeCompletions array (puzzles completed in test mode)
+                        const validDifficulties = ['easy', 'intermediate', 'advanced', 'epic'];
+                        if (this.userProgress.puzzleChallengeCompletions) {
+                            this.userProgress.puzzleChallengeCompletions.forEach(puzzleId => {
+                                const puzzle = allItems.find(g => g.id === puzzleId);
+                                if (puzzle && puzzle.type === 'puzzle') {
+                                    // Verify it has a valid difficulty level (from "By Difficulty" tab)
+                                    if (puzzle.difficulty && validDifficulties.includes(puzzle.difficulty.toLowerCase())) {
+                                        if (!completedPuzzles.includes(puzzleId)) {
+                                            completedPuzzles.push(puzzleId);
+                                            console.log(`✅ Added puzzle to completed_puzzles (By Difficulty, test mode): ${puzzleId}`);
+                                        }
+                                    }
+                                }
+                            });
+                        }
                         
                         console.log('📊 Separated results:', {
                             completedGames: completedGames.length,
@@ -528,7 +607,7 @@ class ProgressTracker {
                 const progressData = {
                     completedGames: completedGames,
                     completedPuzzles: completedPuzzles,
-                    challengeModeCompletions: challengeModeGames,
+                    // challengeModeCompletions removed - only saving to completed_games
                     totalGamesPlayed: this.userProgress.totalGamesPlayed || 0,
                     trainingHours: totalTrainingHours,
                     currentStreak: this.userProgress.currentStreak || 0
@@ -536,11 +615,13 @@ class ProgressTracker {
                 
                 console.log('💾 Saving to Supabase with data:', {
                     completedGames: completedGames,
+                    completedGamesCount: completedGames.length,
                     completedPuzzles: completedPuzzles,
-                    challengeModeCompletions: challengeModeGames,
+                    completedPuzzlesCount: completedPuzzles.length,
                     totalGamesPlayed: this.userProgress.totalGamesPlayed,
                     trainingHours: totalTrainingHours
                 });
+                console.log('💾 Full progressData:', progressData);
                 
                 const result = await window.saveUserProgress(progressData);
                 if (result) {
@@ -623,10 +704,13 @@ class ProgressTracker {
         return new Set(this.userProgress.completedGames);
     }
     
-    // Get all completed challenges (games) as a Set
+    // Get all completed challenges (games and puzzles) as a Set
+    // This includes both completed_games and completed_puzzles from Supabase
     getAllCompletedChallengesSet() {
+        // Combine completedGames (which includes both games and puzzles for badge display)
         const allCompleted = [...this.userProgress.completedGames];
         console.log('Getting all completed challenges set:', allCompleted);
+        console.log('Total completed items:', allCompleted.length);
         return new Set(allCompleted);
     }
 
