@@ -1599,9 +1599,16 @@
         // Wait for DOM and scripts to load before checking auth
         document.addEventListener('DOMContentLoaded', async function() {
             // Give Supabase time to initialize (especially important in production)
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            // Check if user is logged in using the proper auth check
+            // Wait for checkAuthStatus to be available (up to 5 seconds)
+            let attempts = 0;
+            while (typeof window.checkAuthStatus !== 'function' && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            // MUST use checkAuthStatus - no localStorage fallback for security
             if (typeof window.checkAuthStatus === 'function') {
                 try {
                     const authStatus = await window.checkAuthStatus();
@@ -1610,27 +1617,19 @@
                         window.location.href = 'index.html';
                         return;
                     }
+                    // User is logged in - continue loading page
                 } catch (error) {
                     console.error('Error checking auth status:', error);
-                    // If check fails, let initProfile handle it (it has better error handling)
+                    // If auth check fails, redirect to home for security
+                    console.log('Auth check failed, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
                 }
             } else {
-                // Fallback: Check localStorage if checkAuthStatus not available yet
-                const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-                let hasSupabaseSession = false;
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.includes('supabase') || key.includes('yaaxydrmuslgzjletzbw') || key.startsWith('sb-'))) {
-                        hasSupabaseSession = true;
-                        break;
-                    }
-                }
-                
-                // Only redirect if definitely not logged in
-                if (!isLoggedIn && !hasSupabaseSession) {
-                    console.log('No auth found, redirecting to home page');
-                    window.location.href = 'index.html';
-                }
+                // If checkAuthStatus is not available after waiting, redirect for security
+                console.error('checkAuthStatus function not available - redirecting for security');
+                window.location.href = 'index.html';
+                return;
             }
         });
     </script>
@@ -1660,17 +1659,20 @@
             console.log('🚀🚀🚀 initProfile() STARTED - THIS SHOULD APPEAR IN CONSOLE 🚀🚀🚀');
             try {
             // First, check if user is actually logged in using centralized auth check
+            // MUST use checkAuthStatus - no localStorage fallback for security
+            if (typeof window.checkAuthStatus !== 'function') {
+                console.error('checkAuthStatus not available - redirecting for security');
+                window.location.href = 'index.html';
+                return;
+            }
+            
             let authStatus;
-            if (typeof window.checkAuthStatus === 'function') {
+            try {
                 authStatus = await window.checkAuthStatus();
-            } else {
-                // Fallback if function not available
-                authStatus = {
-                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                    user: null,
-                    email: localStorage.getItem('userEmail'),
-                    name: localStorage.getItem('userName')
-                };
+            } catch (error) {
+                console.error('Error checking auth status:', error);
+                window.location.href = 'index.html';
+                return;
             }
             
             // If user is not logged in, redirect to home page immediately
@@ -2439,46 +2441,18 @@
             });
         }
 
-        // Sign in handler
+        // Sign in handler - redirects to home page where proper Supabase auth is handled
         function handleSignIn(event) {
             event.preventDefault();
-            const email = document.getElementById('signInEmail').value;
-            const password = document.getElementById('signInPassword').value;
-            
-            // Check credentials against localStorage
-            const storedEmail = localStorage.getItem('userEmail');
-            const storedPassword = localStorage.getItem('userPassword');
-            
-            if (email === storedEmail && password === storedPassword) {
-                localStorage.setItem('isLoggedIn', 'true');
-                updateNavigation();
-                closeModal();
-                window.location.reload();
-            }
+            console.log('Sign in attempted from profile page - redirecting to home for proper authentication');
+            window.location.href = 'index.html#signin';
         }
 
-        // Register handler
+        // Register handler - redirects to home page where proper Supabase auth is handled
         function handleRegister(event) {
             event.preventDefault();
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const name = document.getElementById('registerName').value;
-            
-            // Check if email already exists
-            const existingEmail = localStorage.getItem('userEmail');
-            if (existingEmail === email) {
-                showSignInModal();
-                return;
-            }
-            
-            // Create new account
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('userName', name);
-            localStorage.setItem('userPassword', password);
-            updateNavigation();
-            closeModal();
-            window.location.reload();
+            console.log('Register attempted from profile page - redirecting to home for proper authentication');
+            window.location.href = 'index.html#register';
         }
 
         // Google sign-in handler (works for both sign-in and registration)
