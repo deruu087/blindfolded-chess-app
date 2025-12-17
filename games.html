@@ -2787,36 +2787,54 @@
                     // Load both games.json and custom games from API
                     const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
                     const customApiUrl = isProduction ? '/api/get-games' : 'http://localhost:3001/get-games';
-                    const [gamesResponse, customGamesResponse] = await Promise.all([
-                        fetch(`games/games.json?t=${Date.now()}`),
-                        fetch(customApiUrl)
-                    ]);
                     
                     let allGames = [];
                     
                     // Load main games
-                    if (gamesResponse.ok) {
-                        const gamesData = await gamesResponse.json();
-                        if (gamesData.games && Array.isArray(gamesData.games)) {
-                            allGames = allGames.concat(gamesData.games);
-                            console.log(`Loaded ${gamesData.games.length} games from games.json`);
+                    try {
+                        const gamesUrl = `games/games.json?t=${Date.now()}`;
+                        console.log('Fetching games from:', gamesUrl);
+                        const gamesResponse = await fetch(gamesUrl);
+                        
+                        if (gamesResponse.ok) {
+                            const gamesData = await gamesResponse.json();
+                            if (gamesData.games && Array.isArray(gamesData.games)) {
+                                allGames = allGames.concat(gamesData.games);
+                                console.log(`✅ Loaded ${gamesData.games.length} games from games.json`);
+                            } else {
+                                console.warn('games.json does not have a games array:', gamesData);
+                            }
+                        } else {
+                            console.error('❌ Could not load games.json:', gamesResponse.status, gamesResponse.statusText);
                         }
-                    } else {
-                        console.warn('Could not load games.json:', gamesResponse.status);
+                    } catch (error) {
+                        console.error('❌ Error loading games.json:', error);
                     }
                     
                     // Load custom games
-                    if (customGamesResponse.ok) {
-                        const customGamesData = await customGamesResponse.json();
-                        if (customGamesData.games && Array.isArray(customGamesData.games)) {
-                            allGames = allGames.concat(customGamesData.games);
-                            console.log(`Loaded ${customGamesData.games.length} custom games from custom-games.json`);
+                    try {
+                        console.log('Fetching custom games from:', customApiUrl);
+                        const customGamesResponse = await fetch(customApiUrl);
+                        
+                        if (customGamesResponse.ok) {
+                            const customGamesData = await customGamesResponse.json();
+                            if (customGamesData.games && Array.isArray(customGamesData.games)) {
+                                allGames = allGames.concat(customGamesData.games);
+                                console.log(`✅ Loaded ${customGamesData.games.length} custom games`);
+                            } else {
+                                console.warn('Custom games response does not have a games array:', customGamesData);
+                            }
+                        } else {
+                            console.warn('Could not load custom games:', customGamesResponse.status, customGamesResponse.statusText);
                         }
-                    } else {
-                        console.warn('Could not load custom-games.json:', customGamesResponse.status);
+                    } catch (error) {
+                        console.error('❌ Error loading custom games:', error);
                     }
                     
-                    console.log(`Total games loaded: ${allGames.length}`);
+                    console.log(`📊 Total games loaded: ${allGames.length}`);
+                    if (allGames.length === 0) {
+                        console.error('⚠️ WARNING: No games loaded! Check file paths and network requests.');
+                    }
                     console.log('Games with locked status:', allGames.map(g => ({ name: g.name, locked: g.locked })));
                     return { games: allGames };
                     

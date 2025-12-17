@@ -2371,7 +2371,15 @@
             });
             
             // Also try to sign out from Supabase directly (non-blocking)
-            if (typeof getSupabase === 'function') {
+            if (typeof window.signOut === 'function') {
+                try {
+                    await window.signOut();
+                    console.log('✅ Signed out from Supabase');
+                } catch (error) {
+                    console.error('Error signing out from Supabase:', error);
+                    // Ignore errors, we've already cleared localStorage
+                }
+            } else if (typeof getSupabase === 'function') {
                 const supabase = getSupabase();
                 if (supabase) {
                     console.log('Calling supabase.auth.signOut() directly...');
