@@ -7117,19 +7117,32 @@
     <script>
         // Initialize Supabase when page loads
         document.addEventListener('DOMContentLoaded', async function() {
-            // Initialize Supabase client
-            if (typeof initSupabase === 'function') {
-                initSupabase();
-            }
-            
-            // Handle OAuth callback if present (must happen after Supabase is initialized)
-            if (typeof handleOAuthCallback === 'function') {
-                await handleOAuthCallback();
-            }
-            
-            // Update navigation after OAuth callback
-            if (typeof updateNavigation === 'function') {
-                await updateNavigation();
+            try {
+                // Initialize Supabase client
+                if (typeof initSupabase === 'function') {
+                    initSupabase();
+                }
+                
+                // Handle OAuth callback if present (must happen after Supabase is initialized)
+                if (typeof handleOAuthCallback === 'function') {
+                    try {
+                        await handleOAuthCallback();
+                    } catch (error) {
+                        console.error('Error handling OAuth callback:', error);
+                    }
+                }
+                
+                // Update navigation after OAuth callback
+                if (typeof updateNavigation === 'function') {
+                    try {
+                        await updateNavigation();
+                    } catch (error) {
+                        console.error('Error updating navigation:', error);
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing page:', error);
+                // Page should still work even if Supabase fails
             }
         });
     </script>

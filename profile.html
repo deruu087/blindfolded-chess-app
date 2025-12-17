@@ -1594,28 +1594,45 @@
         }
     </script>
     
-    <!-- Early auth check - runs before page renders to prevent flash -->
+    <!-- Early auth check - runs after scripts load to prevent redirecting logged-in users -->
     <script>
-        // Check auth status immediately before page renders
-        (function() {
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            // Also check if there's a Supabase session key
-            let hasSupabaseSession = false;
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('supabase') || key.includes('yaaxydrmuslgzjletzbw') || key.startsWith('sb-'))) {
-                    hasSupabaseSession = true;
-                    break;
+        // Wait for DOM and scripts to load before checking auth
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Give Supabase time to initialize (especially important in production)
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Check if user is logged in using the proper auth check
+            if (typeof window.checkAuthStatus === 'function') {
+                try {
+                    const authStatus = await window.checkAuthStatus();
+                    if (!authStatus.isLoggedIn) {
+                        console.log('User not logged in, redirecting to home page');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error checking auth status:', error);
+                    // If check fails, let initProfile handle it (it has better error handling)
+                }
+            } else {
+                // Fallback: Check localStorage if checkAuthStatus not available yet
+                const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+                let hasSupabaseSession = false;
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('supabase') || key.includes('yaaxydrmuslgzjletzbw') || key.startsWith('sb-'))) {
+                        hasSupabaseSession = true;
+                        break;
+                    }
+                }
+                
+                // Only redirect if definitely not logged in
+                if (!isLoggedIn && !hasSupabaseSession) {
+                    console.log('No auth found, redirecting to home page');
+                    window.location.href = 'index.html';
                 }
             }
-            
-            // If not logged in and no Supabase session, redirect immediately to home
-            // The home page will show sign-in modal if needed
-            if (!isLoggedIn && !hasSupabaseSession) {
-                window.location.href = 'index.html';
-                return; // Stop execution
-            }
-        })();
+        });
     </script>
     
     <script>
