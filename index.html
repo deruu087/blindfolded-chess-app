@@ -2038,48 +2038,14 @@
             window.subscribing = true;
             
             try {
-                // Use centralized auth check function with timeout
-                let authStatus;
-                if (typeof window.checkAuthStatus === 'function') {
-                    console.log('Checking auth status...');
-                    
-                    // Add timeout to prevent hanging
-                    const authPromise = window.checkAuthStatus();
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Auth check timeout')), 3000)
-                    );
-                    
-                    try {
-                        authStatus = await Promise.race([authPromise, timeoutPromise]);
-                        console.log('Auth status:', authStatus);
-                    } catch (authError) {
-                        console.warn('Auth check failed or timed out:', authError);
-                        // Fallback to localStorage
-                        authStatus = {
-                            isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                            user: null,
-                            email: localStorage.getItem('userEmail'),
-                            name: localStorage.getItem('userName')
-                        };
-                        console.log('Using localStorage fallback:', authStatus);
-                    }
-                } else {
-                    console.warn('checkAuthStatus not available, using localStorage fallback');
-                    // Fallback if function not available
-                    authStatus = {
-                        isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                        user: null,
-                        email: localStorage.getItem('userEmail'),
-                        name: localStorage.getItem('userName')
-                    };
-                }
+                // Quick check: Use localStorage first for instant redirect
+                const quickCheck = localStorage.getItem('isLoggedIn') === 'true';
+                console.log('Quick localStorage check - isLoggedIn:', quickCheck);
                 
-                const isLoggedIn = authStatus.isLoggedIn;
-                console.log('Is logged in:', isLoggedIn);
-                
-                if (!isLoggedIn) {
-                    // User is not logged in - show sign-in modal
+                if (!quickCheck) {
+                    // User is not logged in - show sign-in modal immediately
                     console.log('User not logged in. Showing sign-in modal.');
+                    window.subscribing = false;
                     
                     // Store the selected plan and show sign-in modal
                     localStorage.setItem('pendingSubscription', plan);
@@ -2089,14 +2055,25 @@
                         console.error('showSignInModal function not found!');
                         alert('Please sign in first to subscribe.');
                     }
-                    window.subscribing = false;
                     return;
                 }
                 
-                // User is authenticated, redirect to Dodo Payments checkout
-                console.log('User is properly logged in, redirecting to Dodo Payments');
+                // User appears logged in - redirect immediately (don't wait for async check)
+                console.log('User appears logged in, redirecting immediately to Dodo Payments');
                 redirectToDodoPayments(plan);
                 window.subscribing = false;
+                
+                // Optionally verify auth in background (non-blocking)
+                if (typeof window.checkAuthStatus === 'function') {
+                    window.checkAuthStatus().then(authStatus => {
+                        if (!authStatus.isLoggedIn) {
+                            console.warn('Background auth check failed - user may need to sign in again');
+                            // Could redirect back or show message, but don't interrupt the payment flow
+                        }
+                    }).catch(err => {
+                        console.warn('Background auth check error:', err);
+                    });
+                }
             } catch (error) {
                 console.error('Error in subscribe function:', error);
                 alert('Error: ' + error.message);
