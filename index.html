@@ -2029,13 +2029,40 @@
         // Subscription functions
         async function subscribe(plan) {
             console.log('Subscribe function called with plan:', plan);
+            
+            // Prevent double-clicking
+            if (window.subscribing) {
+                console.log('Subscribe already in progress, ignoring...');
+                return;
+            }
+            window.subscribing = true;
+            
             try {
-                // Use centralized auth check function
+                // Use centralized auth check function with timeout
                 let authStatus;
                 if (typeof window.checkAuthStatus === 'function') {
                     console.log('Checking auth status...');
-                    authStatus = await window.checkAuthStatus();
-                    console.log('Auth status:', authStatus);
+                    
+                    // Add timeout to prevent hanging
+                    const authPromise = window.checkAuthStatus();
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Auth check timeout')), 3000)
+                    );
+                    
+                    try {
+                        authStatus = await Promise.race([authPromise, timeoutPromise]);
+                        console.log('Auth status:', authStatus);
+                    } catch (authError) {
+                        console.warn('Auth check failed or timed out:', authError);
+                        // Fallback to localStorage
+                        authStatus = {
+                            isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                            user: null,
+                            email: localStorage.getItem('userEmail'),
+                            name: localStorage.getItem('userName')
+                        };
+                        console.log('Using localStorage fallback:', authStatus);
+                    }
                 } else {
                     console.warn('checkAuthStatus not available, using localStorage fallback');
                     // Fallback if function not available
@@ -2062,15 +2089,18 @@
                         console.error('showSignInModal function not found!');
                         alert('Please sign in first to subscribe.');
                     }
+                    window.subscribing = false;
                     return;
                 }
                 
                 // User is authenticated, redirect to Dodo Payments checkout
                 console.log('User is properly logged in, redirecting to Dodo Payments');
                 redirectToDodoPayments(plan);
+                window.subscribing = false;
             } catch (error) {
                 console.error('Error in subscribe function:', error);
                 alert('Error: ' + error.message);
+                window.subscribing = false;
             }
         }
         
