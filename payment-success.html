@@ -83,6 +83,9 @@
             Thank you for your subscription. Your account is being activated...
         </p>
         <div class="loading" id="loadingMessage">Activating your subscription...</div>
+        <a href="profile.html" class="btn-primary" id="manualRedirectBtn" style="margin-top: 1rem; display: none;">
+            Go to Profile
+        </a>
     </div>
 
     <!-- Supabase JavaScript Library -->
@@ -102,9 +105,18 @@
         async function activateSubscription() {
             try {
                 // Get payment details from URL parameters
+                // Dodo Payments redirects with: payment_id and status
                 const urlParams = new URLSearchParams(window.location.search);
-                const orderId = urlParams.get('order_id') || urlParams.get('transaction_id');
+                const paymentId = urlParams.get('payment_id') || urlParams.get('order_id') || urlParams.get('transaction_id');
+                const paymentStatus = urlParams.get('status'); // 'succeeded' or 'failed'
                 const email = urlParams.get('email');
+                
+                console.log('Payment success page loaded with params:', {
+                    paymentId,
+                    paymentStatus,
+                    email,
+                    allParams: Object.fromEntries(urlParams)
+                });
                 
                 // Get the pending plan from localStorage
                 const planType = localStorage.getItem('pendingSubscriptionPlan') || 'monthly';
@@ -149,11 +161,13 @@
                                     window.location.href = 'profile.html';
                                 }, 2000);
                             } else {
-                                document.getElementById('loadingMessage').textContent = 'Error activating subscription. Please contact support.';
+                                document.getElementById('loadingMessage').textContent = 'Subscription will be activated shortly. The webhook is processing your payment.';
+                                document.getElementById('manualRedirectBtn').style.display = 'inline-block';
                                 console.error('Subscription activation error:', result.error);
                             }
                         } else {
-                            document.getElementById('loadingMessage').textContent = 'Error: Supabase functions not loaded. Please refresh the page.';
+                            document.getElementById('loadingMessage').textContent = 'Subscription will be activated shortly. The webhook is processing your payment.';
+                            document.getElementById('manualRedirectBtn').style.display = 'inline-block';
                         }
                     } else {
                         // User not logged in - redirect to sign in
@@ -167,7 +181,8 @@
                 }
             } catch (error) {
                 console.error('Error activating subscription:', error);
-                document.getElementById('loadingMessage').textContent = 'Error activating subscription. Please contact support.';
+                document.getElementById('loadingMessage').textContent = 'Subscription will be activated shortly. The webhook is processing your payment.';
+                document.getElementById('manualRedirectBtn').style.display = 'inline-block';
             }
         }
 
