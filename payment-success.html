@@ -128,10 +128,20 @@
                     if (user) {
                         // Create or update subscription in Supabase
                         if (typeof window.createOrUpdateSubscription === 'function') {
-                            // Get amount from URL or use default based on plan
+                            // Get amount from URL - NO DEFAULT VALUES
                             const urlParams = new URLSearchParams(window.location.search);
-                            const amount = urlParams.get('amount') || (planType === 'monthly' ? 3.52 : 8.90);
+                            const amount = urlParams.get('amount');
                             const currency = urlParams.get('currency') || 'EUR';
+                            
+                            // If no amount in URL, don't create subscription (webhook will handle it)
+                            if (!amount) {
+                                console.log('No amount in URL - webhook will handle subscription creation');
+                                document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated shortly.';
+                                setTimeout(() => {
+                                    window.location.href = 'profile.html';
+                                }, 2000);
+                                return;
+                            }
                             
                             const subscriptionData = {
                                 plan_type: planType,

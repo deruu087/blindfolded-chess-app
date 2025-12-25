@@ -125,12 +125,21 @@ export default async function handler(req, res) {
             
             // If we found the user, create/update subscription
             if (userId) {
+                // Extract next_billing_date from webhook data if available
+                let nextBillingDate = null;
+                if (data.next_billing_date) {
+                    // Dodo Payments sends ISO string, convert to date
+                    nextBillingDate = data.next_billing_date.split('T')[0]; // Extract date part
+                }
+                
                 const subscriptionData = {
                     user_id: userId,
+                    email: customerEmail, // Add email for easier querying
                     plan_type: planType,
                     status: 'active',
-                    start_date: new Date().toISOString().split('T')[0],
+                    start_date: data.created_at ? data.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
                     end_date: null, // No end date for recurring subscriptions
+                    next_billing_date: nextBillingDate, // Store next billing date from webhook
                     amount_paid: amountNum,
                     currency: currency || 'EUR',
                     payment_method: 'dodo_payments',
@@ -159,6 +168,7 @@ export default async function handler(req, res) {
                     const subscriptionId = data.subscription_id || orderId;
                     const paymentData = {
                         user_id: userId,
+                        email: customerEmail, // Add email for easier querying
                         amount: amountNum,
                         currency: currency || 'EUR',
                         status: 'paid',

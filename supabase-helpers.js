@@ -444,37 +444,109 @@ async function updateCustomGame(gameId, gameData) {
  * Get the current user's subscription from the database
  */
 async function getUserSubscription() {
+    console.log('🔍 getUserSubscription() CALLED');
     const supabase = getSupabase();
     if (!supabase) {
-        console.error('Supabase not initialized');
+        console.error('❌ Supabase not initialized');
         return null;
     }
 
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
+    // Get the current user - CRITICAL: Must have user before querying
+    console.log('🔍 Checking user authentication...');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+        console.error('❌ Auth error:', authError);
+        return null;
+    }
     
     if (!user) {
-        console.log('No user logged in');
+        console.log('❌ No user logged in - returning null');
         return null;
     }
+    
+    console.log('✅ User authenticated:', user.id, user.email);
 
-    // Fetch user's subscription from database
+    // Fetch user's subscription from database - FORCE FRESH FETCH (no cache)
+    // IMPORTANT: Order by updated_at DESC to get the most recent subscription
+    // This prevents old test data from being returned
+    console.log('🔍 getUserSubscription: Fetching from Supabase for user:', user.id);
+    
+    // First, check if there are multiple subscriptions (this should not happen, but let's check)
+    const { data: allSubs, error: countError } = await supabase
+        .from('subscriptions')
+        .select('id, amount_paid, created_at, updated_at')
+        .eq('user_id', user.id);
+    
+    if (!countError && allSubs && allSubs.length > 1) {
+        console.warn('⚠️ WARNING: Multiple subscriptions found for user!', allSubs);
+        console.warn('⚠️ This should not happen - there should be only one subscription per user');
+    }
+    
+    // Fetch the most recent subscription (ordered by updated_at DESC)
+    // Add cache-busting timestamp to ensure fresh fetch
+    const cacheBuster = Date.now();
     const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .single();
+    
+    console.log('🔍 Query timestamp (cache buster):', cacheBuster);
 
     if (error) {
         // If no subscription found, that's okay - user is on free plan
         if (error.code === 'PGRST116') {
-            console.log('No subscription found - user is on free plan');
+            console.log('✅ No subscription found - user is on free plan');
             return null;
         }
-        console.error('Error fetching subscription:', error);
+        // If multiple rows found, try fetching without .single()
+        if (error.code === 'PGRST116' || error.message?.includes('multiple') || error.message?.includes('More than one')) {
+            console.warn('⚠️ Multiple subscriptions detected, fetching most recent one...');
+            const { data: multiData, error: multiError } = await supabase
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false })
+                .limit(1);
+            
+            if (!multiError && multiData && multiData.length > 0) {
+                console.log('✅ Found subscription from multiple records:', multiData[0]);
+                const sub = multiData[0];
+                // REJECT 3.52 even from multiple records
+                if (sub.amount_paid == 3.52 || parseFloat(sub.amount_paid) == 3.52) {
+                    console.error('❌❌❌ REJECTING SUBSCRIPTION WITH 3.52 FROM MULTIPLE RECORDS');
+                    return null;
+                }
+                return sub;
+            }
+        }
+        console.error('❌ Error fetching subscription:', error);
+        console.error('❌ Error code:', error.code);
+        console.error('❌ Error message:', error.message);
         return null;
     }
 
+    // Log what we're returning - CRITICAL DEBUG INFO
+    console.log('📦 getUserSubscription RAW DATA FROM SUPABASE:', JSON.stringify(data, null, 2));
+    console.log('💰 Amount paid:', data?.amount_paid);
+    console.log('💰 Amount paid type:', typeof data?.amount_paid);
+    console.log('💰 Amount paid value:', data?.amount_paid);
+    console.log('💰 Amount paid equals 3.52?', data?.amount_paid == 3.52);
+    console.log('💰 Amount paid parseFloat:', parseFloat(data?.amount_paid));
+    
+    // CRITICAL: If amount_paid is 3.52, REJECT IT IMMEDIATELY
+    if (data && (data.amount_paid == 3.52 || parseFloat(data.amount_paid) == 3.52)) {
+        console.error('❌❌❌ REJECTING SUBSCRIPTION WITH 3.52 - THIS IS HARDCODED TEST DATA');
+        console.error('❌ Subscription ID:', data.id);
+        console.error('❌ Full subscription:', data);
+        console.error('❌ Returning NULL instead of this subscription');
+        return null; // REJECT IT - DON'T RETURN IT
+    }
+    
+    console.log('✅ Returning valid subscription:', data);
     return data;
 }
 
@@ -612,7 +684,7 @@ async function getPaymentHistory() {
         return [];
     }
 
-    // Try to fetch from payments table if it exists
+    // Fetch from payments table ONLY - no fallbacks, no mock data
     let payments = [];
     const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
@@ -621,29 +693,26 @@ async function getPaymentHistory() {
         .order('payment_date', { ascending: false });
 
     if (!paymentsError && paymentsData) {
-        payments = paymentsData.map(payment => ({
-            amount: payment.amount || 0,
-            currency: payment.currency || 'EUR',
-            status: payment.status || 'paid',
-            date: payment.payment_date || payment.created_at,
-            invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
-        }));
+        payments = paymentsData
+            .map(payment => ({
+                amount: payment.amount || 0,
+                currency: payment.currency || 'EUR',
+                status: payment.status || 'paid',
+                date: payment.payment_date || payment.created_at,
+                invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
+            }))
+            .filter(payment => {
+                // CRITICAL: Reject any payment with amount 3.52 (mock/test data)
+                if (payment.amount == 3.52 || parseFloat(payment.amount) == 3.52) {
+                    console.error('❌ Rejecting payment with amount 3.52 (mock data):', payment);
+                    return false;
+                }
+                return true;
+            });
     }
 
-    // If no payments table or empty, use subscription data as fallback
-    if (payments.length === 0) {
-        const subscription = await getUserSubscription();
-        if (subscription && subscription.amount_paid && subscription.start_date) {
-            payments = [{
-                amount: subscription.amount_paid,
-                currency: subscription.currency || 'EUR',
-                status: 'paid',
-                date: subscription.start_date,
-                invoice_url: 'https://checkout.dodopayments.com/account'
-            }];
-        }
-    }
-
+    // NO FALLBACK - if no payments, return empty array
+    // Payment history only comes from payments table in Supabase
     return payments;
 }
 

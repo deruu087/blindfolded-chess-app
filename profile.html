@@ -31,10 +31,27 @@
                 document.head.appendChild(style);
             
             // Function to update subscription display
+            // CRITICAL: Removed localStorage fallback - only runs after Supabase is ready
             function updateSubscriptionDisplay() {
-                const cachedStatus = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+                // Don't use localStorage - wait for Supabase
+                // This function is called early, so we'll just hide elements until Supabase loads
                 const statusEl = document.getElementById('subscriptionStatus');
                 const subtleEl = document.getElementById('subscriptionInfoSubtle');
+                
+                // Hide both until Supabase confirms status
+                if (statusEl) {
+                    statusEl.style.setProperty('display', 'none', 'important');
+                }
+                if (subtleEl) {
+                    subtleEl.style.setProperty('display', 'none', 'important');
+                }
+                
+                // Early return - don't use cached status
+                return;
+                
+                // OLD CODE BELOW - REMOVED localStorage fallback
+                /*
+                const cachedStatus = localStorage.getItem('cachedSubscriptionStatus') === 'true';
                 
                 if (cachedStatus) {
                     // User has paid account - keep both hidden and remove from layout
@@ -63,6 +80,7 @@
                         subtleEl.classList.add('show-subscription');
                     }
                 }
+                */
             }
             
             // Run immediately - don't wait for DOM
@@ -1202,7 +1220,8 @@
                 <div class="profile-section" id="billings-section" style="display: none;">
                     <h3 class="section-title">Billings</h3>
                     <div class="billings-content">
-                        <!-- Billings content will go here -->
+                        <!-- CRITICAL: Always start with loading state - prevents stale HTML -->
+                        <p style="color: #4b5563;">Loading billing information...</p>
                     </div>
                 </div>
 
@@ -1262,8 +1281,23 @@
                     }
                     
                     // Load billing info if billings tab is clicked
+                    // CRITICAL: Only load if Supabase is ready AND user is authenticated
                     if (tabName === 'billings') {
-                        loadBillingInfo();
+                        // Clear any stale HTML immediately
+                        const billingsContent = document.querySelector('#billings-section .billings-content');
+                        if (billingsContent) {
+                            billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+                        }
+                        
+                        // Wait for Supabase AND auth to be ready
+                        waitForSupabaseAndAuth().then(() => {
+                            loadBillingInfo();
+                        }).catch((error) => {
+                            console.error('Failed to initialize Supabase/auth:', error);
+                            if (billingsContent) {
+                                billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Unable to load billing information. Please refresh.</p>';
+                            }
+                        });
                     }
                     
                     // Save to localStorage
@@ -1303,7 +1337,30 @@
                     }
                 }
                 
-                switchTab(activeTab, false);
+                // CRITICAL: If billings tab, ensure Supabase is ready before switching
+                if (activeTab === 'billings') {
+                    // Clear billing HTML immediately
+                    const billingsContent = document.querySelector('#billings-section .billings-content');
+                    if (billingsContent) {
+                        billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+                    }
+                    
+                    // Switch to tab (shows loading state)
+                    switchTab(activeTab, false);
+                    
+                    // Then wait for Supabase and load data
+                    waitForSupabaseAndAuth().then(() => {
+                        loadBillingInfo();
+                    }).catch((error) => {
+                        console.error('Failed to initialize Supabase/auth for billing:', error);
+                        if (billingsContent) {
+                            billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Unable to load billing information. Please refresh.</p>';
+                        }
+                    });
+                } else {
+                    // For other tabs, switch immediately
+                    switchTab(activeTab, false);
+                }
             }
 
             // Add click handlers
@@ -1319,6 +1376,25 @@
             restoreActiveTab();
         }
 
+        // Helper function to wait for Supabase and auth to be ready
+        async function waitForSupabaseAndAuth() {
+            // Wait for Supabase to initialize
+            let attempts = 0;
+            while (attempts < 50) {
+                if (typeof window.getSupabase === 'function' && window.getSupabase()) {
+                    // Supabase is ready, now check auth
+                    const supabase = window.getSupabase();
+                    const { data: { user }, error } = await supabase.auth.getUser();
+                    if (!error && user) {
+                        return; // Both Supabase and auth are ready
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            throw new Error('Supabase or auth not ready after 5 seconds');
+        }
+
         // Initialize tabs when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initProfileTabs);
@@ -1327,36 +1403,139 @@
         }
 
         // Load and display billing information
+        // VERSION: 3.0 - Blocks until Supabase + auth ready, no localStorage fallbacks
         async function loadBillingInfo() {
+            console.log('🚀 loadBillingInfo() CALLED - VERSION 2.0');
+            console.log('🚀 Timestamp:', new Date().toISOString());
+            
             const billingsContent = document.querySelector('#billings-section .billings-content');
-            if (!billingsContent) return;
+            if (!billingsContent) {
+                console.error('❌ billingsContent element not found');
+                return;
+            }
+            
+            // CRITICAL: Always show loading state first - clear any cached HTML
+            billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+            console.log('✅ Set loading state - cleared any cached HTML');
+
+            // CRITICAL: Wait for Supabase to be initialized before proceeding
+            if (typeof window.getSupabase !== 'function' || !window.getSupabase()) {
+                console.log('⏳ Supabase not ready yet, waiting...');
+                // Wait up to 3 seconds for Supabase to initialize
+                let attempts = 0;
+                while (attempts < 30 && (typeof window.getSupabase !== 'function' || !window.getSupabase())) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                // If still not ready, show error
+                if (typeof window.getSupabase !== 'function' || !window.getSupabase()) {
+                    billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Supabase not initialized. Please refresh the page.</p>';
+                    return;
+                }
+            }
 
             // Show loading state
             billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
 
             try {
-                // Get subscription from Supabase
-                let subscription = null;
-                if (typeof window.getUserSubscription === 'function') {
-                    subscription = await window.getUserSubscription();
+                // CRITICAL: Verify user is authenticated before fetching subscription
+                const supabase = window.getSupabase();
+                if (!supabase) {
+                    throw new Error('Supabase not initialized');
                 }
-
-                // MOCK DATA: Use mock subscription if no real subscription exists
-                // TODO: Remove this mock data when integrating real-time data
-                if (!subscription) {
-                    const today = new Date();
-                    const nextMonth = new Date(today);
-                    nextMonth.setMonth(nextMonth.getMonth() + 1);
+                
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                if (authError || !user) {
+                    console.error('❌ User not authenticated, cannot fetch subscription:', authError);
+                    billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Please log in to view billing information.</p>';
+                    return;
+                }
+                console.log('✅ User authenticated:', user.id, user.email);
+                
+                // CLEAR ANY CACHED DATA FIRST - FORCE FRESH FETCH
+                const loadTimestamp = Date.now();
+                console.log('🔄 loadBillingInfo called - Supabase is ready, fetching fresh data');
+                console.log('🔄 Load timestamp:', loadTimestamp);
+                console.log('🔄 User ID:', user.id);
+                console.log('🔄 CLEARING localStorage cache...');
+                // Don't clear everything, just subscription-related cache
+                localStorage.removeItem('cachedSubscriptionStatus');
+                localStorage.removeItem('cachedSubscriptionPlan');
+                // Also clear any old subscription data that might be cached
+                localStorage.removeItem('subscriptionData');
+                localStorage.removeItem('userSubscription');
+                
+                // CRITICAL: Initialize subscription as null - NO DEFAULT VALUES
+                let subscription = null;
+                
+                // Get subscription from Supabase ONLY - no fallbacks, no defaults, NO CACHE
+                if (typeof window.getUserSubscription === 'function') {
+                    console.log('🔍 Calling getUserSubscription() - FORCING FRESH FETCH FROM SUPABASE');
+                    console.log('🔍 Subscription variable BEFORE call:', subscription);
                     
-                    subscription = {
-                        plan_type: 'monthly',
-                        status: 'active',
-                        start_date: today.toISOString().split('T')[0],
-                        end_date: null,
-                        amount_paid: 3.52,
-                        currency: 'EUR',
-                        payment_method: 'dodo_payments'
-                    };
+                    // Force fresh fetch - don't use any cached data
+                    subscription = await window.getUserSubscription();
+                    
+                    console.log('🔍 Subscription variable AFTER call:', subscription);
+                    console.log('🔍 Subscription is null?', subscription === null);
+                    console.log('🔍 Subscription is undefined?', subscription === undefined);
+                    console.log('🔍 Raw subscription from Supabase (FRESH FETCH):', subscription);
+                    console.log('🔍 Full subscription object:', JSON.stringify(subscription, null, 2));
+                    
+                    // IMMEDIATE REJECTION: If amount_paid is 3.52, REJECT IT - DON'T USE IT
+                    if (subscription && (subscription.amount_paid == 3.52 || parseFloat(subscription.amount_paid) == 3.52)) {
+                        console.error('❌❌❌ REJECTING SUBSCRIPTION WITH 3.52 - HARDCODED TEST VALUE DETECTED');
+                        console.error('❌ Subscription:', JSON.stringify(subscription, null, 2));
+                        console.error('❌ Setting subscription to NULL - will show empty state');
+                        subscription = null; // REJECT IT IMMEDIATELY
+                    }
+                    
+                    // STRICT VALIDATION: Only accept subscription if it has all required fields
+                    // AND it must come from Supabase (not localStorage or defaults)
+                    if (subscription) {
+                        const hasRequiredFields = subscription.plan_type && 
+                                                 subscription.status && 
+                                                 subscription.user_id &&
+                                                 subscription.id; // Must have database ID
+                        
+                        if (!hasRequiredFields) {
+                            console.log('❌ Invalid subscription - missing required fields, treating as null');
+                            subscription = null;
+                        } else {
+                            console.log('✅ Valid subscription found in Supabase:', {
+                                id: subscription.id,
+                                plan_type: subscription.plan_type,
+                                status: subscription.status,
+                                amount_paid: subscription.amount_paid,
+                                user_id: subscription.user_id
+                            });
+                        }
+                    } else {
+                        console.log('ℹ️ No subscription returned from Supabase - showing empty state');
+                    }
+                } else {
+                    console.log('⚠️ getUserSubscription function not available');
+                }
+                
+                // ABSOLUTE CHECK: Force null if subscription is falsy or invalid
+                // NO DEFAULT VALUES, NO FALLBACKS, NO MOCK DATA
+                // REJECT 3.52 as it's a known hardcoded test value
+                if (!subscription || 
+                    !subscription.plan_type || 
+                    !subscription.status || 
+                    !subscription.id ||
+                    subscription.amount_paid == 3.52) {  // Use == to catch both string and number
+                    console.log('🔄 Setting subscription to null - invalid subscription or hardcoded 3.52 detected');
+                    console.log('🔄 Rejected subscription:', subscription);
+                    subscription = null;
+                }
+                
+                // EXTRA SAFETY: Double-check for 3.52
+                if (subscription && (subscription.amount_paid == 3.52 || parseFloat(subscription.amount_paid) == 3.52)) {
+                    console.error('❌ REJECTING SUBSCRIPTION WITH HARDCODED 3.52 VALUE');
+                    console.error('❌ This should never happen - subscription:', subscription);
+                    subscription = null;
                 }
 
                 // Format dates helper
@@ -1371,56 +1550,100 @@
 
                 // Calculate next payment date
                 let nextPaymentDate = null;
-                if (subscription && subscription.status === 'active' && subscription.start_date) {
-                    const startDate = new Date(subscription.start_date);
-                    const now = new Date();
-                    const monthsToAdd = subscription.plan_type === 'monthly' ? 1 : 3;
-                    
-                    // Find next payment date
-                    let nextPayment = new Date(startDate);
-                    while (nextPayment <= now) {
-                        nextPayment.setMonth(nextPayment.getMonth() + monthsToAdd);
+                if (subscription && subscription.status === 'active') {
+                    // If we have next_billing_date from webhook, use it
+                    if (subscription.next_billing_date) {
+                        nextPaymentDate = new Date(subscription.next_billing_date);
+                    } else if (subscription.start_date) {
+                        // Calculate from start_date
+                        const startDate = new Date(subscription.start_date);
+                        const now = new Date();
+                        const monthsToAdd = subscription.plan_type === 'monthly' ? 1 : 3;
+                        
+                        // Find next payment date
+                        let nextPayment = new Date(startDate);
+                        while (nextPayment <= now) {
+                            nextPayment.setMonth(nextPayment.getMonth() + monthsToAdd);
+                        }
+                        nextPaymentDate = nextPayment;
                     }
-                    nextPaymentDate = nextPayment;
                 }
 
-                // Prepare subscription data
-                const subscriptionType = subscription?.plan_type === 'monthly' ? 'Monthly' : 
-                                       subscription?.plan_type === 'quarterly' ? 'Quarterly' : 
-                                       'Monthly';
+                // Prepare subscription data - only if subscription exists and has plan_type
+                // Also check that it's not just an empty object or invalid data
+                if (!subscription || !subscription.plan_type || !subscription.status) {
+                    console.log('No valid subscription found, showing empty state');
+                    subscription = null;
+                } else {
+                    console.log('Valid subscription found:', {
+                        plan_type: subscription.plan_type,
+                        status: subscription.status,
+                        amount_paid: subscription.amount_paid
+                    });
+                }
                 
-                const isActive = subscription?.status === 'active';
-                const statusText = isActive ? 'Active' : 'Not active';
-                const statusColor = isActive ? '#27ae60' : '#9ca3af';
-                
-                const amount = subscription?.amount_paid ? 
-                             `${subscription.currency || 'EUR'} ${subscription.amount_paid.toFixed(2)}` : 
-                             (subscription?.plan_type === 'monthly' ? '€3.52' : '€8.90');
-                
-                const billingFrequency = subscription?.plan_type === 'monthly' ? 'billed monthly' : 'billed quarterly';
-                const nextBillingDateText = nextPaymentDate ? formatDate(nextPaymentDate) : 'N/A';
+                // Only build subscription display if we have valid subscription data
+                if (subscription && subscription.plan_type && subscription.status) {
+                    const subscriptionType = subscription.plan_type === 'monthly' ? 'Monthly' : 
+                                           subscription.plan_type === 'quarterly' ? 'Quarterly' : 
+                                           '-';
+                    
+                    const isActive = subscription.status === 'active';
+                    const statusText = isActive ? 'Active' : 'Not active';
+                    const statusColor = isActive ? '#27ae60' : '#9ca3af';
+                    
+                    // Format amount with currency - only show if amount_paid exists
+                    let amount = '-';
+                    if (subscription.amount_paid) {
+                        const currencySymbol = subscription.currency === 'EUR' ? '€' : 
+                                             subscription.currency === 'USD' ? '$' : 
+                                             subscription.currency || '€';
+                        amount = `${currencySymbol}${subscription.amount_paid.toFixed(2)}`;
+                    }
+                    
+                    const billingFrequency = subscription.plan_type === 'monthly' ? 'billed monthly' : 
+                                           subscription.plan_type === 'quarterly' ? 'billed quarterly' : 
+                                           '';
+                    const nextBillingDateText = nextPaymentDate ? formatDate(nextPaymentDate) : '-';
+                    
+                    // Build HTML with subscription data (existing code continues below)
+                    var subscriptionType_final = subscriptionType;
+                    var isActive_final = isActive;
+                    var statusText_final = statusText;
+                    var statusColor_final = statusColor;
+                    var amount_final = amount;
+                    var billingFrequency_final = billingFrequency;
+                    var nextBillingDateText_final = nextBillingDateText;
+                } else {
+                    // Set defaults for empty state
+                    var subscriptionType_final = '-';
+                    var isActive_final = false;
+                    var statusText_final = 'Not active';
+                    var statusColor_final = '#9ca3af';
+                    var amount_final = '-';
+                    var billingFrequency_final = '';
+                    var nextBillingDateText_final = '-';
+                }
 
-                // Fetch payment history
+                // Fetch payment history from Supabase ONLY - no fallbacks, no mock data
                 let paymentHistory = [];
                 if (typeof window.getPaymentHistory === 'function') {
                     try {
                         paymentHistory = await window.getPaymentHistory();
+                        console.log('Payment history from Supabase:', paymentHistory);
+                        
+                        // CRITICAL: Filter out any payments with amount 3.52 (mock/test data)
+                        paymentHistory = paymentHistory.filter(payment => {
+                            if (payment.amount == 3.52 || parseFloat(payment.amount) == 3.52) {
+                                console.error('❌ Rejecting payment with amount 3.52 (mock data):', payment);
+                                return false;
+                            }
+                            return true;
+                        });
                     } catch (error) {
                         console.error('Error fetching payment history:', error);
+                        // NO FALLBACK - paymentHistory remains empty array
                     }
-                }
-
-                // MOCK DATA: Add mock payment history if empty
-                // TODO: Remove this mock data when integrating real-time data
-                if (paymentHistory.length === 0 && subscription) {
-                    const today = new Date();
-                    paymentHistory = [{
-                        amount: subscription.amount_paid || 3.52,
-                        currency: subscription.currency || 'EUR',
-                        status: 'paid',
-                        date: subscription.start_date || today.toISOString().split('T')[0],
-                        invoice_url: 'https://checkout.dodopayments.com/account'
-                    }];
                 }
 
                 // Build payment history table HTML
@@ -1470,49 +1693,73 @@
                     `;
                 }
 
-                // Build HTML with 2 divs
-                let billingHTML = `
-                    <!-- First div: Subscription details with cancel button -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
-                        <!-- Left side: Subscription info -->
-                        <div style="flex: 1;">
-                            <!-- Line 1: Monthly/Quarterly (bold) -->
-                            <div style="font-weight: bold; font-size: 1.1rem; color: #1e3a8a; margin-bottom: 0.5rem;">
-                                ${subscriptionType}
-                            </div>
-                            <!-- Line 2: Active/Not active -->
-                            <div style="margin-bottom: 0.5rem;">
-                                <span style="color: ${statusColor}; font-size: 0.95rem;">
-                                    ${statusText}
-                                </span>
-                            </div>
-                            <!-- Line 3: Amount + billed text -->
-                            <div style="margin-bottom: 0.5rem; color: #4b5563; font-size: 0.95rem;">
-                                ${amount} ${billingFrequency}
-                            </div>
-                            <!-- Line 4: Next billing date -->
-                            <div style="color: #4b5563; font-size: 0.95rem;">
-                                Next billing date: ${nextBillingDateText}
-                            </div>
-                        </div>
-                        <!-- Right side: Cancel subscription button -->
-                        <div style="margin-left: 2rem;">
-                            ${isActive ? `
-                                <button id="cancelSubscriptionBtn" style="background-color: #f3f4f6; color: #ef4444; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s;">
-                                    Cancel Subscription
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
+                // FINAL SAFETY CHECK: Ensure subscription is valid before rendering
+                // Must have: plan_type, status, id, and amount_paid must NOT be 3.52
+                if (subscription) {
+                    const isValid = subscription.plan_type && 
+                                   subscription.status && 
+                                   subscription.id &&
+                                   subscription.amount_paid != 3.52 &&
+                                   parseFloat(subscription.amount_paid) != 3.52;
                     
-                    <!-- Second div: Payment History -->
-                    <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
-                        ${paymentHistoryHTML}
-                    </div>
-                `;
+                    if (!isValid) {
+                        console.error('❌ Invalid subscription detected before rendering:', subscription);
+                        console.error('❌ Rejecting subscription - will show empty state');
+                        subscription = null;
+                    }
+                }
+                
+                // Build HTML with 2 divs - only if we have valid subscription
+                let billingHTML = '';
+                console.log('🔍 Final subscription check before rendering:', subscription);
+                console.log('🔍 subscription.plan_type:', subscription?.plan_type);
+                console.log('🔍 subscription.status:', subscription?.status);
+                console.log('🔍 subscription.amount_paid:', subscription?.amount_paid);
+                
+                if (subscription && subscription.plan_type && subscription.status && subscription.id) {
+                    billingHTML = `
+                        <!-- First div: Subscription details with cancel button -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <!-- Left side: Subscription info -->
+                            <div style="flex: 1;">
+                                <!-- Line 1: Monthly/Quarterly (bold) -->
+                                <div style="font-weight: bold; font-size: 1.1rem; color: #1e3a8a; margin-bottom: 0.5rem;">
+                                    ${subscriptionType_final}
+                                </div>
+                                <!-- Line 2: Active/Not active -->
+                                <div style="margin-bottom: 0.5rem;">
+                                    <span style="color: ${statusColor_final}; font-size: 0.95rem;">
+                                        ${statusText_final}
+                                    </span>
+                                </div>
+                                <!-- Line 3: Amount + billed text -->
+                                <div style="margin-bottom: 0.5rem; color: #4b5563; font-size: 0.95rem;">
+                                    ${amount_final} ${billingFrequency_final}
+                                </div>
+                                <!-- Line 4: Next billing date -->
+                                <div style="color: #4b5563; font-size: 0.95rem;">
+                                    Next billing date: ${nextBillingDateText_final}
+                                </div>
+                            </div>
+                            <!-- Right side: Cancel subscription button -->
+                            <div style="margin-left: 2rem;">
+                                ${isActive_final ? `
+                                    <button id="cancelSubscriptionBtn" style="background-color: #f3f4f6; color: #ef4444; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s;">
+                                        Cancel Subscription
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Second div: Payment History -->
+                        <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            ${paymentHistoryHTML}
+                        </div>
+                    `;
+                }
 
                 // If no subscription, show empty state
-                if (!subscription) {
+                if (!subscription || !subscription.plan_type) {
                     billingHTML = `
                         <!-- First div: No subscription -->
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
@@ -1526,10 +1773,10 @@
                                     </span>
                                 </div>
                                 <div style="margin-bottom: 0.5rem; color: #4b5563; font-size: 0.95rem;">
-                                    €0.00 billed monthly
+                                    -
                                 </div>
                                 <div style="color: #4b5563; font-size: 0.95rem;">
-                                    Next billing date: N/A
+                                    Next billing date: -
                                 </div>
                             </div>
                             <div style="margin-left: 2rem;">
@@ -1644,15 +1891,24 @@
         // Tab switching functionality is handled in the earlier script block
         // This duplicate function has been removed to avoid conflicts
         
-        // User data from localStorage
+        // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
         let userData = {
             name: localStorage.getItem('userName') || "Guest User",
             email: localStorage.getItem('userEmail') || "guest@example.com",
-            subscription: localStorage.getItem('subscriptionPlan') || "free", // "free", "monthly", "quarterly"
+            subscription: "free", // CRITICAL: Always start as 'free', updated ONLY from Supabase
             gamesPlayed: 0,
             trainingHours: 0,
             currentStreak: 0
         };
+        
+        // Clear any stale billing-related localStorage on page load
+        (function() {
+            localStorage.removeItem('cachedSubscriptionStatus');
+            localStorage.removeItem('cachedSubscriptionPlan');
+            localStorage.removeItem('subscriptionData');
+            localStorage.removeItem('userSubscription');
+            console.log('🧹 Cleared stale billing localStorage on page load');
+        })();
 
         // Initialize profile page
         async function initProfile() {
@@ -1857,52 +2113,45 @@
             const planNameSubtle = document.getElementById('planNameSubtle');
             const planFeaturesSubtle = document.getElementById('planFeaturesSubtle');
 
-            // Check Supabase subscription status first
+            // CRITICAL: Only use Supabase - NO localStorage fallbacks
             let hasActiveSubscription = false;
             let subscription = null;
             
-            if (typeof window.hasActiveSubscription === 'function') {
+            // Wait for Supabase to be ready
+            if (typeof window.hasActiveSubscription === 'function' && typeof window.getSupabase === 'function' && window.getSupabase()) {
                 try {
                     hasActiveSubscription = await window.hasActiveSubscription();
-                    // Cache the result in localStorage for faster initial load next time
-                    localStorage.setItem('cachedSubscriptionStatus', hasActiveSubscription ? 'true' : 'false');
                     
                     if (hasActiveSubscription && typeof window.getUserSubscription === 'function') {
                         subscription = await window.getUserSubscription();
-                        // Also cache the subscription plan
-                        if (subscription) {
-                            localStorage.setItem('cachedSubscriptionPlan', subscription.plan_type);
-                        }
                     }
                 } catch (e) {
-                    console.log('Supabase subscription check failed, using cached value');
-                    // Use cached value if Supabase check fails
-                    hasActiveSubscription = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+                    console.error('Supabase subscription check failed:', e);
+                    // NO FALLBACK - set to false if Supabase fails
+                    hasActiveSubscription = false;
+                    subscription = null;
                 }
             } else {
-                // Fallback to cached value if Supabase not available yet
-                hasActiveSubscription = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+                // Supabase not ready - don't use cached values, wait for it
+                console.log('Supabase not ready yet, skipping subscription status update');
+                return;
             }
 
-            // Update userData.subscription based on Supabase or localStorage
+            // Update userData.subscription ONLY from Supabase data
             if (hasActiveSubscription && subscription) {
                 // User has active subscription from Supabase
                 userData.subscription = subscription.plan_type;
                 if (subscription.status === 'cancelled') {
                     userData.subscription = subscription.plan_type + '_cancelled';
                 }
-            } else if (hasActiveSubscription) {
-                // Has subscription from localStorage
-                const plan = localStorage.getItem('subscriptionPlan') || 'monthly';
-                userData.subscription = plan;
             } else {
-                // No subscription
+                // No subscription from Supabase
                 userData.subscription = 'free';
             }
 
-            // Check if subscription is cancelled and if billing period has ended
-            const isCancelled = subscription?.status === 'cancelled' || localStorage.getItem('subscriptionCancelled') === 'true';
-            const cancellationDate = subscription?.updated_at || localStorage.getItem('cancellationDate');
+            // Check if subscription is cancelled - ONLY from Supabase, no localStorage fallback
+            const isCancelled = subscription?.status === 'cancelled';
+            const cancellationDate = subscription?.updated_at;
             
             if (isCancelled && cancellationDate) {
                 const cancelledDate = new Date(cancellationDate);
@@ -1918,10 +2167,8 @@
                 }
                 
                 // If billing period has ended, downgrade to free
+                // CRITICAL: Don't update localStorage - Supabase is source of truth
                 if (now >= billingEndDate) {
-                    localStorage.setItem('subscriptionPlan', 'free');
-                    localStorage.removeItem('subscriptionCancelled');
-                    localStorage.removeItem('cancellationDate');
                     userData.subscription = 'free';
                     hasActiveSubscription = false;
                 }
@@ -1988,22 +2235,6 @@
             }
         }
 
-        function getNextBillingDate(plan) {
-            const now = new Date();
-            let nextBilling;
-            
-            if (plan === 'monthly') {
-                nextBilling = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
-            } else if (plan === 'quarterly') {
-                nextBilling = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
-            }
-            
-            return nextBilling.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-        }
 
         // Check if all games and puzzles are unlocked
         async function checkIfAllContentUnlocked() {
@@ -2596,26 +2827,20 @@
             const userName = localStorage.getItem('userName') || 'User';
             const userEmail = localStorage.getItem('userEmail') || 'No email provided';
             
-            // Get subscription from Supabase first, fallback to localStorage
+            // Get subscription from Supabase ONLY - no fallbacks
             let subscription = null;
-            let subscriptionPlan = 'free';
             let hasActiveSubscription = false;
             
             if (typeof window.getUserSubscription === 'function') {
                 try {
                     subscription = await window.getUserSubscription();
                     if (subscription) {
-                        subscriptionPlan = subscription.plan_type;
                         hasActiveSubscription = subscription.status === 'active';
                     }
                 } catch (e) {
                     console.log('Error fetching subscription from Supabase:', e);
-                    // Fallback to localStorage
-                    subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+                    // No fallback - subscription remains null
                 }
-            } else {
-                // Fallback to localStorage if Supabase not available
-                subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
             }
             
             // Get subscription details
@@ -2629,7 +2854,7 @@
                                subscription.plan_type;
                 const price = subscription.amount_paid ? 
                              `${subscription.currency || 'EUR'} ${subscription.amount_paid}` : 
-                             (subscription.plan_type === 'monthly' ? '€4.99' : '€12.99');
+                             'N/A';
                 const startDate = subscription.start_date ? 
                                 new Date(subscription.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
                                 'N/A';
@@ -2685,48 +2910,6 @@
                     </div>
                 `;
                 subscriptionActions = '';
-            } else if (subscriptionPlan === 'monthly') {
-                // Fallback to localStorage monthly
-                subscriptionDetails = `
-                    <div class="info-item">
-                        <label>Plan:</label>
-                        <span>Premium Monthly</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Billing:</label>
-                        <span>$4.99/month</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Next billing:</label>
-                        <span>${getNextBillingDate('monthly')}</span>
-                    </div>
-                `;
-                subscriptionActions = `
-                    <div class="subscription-actions" style="margin-top: 1rem; text-align: center;">
-                        <a href="#" onclick="cancelSubscription(); return false;" style="color: #6b7280; text-decoration: none; font-size: 0.9rem;">Cancel Subscription</a>
-                    </div>
-                `;
-            } else if (subscriptionPlan === 'quarterly') {
-                // Fallback to localStorage quarterly
-                subscriptionDetails = `
-                    <div class="info-item">
-                        <label>Plan:</label>
-                        <span>Premium Quarterly</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Billing:</label>
-                        <span>$12.99/quarter</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Next billing:</label>
-                        <span>${getNextBillingDate('quarterly')}</span>
-                    </div>
-                `;
-                subscriptionActions = `
-                    <div class="subscription-actions" style="margin-top: 1rem; text-align: center;">
-                        <a href="#" onclick="cancelSubscription(); return false;" style="color: #6b7280; text-decoration: none; font-size: 0.9rem;">Cancel Subscription</a>
-                    </div>
-                `;
             } else {
                 subscriptionDetails = `
                     <div class="info-item">
