@@ -28,21 +28,25 @@ export default async function handler(req, res) {
         // TODO: Add webhook signature verification when you get the webhook secret
         
         // Handle different webhook event types
-        const eventType = webhookData.event || webhookData.type || webhookData.status;
-        const orderId = webhookData.order_id || webhookData.transaction_id || webhookData.id;
+        // Dodo Payments may send event in different fields
+        const eventType = webhookData.event || webhookData.type || webhookData.event_type || webhookData.status;
+        const orderId = webhookData.order_id || webhookData.transaction_id || webhookData.id || webhookData.payment_id;
         const customerEmail = webhookData.customer?.email || webhookData.email || webhookData.customer_email;
-        const amount = webhookData.amount || webhookData.total || webhookData.price;
-        const currency = webhookData.currency || 'USD';
-        const status = webhookData.status || webhookData.payment_status;
+        const amount = webhookData.amount || webhookData.total || webhookData.price || webhookData.amount_paid;
+        const currency = webhookData.currency || 'USD' || 'EUR';
+        const status = webhookData.status || webhookData.payment_status || webhookData.state;
         
-        console.log('Event type:', eventType);
-        console.log('Order ID:', orderId);
-        console.log('Customer email:', customerEmail);
-        console.log('Status:', status);
+        console.log('📋 Webhook details:');
+        console.log('  Event type:', eventType);
+        console.log('  Order ID:', orderId);
+        console.log('  Customer email:', customerEmail);
+        console.log('  Status:', status);
+        console.log('  Amount:', amount, currency);
         
         // Handle successful payment
-        if (status === 'completed' || status === 'paid' || status === 'success' || 
-            eventType === 'payment.completed' || eventType === 'order.completed') {
+        if (status === 'completed' || status === 'paid' || status === 'success' || status === 'succeeded' ||
+            eventType === 'payment.completed' || eventType === 'payment.succeeded' || 
+            eventType === 'order.completed' || eventType === 'subscription.active') {
             
             // Initialize Supabase with service role key (needed to query auth.users)
             
