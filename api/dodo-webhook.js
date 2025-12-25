@@ -31,9 +31,20 @@ export default async function handler(req, res) {
         // Dodo Payments may send event in different fields
         const eventType = webhookData.event || webhookData.type || webhookData.event_type || webhookData.status;
         const orderId = webhookData.order_id || webhookData.transaction_id || webhookData.id || webhookData.payment_id;
-        const customerEmail = webhookData.customer?.email || webhookData.email || webhookData.customer_email;
+        
+        // Try multiple ways to extract customer email
+        const customerEmail = webhookData.customer?.email || 
+                              webhookData.customer_email || 
+                              webhookData.email || 
+                              webhookData.billing?.email ||
+                              webhookData.billing_email ||
+                              webhookData.user?.email ||
+                              webhookData.user_email ||
+                              webhookData.payer?.email ||
+                              webhookData.payer_email;
+        
         const amount = webhookData.amount || webhookData.total || webhookData.price || webhookData.amount_paid;
-        const currency = webhookData.currency || 'USD' || 'EUR';
+        const currency = webhookData.currency || webhookData.currency_code || 'USD' || 'EUR';
         const status = webhookData.status || webhookData.payment_status || webhookData.state;
         
         console.log('📋 Webhook details:');
@@ -42,6 +53,15 @@ export default async function handler(req, res) {
         console.log('  Customer email:', customerEmail);
         console.log('  Status:', status);
         console.log('  Amount:', amount, currency);
+        console.log('  Full webhook keys:', Object.keys(webhookData));
+        
+        // Log nested objects to help debug
+        if (webhookData.customer) {
+            console.log('  Customer object:', JSON.stringify(webhookData.customer));
+        }
+        if (webhookData.billing) {
+            console.log('  Billing object:', JSON.stringify(webhookData.billing));
+        }
         
         // Handle successful payment
         if (status === 'completed' || status === 'paid' || status === 'success' || status === 'succeeded' ||
@@ -67,8 +87,15 @@ export default async function handler(req, res) {
             });
             
             if (!customerEmail) {
-                console.error('No customer email in webhook data');
-                return res.status(400).json({ error: 'No customer email provided' });
+                console.error('❌ No customer email found in webhook data');
+                console.error('Full webhook payload:', JSON.stringify(webhookData, null, 2));
+                // Don't fail - log for manual processing
+                // The payment-success.html page will handle it when user visits
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Webhook received but no email - will be processed on payment-success page',
+                    orderId: orderId
+                });
             }
             
             // Find user by email using admin API
