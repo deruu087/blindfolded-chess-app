@@ -28,40 +28,25 @@ export default async function handler(req, res) {
         // TODO: Add webhook signature verification when you get the webhook secret
         
         // Handle different webhook event types
-        // Dodo Payments may send event in different fields
-        const eventType = webhookData.event || webhookData.type || webhookData.event_type || webhookData.status;
-        const orderId = webhookData.order_id || webhookData.transaction_id || webhookData.id || webhookData.payment_id;
+        const eventType = webhookData.event || webhookData.type || webhookData.event_type;
         
-        // Try multiple ways to extract customer email
-        const customerEmail = webhookData.customer?.email || 
-                              webhookData.customer_email || 
-                              webhookData.email || 
-                              webhookData.billing?.email ||
-                              webhookData.billing_email ||
-                              webhookData.user?.email ||
-                              webhookData.user_email ||
-                              webhookData.payer?.email ||
-                              webhookData.payer_email;
+        // Dodo Payments sends data nested in 'data' object
+        const data = webhookData.data || webhookData;
         
-        const amount = webhookData.amount || webhookData.total || webhookData.price || webhookData.amount_paid;
-        const currency = webhookData.currency || webhookData.currency_code || 'USD' || 'EUR';
-        const status = webhookData.status || webhookData.payment_status || webhookData.state;
+        // Extract customer email from nested structure
+        const customerEmail = data.customer?.email || data.customer_email || webhookData.customer?.email || webhookData.email;
         
-        console.log('📋 Webhook details:');
-        console.log('  Event type:', eventType);
-        console.log('  Order ID:', orderId);
-        console.log('  Customer email:', customerEmail);
-        console.log('  Status:', status);
-        console.log('  Amount:', amount, currency);
-        console.log('  Full webhook keys:', Object.keys(webhookData));
+        // Extract order/subscription ID
+        const orderId = data.subscription_id || data.payment_id || data.order_id || data.transaction_id || data.id;
         
-        // Log nested objects to help debug
-        if (webhookData.customer) {
-            console.log('  Customer object:', JSON.stringify(webhookData.customer));
-        }
-        if (webhookData.billing) {
-            console.log('  Billing object:', JSON.stringify(webhookData.billing));
-        }
+        // Extract amount (Dodo Payments sends in cents)
+        const amountRaw = data.total_amount || data.recurring_pre_tax_amount || data.amount || data.settlement_amount || 0;
+        const amount = (parseFloat(amountRaw) / 100).toFixed(2); // Convert cents to decimal
+        
+        const currency = data.currency || data.settlement_currency || 'EUR';
+        const status = data.status || 'succeeded';
+        
+        console.log('📋 Webhook:', eventType, '| Email:', customerEmail, '| Amount:', amount, currency, '| Status:', status);
         
         // Handle successful payment
         if (status === 'completed' || status === 'paid' || status === 'success' || status === 'succeeded' ||
@@ -119,13 +104,23 @@ export default async function handler(req, res) {
             }
             
             // Determine plan type from amount
-            // Monthly: €3.52 or $3.49, Quarterly: €8.90 or $8.90
+            // Monthly: €0.85 (test) or €3.52 (prod), Quarterly: €8.90
+            // Amount is already converted from cents to decimal
             const amountNum = parseFloat(amount) || 0;
             let planType = 'monthly';
-            if (amountNum >= 8.0 && amountNum <= 12.0) {
-                planType = 'quarterly';
-            } else if (amountNum >= 3.0 && amountNum <= 4.0) {
+            
+            // Check payment frequency from webhook data
+            if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 1) {
                 planType = 'monthly';
+            } else if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 3) {
+                planType = 'quarterly';
+            } else {
+                // Fallback to amount-based detection
+                if (amountNum >= 8.0 && amountNum <= 12.0) {
+                    planType = 'quarterly';
+                } else if (amountNum >= 0.5 && amountNum <= 5.0) {
+                    planType = 'monthly';
+                }
             }
             
             // If we found the user, create/update subscription
@@ -160,15 +155,17 @@ export default async function handler(req, res) {
                     }
                     
                     // Insert payment record into payments table
+                    // Use subscription_id as order_id and transaction_id
+                    const subscriptionId = data.subscription_id || orderId;
                     const paymentData = {
                         user_id: userId,
                         amount: amountNum,
                         currency: currency || 'EUR',
                         status: 'paid',
-                        payment_date: new Date().toISOString(),
+                        payment_date: data.created_at || data.previous_billing_date || new Date().toISOString(),
                         invoice_url: `https://checkout.dodopayments.com/account`,
-                        order_id: orderId,
-                        transaction_id: orderId,
+                        order_id: subscriptionId,
+                        transaction_id: subscriptionId,
                         payment_method: 'dodo_payments',
                         description: `${planType} subscription payment`
                     };
