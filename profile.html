@@ -1068,84 +1068,6 @@
             margin-top: 2rem;
         }
 
-        /* Cancel Subscription Confirmation Modal */
-        .cancel-subscription-modal {
-            display: none;
-            position: fixed;
-            z-index: 1002;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            animation: fadeIn 0.3s ease;
-        }
-
-        .cancel-subscription-content {
-            background-color: #ffffff;
-            margin: 15% auto;
-            padding: 2rem;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 450px;
-            position: relative;
-            animation: slideIn 0.3s ease;
-            text-align: center;
-        }
-
-        .cancel-subscription-header {
-            margin-bottom: 1.5rem;
-        }
-
-        .cancel-subscription-header h2 {
-            margin: 0;
-            color: #1e3a8a;
-            font-size: 1.25rem;
-            font-weight: normal;
-        }
-
-        .cancel-subscription-message {
-            color: #4b5563;
-            margin-bottom: 2rem;
-            line-height: 1.5;
-            font-size: 1rem;
-        }
-
-        .cancel-subscription-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-        }
-
-        .btn-cancel-subscription {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: normal;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 120px;
-        }
-
-        .btn-cancel-yes {
-            background-color: #ef4444;
-            color: white;
-        }
-
-        .btn-cancel-yes:hover {
-            background-color: #dc2626;
-        }
-
-        .btn-cancel-no {
-            background-color: #4b5563;
-            color: white;
-        }
-
-        .btn-cancel-no:hover {
-            background-color: #374151;
-        }
-
         .google-signup {
             margin-top: 1rem;
             text-align: center;
@@ -1875,9 +1797,26 @@
                 // Add cancel subscription handler
                 const cancelBtn = document.getElementById('cancelSubscriptionBtn');
                 if (cancelBtn) {
-                    cancelBtn.addEventListener('click', function() {
-                        // Show confirmation modal
-                        showCancelSubscriptionModal();
+                    cancelBtn.addEventListener('click', async function() {
+                        if (confirm('Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period.')) {
+                            if (typeof window.cancelSubscription === 'function') {
+                                try {
+                                    const result = await window.cancelSubscription();
+                                    if (result.success) {
+                                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                                        // Reload billing info to show updated status
+                                        loadBillingInfo();
+                                    } else {
+                                        alert('Error cancelling subscription. Please try again or contact support.');
+                                    }
+                                } catch (error) {
+                                    console.error('Error cancelling subscription:', error);
+                                    alert('Error cancelling subscription. Please try again or contact support.');
+                                }
+                            } else {
+                                alert('Cancel subscription function not available. Please contact support.');
+                            }
+                        }
                     });
                 }
 
@@ -2720,11 +2659,9 @@
             const signInModal = document.getElementById('signInModal');
             const registerModal = document.getElementById('registerModal');
             const logoutConfirmModal = document.getElementById('logoutConfirmModal');
-            const cancelSubscriptionModal = document.getElementById('cancelSubscriptionModal');
             if (signInModal) signInModal.style.display = 'none';
             if (registerModal) registerModal.style.display = 'none';
             if (logoutConfirmModal) logoutConfirmModal.style.display = 'none';
-            if (cancelSubscriptionModal) cancelSubscriptionModal.style.display = 'none';
             
             // Close dynamically created modals
             const dynamicModals = document.querySelectorAll('.modal');
@@ -2734,86 +2671,6 @@
                 }
             });
         }
-
-        // Show cancel subscription confirmation modal
-        function showCancelSubscriptionModal() {
-            const modal = document.getElementById('cancelSubscriptionModal');
-            if (modal) {
-                modal.style.display = 'block';
-            } else {
-                console.error('Cancel subscription modal not found!');
-            }
-        }
-
-        // Make showCancelSubscriptionModal globally accessible
-        window.showCancelSubscriptionModal = showCancelSubscriptionModal;
-
-        // Confirm cancel subscription
-        async function confirmCancelSubscription() {
-            console.log('confirmCancelSubscription called');
-            
-            // Hide modal first
-            const modal = document.getElementById('cancelSubscriptionModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-
-            // Show loading state
-            const cancelBtn = document.getElementById('cancelSubscriptionBtn');
-            if (cancelBtn) {
-                cancelBtn.disabled = true;
-                cancelBtn.textContent = 'Cancelling...';
-            }
-
-            if (typeof window.cancelSubscription === 'function') {
-                try {
-                    const result = await window.cancelSubscription();
-                    if (result.success) {
-                        // Show success message
-                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
-                        // Reload billing info to show updated status
-                        loadBillingInfo();
-                    } else {
-                        alert('Error cancelling subscription. Please try again or contact support.');
-                        // Re-enable button on error
-                        if (cancelBtn) {
-                            cancelBtn.disabled = false;
-                            cancelBtn.textContent = 'Cancel Subscription';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error cancelling subscription:', error);
-                    alert('Error cancelling subscription. Please try again or contact support.');
-                    // Re-enable button on error
-                    if (cancelBtn) {
-                        cancelBtn.disabled = false;
-                        cancelBtn.textContent = 'Cancel Subscription';
-                    }
-                }
-            } else {
-                alert('Cancel subscription function not available. Please contact support.');
-                // Re-enable button on error
-                if (cancelBtn) {
-                    cancelBtn.disabled = false;
-                    cancelBtn.textContent = 'Cancel Subscription';
-                }
-            }
-        }
-
-        // Make confirmCancelSubscription globally accessible
-        window.confirmCancelSubscription = confirmCancelSubscription;
-
-        // Cancel cancel subscription (close modal without cancelling)
-        function cancelCancelSubscription() {
-            console.log('cancelCancelSubscription called');
-            const modal = document.getElementById('cancelSubscriptionModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        // Make cancelCancelSubscription globally accessible
-        window.cancelCancelSubscription = cancelCancelSubscription;
 
         // Sign in handler - redirects to home page where proper Supabase auth is handled
         function handleSignIn(event) {
@@ -3095,10 +2952,24 @@
         // This logout function is now handled by the confirmation modal above
         // Keeping this for compatibility but it will show the confirmation modal
 
-        // Cancel subscription is now handled by:
-        // 1. showCancelSubscriptionModal() - shows confirmation modal
-        // 2. confirmCancelSubscription() - calls window.cancelSubscription() from supabase-helpers.js
-        // 3. window.cancelSubscription() - updates Supabase (defined in supabase-helpers.js)
+        // Cancel subscription functionality
+        function cancelSubscription() {
+            // Set cancellation date and mark as cancelled
+            const currentDate = new Date();
+            localStorage.setItem('subscriptionCancelled', 'true');
+            localStorage.setItem('cancellationDate', currentDate.toISOString());
+            localStorage.setItem('subscriptionPlan', userData.subscription + '_cancelled');
+            
+            // Update user data
+            userData.subscription = userData.subscription + '_cancelled';
+            updateSubscriptionStatus();
+            
+            // Close the modal and refresh the page to update the interface
+            closeModal();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
 
         // Clear all data function (for testing)
         function clearAllData() {
@@ -3180,13 +3051,9 @@
                 const signInModal = document.getElementById('signInModal');
                 const registerModal = document.getElementById('registerModal');
                 const logoutConfirmModal = document.getElementById('logoutConfirmModal');
-                const cancelSubscriptionModal = document.getElementById('cancelSubscriptionModal');
                 
                 // Don't close if clicking inside the modal content
                 if (logoutConfirmModal && logoutConfirmModal.contains(event.target) && event.target !== logoutConfirmModal) {
-                    return; // Click is inside modal content, don't close
-                }
-                if (cancelSubscriptionModal && cancelSubscriptionModal.contains(event.target) && event.target !== cancelSubscriptionModal) {
                     return; // Click is inside modal content, don't close
                 }
                 
@@ -3199,10 +3066,13 @@
                 if (event.target === logoutConfirmModal) {
                     closeModal();
                 }
-                if (event.target === cancelSubscriptionModal) {
-                    closeModal();
-                }
             });
+            
+            // Add event listener for cancel button
+            const cancelBtn = document.getElementById('cancelSubscriptionBtn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', cancelSubscription);
+            }
             
             // Logout button already has onclick="window.logout()" in HTML, no need for event listener
             // Confirm logout button uses onclick="confirmLogout()" directly in HTML
@@ -3302,22 +3172,6 @@
             <div class="logout-confirm-buttons">
                 <button class="btn-logout-confirm btn-logout-yes" onclick="if(typeof window.confirmLogout === 'function') { window.confirmLogout(); } else { console.error('confirmLogout not found!'); }">Yes, Logout</button>
                 <button class="btn-logout-confirm btn-logout-no" onclick="if(typeof window.cancelLogout === 'function') { window.cancelLogout(); } else { console.error('cancelLogout not found!'); }">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cancel Subscription Confirmation Modal -->
-    <div id="cancelSubscriptionModal" class="cancel-subscription-modal">
-        <div class="cancel-subscription-content">
-            <div class="cancel-subscription-header">
-                <h2>Cancel Subscription</h2>
-            </div>
-            <div class="cancel-subscription-message">
-                Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period.
-            </div>
-            <div class="cancel-subscription-buttons">
-                <button class="btn-cancel-subscription btn-cancel-yes" onclick="if(typeof window.confirmCancelSubscription === 'function') { window.confirmCancelSubscription(); } else { console.error('confirmCancelSubscription not found!'); }">Yes, Cancel</button>
-                <button class="btn-cancel-subscription btn-cancel-no" onclick="if(typeof window.cancelCancelSubscription === 'function') { window.cancelCancelSubscription(); } else { console.error('cancelCancelSubscription not found!'); }">Keep Subscription</button>
             </div>
         </div>
     </div>
