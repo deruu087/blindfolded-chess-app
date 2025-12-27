@@ -229,8 +229,17 @@ export default async function handler(req, res) {
                 if (dodoResponse.status === 401) {
                     // Determine which key to try next
                     // If we were using TEST key, try LIVE key (and vice versa)
-                    // If only one key was set, try the other env var
+                    // Special case: If only DODO_PAYMENTS_API_KEY is set and it's actually a test key,
+                    // we need to check if DODO_PAYMENTS_TEST_API_KEY exists (it might be the same key)
                     const otherKey = isUsingTestKey ? liveApiKey : testApiKey;
+                    
+                    // If otherKey is not available but we only have one key set,
+                    // and it's stored in DODO_PAYMENTS_API_KEY, check if we should use it as test key
+                    if (!otherKey && !isUsingTestKey && liveApiKey) {
+                        console.log('🔄 401 received - only DODO_PAYMENTS_API_KEY is set');
+                        console.log('   💡 This might be a test key stored in the wrong env var');
+                        console.log('   💡 Solution: Add the same key to DODO_PAYMENTS_TEST_API_KEY in Vercel');
+                    }
                     
                     if (otherKey && otherKey !== dodoApiKey) {
                         console.log('🔄 401 received - trying other API key type...');
@@ -278,12 +287,23 @@ export default async function handler(req, res) {
                     } else {
                         // No other key available
                         const keyType = isUsingTestKey ? 'TEST' : 'LIVE';
+                        const requiredKey = isUsingTestKey ? 'DODO_PAYMENTS_API_KEY (LIVE)' : 'DODO_PAYMENTS_TEST_API_KEY (TEST)';
+                        
+                        // Special message if they have test subscription but only LIVE key set
+                        let hintMessage = `Add ${requiredKey} to Vercel`;
+                        if (!isUsingTestKey && !testApiKey) {
+                            hintMessage = `Your test subscription requires a TEST API key. Add DODO_PAYMENTS_TEST_API_KEY to Vercel with the same key value (${dodoApiKey.substring(0, 10)}...). Alternatively, if this is actually a test key, add it to DODO_PAYMENTS_TEST_API_KEY instead of DODO_PAYMENTS_API_KEY.`;
+                        }
+                        
                         return res.status(401).json({ 
                             success: false,
                             error: 'Authentication failed - API key mismatch',
-                            message: `401 Unauthorized: Using ${keyType} API key, but subscription requires ${isUsingTestKey ? 'LIVE' : 'TEST'} key. Please add ${isUsingTestKey ? 'DODO_PAYMENTS_API_KEY (LIVE)' : 'DODO_PAYMENTS_TEST_API_KEY (TEST)'} to Vercel environment variables.`,
+                            message: `401 Unauthorized: Using ${keyType} API key (from ${isUsingTestKey ? 'DODO_PAYMENTS_TEST_API_KEY' : 'DODO_PAYMENTS_API_KEY'}), but this test subscription requires a TEST API key. ${hintMessage}`,
                             dodoError: errorText,
-                            hint: `Add ${isUsingTestKey ? 'DODO_PAYMENTS_API_KEY' : 'DODO_PAYMENTS_TEST_API_KEY'} to Vercel`
+                            hint: hintMessage,
+                            subscriptionType: 'test',
+                            currentKeyEnvVar: isUsingTestKey ? 'DODO_PAYMENTS_TEST_API_KEY' : 'DODO_PAYMENTS_API_KEY',
+                            requiredKeyEnvVar: 'DODO_PAYMENTS_TEST_API_KEY'
                         });
                     }
                 }
