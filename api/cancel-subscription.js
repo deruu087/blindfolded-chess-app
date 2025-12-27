@@ -235,10 +235,15 @@ export default async function handler(req, res) {
             // API call succeeded - parse response
             try {
                 dodoData = await dodoResponse.json();
-                console.log('✅ Dodo Payments cancellation successful:', dodoData);
+                console.log('✅ Dodo Payments cancellation successful');
+                console.log('📦 Full Dodo Payments response:', JSON.stringify(dodoData, null, 2));
+                console.log('📦 Subscription status in response:', dodoData?.status);
+                console.log('📦 Cancel at next billing date:', dodoData?.cancel_at_next_billing_date);
+                console.log('📦 Cancel at period end:', dodoData?.cancel_at_period_end);
             } catch (jsonError) {
                 // Some APIs return empty body on success
                 console.log('✅ Dodo Payments cancellation successful (no response body)');
+                console.log('⚠️ No response body - cannot verify cancellation status');
                 dodoData = null;
             }
             
@@ -283,12 +288,15 @@ export default async function handler(req, res) {
         }
         
         console.log('✅ Subscription cancelled successfully in both Dodo Payments and Supabase');
+        console.log('📋 Important: Subscription is scheduled to cancel at next billing date');
+        console.log('📋 Subscription will remain active until:', subscription.next_billing_date || 'next billing cycle');
         
         return res.status(200).json({ 
             success: true, 
-            message: 'Subscription cancelled successfully',
+            message: 'Subscription cancelled successfully. It will remain active until the end of the current billing period.',
             subscription: updatedSub,
-            dodoResponse: dodoData
+            dodoResponse: dodoData,
+            note: 'Subscription is scheduled to cancel at next billing date. It will remain active until then.'
         });
         
     } catch (error) {
