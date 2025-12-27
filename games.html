@@ -3301,25 +3301,35 @@
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('DOM loaded, loading games...');
             
-            // Don't handle OAuth here - it will be handled after Supabase initializes
-            // Just load page content
-            // Initialize tabs
-            initializeTabs();
-            
+            // CRITICAL: Load games FIRST, independently of Supabase
+            // Games should work even if Supabase fails
             try {
                 gamesData = await GameLoader.loadGamesFromFiles();
                 console.log('Loaded games:', gamesData);
                 console.log('Number of games loaded:', gamesData ? gamesData.games.length : 0);
                 
-                // Custom games are now loaded through GameLoader.loadGamesFromFiles()
-                // No need for direct fallback loading
+                // Update game buttons immediately after loading games
+                updateGameButtons();
             } catch (error) {
                 console.error('Error loading games:', error);
                 gamesData = { games: [] };
+                // Still try to update UI even if games failed to load
+                try {
+                    updateGameButtons();
+                } catch (e) {
+                    console.error('Error updating game buttons:', e);
+                }
             }
             
-            // Load completed challenges from Supabase FIRST (for logged-in users)
-            // Then fall back to progress tracker
+            // Initialize tabs (doesn't depend on Supabase)
+            try {
+                initializeTabs();
+            } catch (error) {
+                console.error('Error initializing tabs:', error);
+            }
+            
+            // Load completed challenges from Supabase (optional - games work without this)
+            // Wait for Supabase scripts to load first
             if (typeof window.getUserProgress === 'function') {
                 try {
                     const supabaseProgress = await window.getUserProgress();
@@ -3371,12 +3381,21 @@
             }
             
             // Load completed challenges from progress tracker (now includes Supabase data)
-            completedChallenges = loadCompletedChallenges();
-            console.log('Loaded completed challenges:', completedChallenges);
-            console.log('Completed challenges array:', Array.from(completedChallenges));
+            try {
+                completedChallenges = loadCompletedChallenges();
+                console.log('Loaded completed challenges:', completedChallenges);
+                console.log('Completed challenges array:', Array.from(completedChallenges));
+            } catch (error) {
+                console.error('Error loading completed challenges:', error);
+                completedChallenges = new Set();
+            }
             
-            // Update the game buttons display
-            updateGameButtons();
+            // Update the game buttons display (already called after games load, but call again to refresh badges)
+            try {
+                updateGameButtons();
+            } catch (error) {
+                console.error('Error updating game buttons:', error);
+            }
             
             // Function to update the Supabase data table
             function updateSupabaseDataTable(supabaseData) {
@@ -7121,24 +7140,30 @@
     </div>
     
     <!-- Supabase JavaScript Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="console.error('Failed to load Supabase library')"></script>
     
     <!-- Supabase Configuration -->
-    <script src="supabase-config.js"></script>
+    <script src="supabase-config.js" onerror="console.error('Failed to load supabase-config.js')"></script>
     
     <!-- Supabase Helper Functions -->
-    <script src="supabase-helpers.js"></script>
+    <script src="supabase-helpers.js" onerror="console.error('Failed to load supabase-helpers.js')"></script>
     
     <!-- Supabase Authentication Functions -->
-    <script src="supabase-auth.js"></script>
+    <script src="supabase-auth.js" onerror="console.error('Failed to load supabase-auth.js')"></script>
     
     <script>
         // Initialize Supabase when page loads
+        // CRITICAL: This runs independently - games should already be loaded
         document.addEventListener('DOMContentLoaded', async function() {
+            // Wait a bit to ensure Supabase scripts are loaded
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             try {
                 // Initialize Supabase client
                 if (typeof initSupabase === 'function') {
                     initSupabase();
+                } else {
+                    console.warn('⚠️ initSupabase function not available - Supabase scripts may not be loaded');
                 }
                 
                 // Handle OAuth callback if present (must happen after Supabase is initialized)
@@ -7159,7 +7184,8 @@
                     }
                 }
             } catch (error) {
-                console.error('Error initializing page:', error);
+                console.error('Error initializing Supabase:', error);
+                console.error('Games should still work - Supabase is optional for games loading');
                 // Page should still work even if Supabase fails
             }
         });
