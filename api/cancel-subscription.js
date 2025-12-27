@@ -142,17 +142,33 @@ export default async function handler(req, res) {
         // According to Dodo Payments docs: PATCH /subscriptions/{subscription_id}
         // with body: { cancel_at_next_billing_date: true }
         console.log('📞 Calling Dodo Payments API to cancel subscription:', dodoSubscriptionId);
+        console.log('📞 API Base URL:', apiBaseUrl);
+        console.log('📞 Full URL:', `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`);
+        console.log('📞 API Key exists:', !!dodoApiKey);
+        console.log('📞 API Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 10) : 'N/A');
         
-        const dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${dodoApiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                cancel_at_next_billing_date: true
-            })
-        });
+        let dodoResponse;
+        try {
+            dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${dodoApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    cancel_at_next_billing_date: true
+                })
+            });
+            console.log('📞 Dodo Payments response status:', dodoResponse.status);
+        } catch (fetchError) {
+            console.error('❌ Fetch error calling Dodo Payments:', fetchError);
+            console.error('❌ Fetch error details:', {
+                message: fetchError.message,
+                stack: fetchError.stack,
+                name: fetchError.name
+            });
+            throw fetchError;
+        }
         
         if (!dodoResponse.ok) {
             const errorData = await dodoResponse.text();
