@@ -190,6 +190,13 @@ export default async function handler(req, res) {
         console.log('📞 Request body:', JSON.stringify({ cancel_at_next_billing_date: true }));
         console.log('📞 Auth header length:', dodoAuthHeader.length);
         console.log('📞 Auth header starts with:', dodoAuthHeader.substring(0, 20) + '...');
+        console.log('📞 Full API key (first 10 chars):', dodoApiKey ? dodoApiKey.substring(0, 10) + '...' : 'MISSING');
+        console.log('📞 Full API key (last 10 chars):', dodoApiKey ? '...' + dodoApiKey.substring(dodoApiKey.length - 10) : 'MISSING');
+        console.log('📞 API key format check:');
+        console.log('   - Starts with sk_test_?', dodoApiKey?.startsWith('sk_test_'));
+        console.log('   - Starts with sk_live_?', dodoApiKey?.startsWith('sk_live_'));
+        console.log('   - Starts with _?', dodoApiKey?.startsWith('_'));
+        console.log('   - Contains dots?', dodoApiKey?.includes('.'));
         
         let dodoResponse;
         let dodoData;
@@ -209,6 +216,14 @@ export default async function handler(req, res) {
                 const errorText = await dodoResponse.text();
                 console.error('❌ Dodo Payments API error:', dodoResponse.status);
                 console.error('❌ Error response:', errorText);
+                console.error('❌ Full error details:');
+                console.error('   Status:', dodoResponse.status);
+                console.error('   Status Text:', dodoResponse.statusText);
+                console.error('   Response Headers:', JSON.stringify(Object.fromEntries(dodoResponse.headers.entries()), null, 2));
+                console.error('   Error Body:', errorText);
+                console.error('   API Key Used:', isUsingTestKey ? 'TEST (DODO_PAYMENTS_TEST_API_KEY)' : 'LIVE (DODO_PAYMENTS_API_KEY)');
+                console.error('   Subscription ID:', dodoSubscriptionId);
+                console.error('   Full URL:', fullUrl);
                 
                 // 401 means wrong API key type - try the other key if available
                 if (dodoResponse.status === 401) {
