@@ -109,7 +109,18 @@ export default async function handler(req, res) {
         }
         
         // Get Dodo Payments API key from environment variables
-        const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY;
+        let dodoApiKey = process.env.DODO_PAYMENTS_API_KEY;
+        
+        // Trim whitespace in case there are extra spaces
+        if (dodoApiKey) {
+            dodoApiKey = dodoApiKey.trim();
+        }
+        
+        console.log('🔑 API Key check:');
+        console.log('   Key exists:', !!dodoApiKey);
+        console.log('   Key length:', dodoApiKey ? dodoApiKey.length : 0);
+        console.log('   Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 5) + '...' : 'N/A');
+        console.log('   Key ends with:', dodoApiKey ? '...' + dodoApiKey.substring(dodoApiKey.length - 5) : 'N/A');
         
         if (!dodoApiKey) {
             console.error('❌ DODO_PAYMENTS_API_KEY not configured');
@@ -152,8 +163,9 @@ export default async function handler(req, res) {
         // Headers: Authorization: Bearer {API_KEY}, Content-Type: application/json
         
         const fullUrl = `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`;
+        const authHeader = `Bearer ${dodoApiKey}`;
         const headers = {
-            'Authorization': `Bearer ${dodoApiKey}`,
+            'Authorization': authHeader,
             'Content-Type': 'application/json'
         };
         
@@ -162,6 +174,8 @@ export default async function handler(req, res) {
         console.log('📞 Full URL:', fullUrl);
         console.log('📞 Request method: PATCH');
         console.log('📞 Request body:', JSON.stringify({ cancel_at_next_billing_date: true }));
+        console.log('📞 Auth header length:', authHeader.length);
+        console.log('📞 Auth header starts with:', authHeader.substring(0, 20) + '...');
         
         let dodoResponse;
         let dodoData;
