@@ -82,7 +82,7 @@ export default async function handler(req, res) {
         if (!dodoSubscriptionId) {
             console.warn('⚠️ No Dodo Payments subscription ID found, updating Supabase only');
             // Update Supabase only (fallback for subscriptions created before we stored the ID)
-            const { data: updatedSub, error: updateError } = await supabase
+            const { data: updatedSub, error: updateError } = await supabaseAdmin
                 .from('subscriptions')
                 .update({
                     status: 'cancelled',
@@ -93,8 +93,8 @@ export default async function handler(req, res) {
                 .single();
             
             if (updateError) {
-                console.error('Error updating subscription:', updateError);
-                return res.status(500).json({ error: 'Failed to update subscription' });
+                console.error('❌ Error updating subscription:', updateError);
+                return res.status(500).json({ error: 'Failed to update subscription: ' + updateError.message });
             }
             
             return res.status(200).json({ 
@@ -110,7 +110,7 @@ export default async function handler(req, res) {
         if (!dodoApiKey) {
             console.error('❌ DODO_PAYMENTS_API_KEY not configured');
             // Still update Supabase
-            const { data: updatedSub, error: updateError } = await supabase
+            const { data: updatedSub, error: updateError } = await supabaseAdmin
                 .from('subscriptions')
                 .update({
                     status: 'cancelled',
@@ -121,7 +121,8 @@ export default async function handler(req, res) {
                 .single();
             
             if (updateError) {
-                return res.status(500).json({ error: 'Failed to update subscription' });
+                console.error('❌ Error updating subscription:', updateError);
+                return res.status(500).json({ error: 'Failed to update subscription: ' + updateError.message });
             }
             
             return res.status(200).json({ 
@@ -158,7 +159,7 @@ export default async function handler(req, res) {
             console.error('❌ Dodo Payments API error:', dodoResponse.status, errorData);
             
             // Still update Supabase even if Dodo Payments call failed
-            const { data: updatedSub, error: updateError } = await supabase
+            const { data: updatedSub, error: updateError } = await supabaseAdmin
                 .from('subscriptions')
                 .update({
                     status: 'cancelled',
@@ -167,6 +168,10 @@ export default async function handler(req, res) {
                 .eq('user_id', user.id)
                 .select()
                 .single();
+            
+            if (updateError) {
+                console.error('❌ Error updating Supabase after Dodo Payments failure:', updateError);
+            }
             
             return res.status(200).json({ 
                 success: true, 
@@ -180,7 +185,7 @@ export default async function handler(req, res) {
         console.log('✅ Dodo Payments subscription cancelled:', dodoData);
         
         // Update Supabase subscription status
-        const { data: updatedSub, error: updateError } = await supabase
+        const { data: updatedSub, error: updateError } = await supabaseAdmin
             .from('subscriptions')
             .update({
                 status: 'cancelled',
@@ -191,7 +196,7 @@ export default async function handler(req, res) {
             .single();
         
         if (updateError) {
-            console.error('Error updating Supabase:', updateError);
+            console.error('❌ Error updating Supabase:', updateError);
             // Dodo Payments cancellation succeeded, but Supabase update failed
             return res.status(200).json({ 
                 success: true, 
