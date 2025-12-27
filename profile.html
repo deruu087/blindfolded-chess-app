@@ -1873,18 +1873,24 @@
 
                 // Add cancel subscription handler
                 const cancelBtn = document.getElementById('cancelSubscriptionBtn');
+                console.log('🔵 Cancel button element:', cancelBtn);
                 if (cancelBtn) {
                     cancelBtn.addEventListener('click', function() {
+                        console.log('🔵 Cancel button clicked!');
                         // Show modal instead of confirm popup
                         if (typeof window.showCancelSubscriptionModal === 'function') {
+                            console.log('🔵 Calling showCancelSubscriptionModal...');
                             window.showCancelSubscriptionModal();
                         } else {
+                            console.error('🔵 showCancelSubscriptionModal function not found!');
                             // Fallback to confirm if modal function not available
                             if (confirm('Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period.')) {
                                 handleCancelSubscription();
                             }
                         }
                     });
+                } else {
+                    console.error('🔵 Cancel button not found!');
                 }
 
             } catch (error) {
@@ -2712,9 +2718,15 @@
 
         // Cancel Subscription Modal Functions
         function showCancelSubscriptionModal() {
+            console.log('🔵 showCancelSubscriptionModal() called');
             const modal = document.getElementById('cancelSubscriptionModal');
+            console.log('🔵 Modal element:', modal);
             if (modal) {
+                console.log('🔵 Setting modal display to block');
                 modal.style.display = 'block';
+                console.log('🔵 Modal display after setting:', modal.style.display);
+            } else {
+                console.error('🔵 Modal element not found!');
             }
         }
         window.showCancelSubscriptionModal = showCancelSubscriptionModal;
