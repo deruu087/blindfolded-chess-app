@@ -133,24 +133,17 @@ export default async function handler(req, res) {
         }
         
         // Determine API endpoint (test vs production)
-        // According to Dodo Payments docs: https://docs.dodopayments.com/api-reference/subscription-integration-guide
-        // The API endpoint is typically: https://api.dodopayments.com or similar
-        // Check Dodo Payments dashboard → Settings → API for the correct endpoint
-        const isTestMode = process.env.DODO_PAYMENTS_TEST_MODE === 'true' || dodoApiKey.includes('test');
+        // According to Dodo Payments documentation:
+        // Production: https://live.dodopayments.com
+        // Sandbox: https://sandbox.dodopayments.com
+        const isTestMode = process.env.DODO_PAYMENTS_TEST_MODE === 'true' || dodoApiKey.includes('test') || dodoApiKey.includes('sandbox');
         
-        // Common API endpoint patterns - update based on your Dodo Payments dashboard
-        // Option 1: Standard API subdomain (most common)
         const apiBaseUrl = isTestMode 
-            ? 'https://api.test.dodopayments.com'
-            : 'https://api.dodopayments.com';
+            ? 'https://sandbox.dodopayments.com'
+            : 'https://live.dodopayments.com';
         
-        // Option 2: If above doesn't work, try these alternatives:
-        // const apiBaseUrl = isTestMode 
-        //     ? 'https://test.api.dodopayments.com'
-        //     : 'https://api.dodopayments.com';
-        
-        // Option 3: Check your Dodo Payments dashboard for the actual API base URL
         console.log('📞 Using API base URL:', apiBaseUrl);
+        console.log('📞 Test mode:', isTestMode);
         
         // Call Dodo Payments API to cancel subscription
         // NOTE: Check Dodo Payments documentation for correct API endpoint
@@ -174,7 +167,7 @@ export default async function handler(req, res) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        cancel_at_period_end: true  // Correct parameter name per Dodo Payments docs
+                        cancel_at_next_billing_date: true  // Correct parameter per Dodo Payments API
                     })
                 });
                 console.log('📞 Dodo Payments response status:', dodoResponse.status);
