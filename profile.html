@@ -2739,8 +2739,11 @@
             if (typeof window.cancelSubscription === 'function') {
                 try {
                     console.log('🔴 Calling window.cancelSubscription()...');
+                    console.log('🔴 Function type:', typeof window.cancelSubscription);
+                    console.log('🔴 Function:', window.cancelSubscription.toString().substring(0, 200));
                     const result = await window.cancelSubscription();
                     console.log('🔴 Result:', result);
+                    console.log('🔴 Result type:', typeof result);
                     
                     if (result.success) {
                         // Show success message
