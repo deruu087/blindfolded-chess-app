@@ -155,40 +155,44 @@ export default async function handler(req, res) {
         if (apiBaseUrl) {
             console.log('📞 Calling Dodo Payments API to cancel subscription:', dodoSubscriptionId);
             console.log('📞 API Base URL:', apiBaseUrl);
-            console.log('📞 Full URL:', `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`);
-            console.log('📞 API Key exists:', !!dodoApiKey);
-            console.log('📞 API Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 10) : 'N/A');
+        console.log('📞 Full URL:', `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`);
+        console.log('📞 API Key exists:', !!dodoApiKey);
+        
+        try {
+            dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${dodoApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    cancel_at_next_billing_date: true
+                })
+            });
             
-            try {
-                dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${dodoApiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        cancel_at_next_billing_date: true  // Correct parameter per Dodo Payments API
-                    })
-                });
-                console.log('📞 Dodo Payments response status:', dodoResponse.status);
-                
-                if (dodoResponse.ok) {
+            console.log('📞 Dodo Payments response status:', dodoResponse.status);
+            
+            if (dodoResponse.ok) {
+                try {
                     dodoData = await dodoResponse.json();
                     console.log('✅ Dodo Payments cancellation successful:', dodoData);
+                } catch (jsonError) {
+                    // Some APIs return empty body on success
+                    console.log('✅ Dodo Payments cancellation successful (no response body)');
                 }
-            } catch (fetchError) {
-                console.error('❌ Fetch error calling Dodo Payments:', fetchError);
-                console.error('❌ Fetch error details:', {
-                    message: fetchError.message,
-                    stack: fetchError.stack,
-                    name: fetchError.name
-                });
-                // Don't throw - continue to update Supabase even if API call fails
-                console.warn('⚠️ Continuing with Supabase update despite API call failure');
+            } else {
+                const errorText = await dodoResponse.text();
+                console.error('❌ Dodo Payments API error:', dodoResponse.status, errorText);
             }
-        } else {
-            console.log('⚠️ Skipping Dodo Payments API call - endpoint not configured');
-            console.log('⚠️ Please check Dodo Payments documentation and update apiBaseUrl');
+        } catch (fetchError) {
+            console.error('❌ Fetch error calling Dodo Payments:', fetchError);
+            console.error('❌ Fetch error details:', {
+                message: fetchError.message,
+                stack: fetchError.stack,
+                name: fetchError.name
+            });
+            // Don't throw - continue to update Supabase even if API call fails
+            console.warn('⚠️ Continuing with Supabase update despite API call failure');
         }
         
         // Handle Dodo Payments API response (if API call was made)
