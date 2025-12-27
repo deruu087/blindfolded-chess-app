@@ -108,19 +108,25 @@ export default async function handler(req, res) {
             });
         }
         
-        // Get Dodo Payments API key from environment variables
-        let dodoApiKey = process.env.DODO_PAYMENTS_API_KEY;
+        // Get Dodo Payments API keys from environment variables
+        // Support both TEST and LIVE keys - use TEST key if available, otherwise LIVE key
+        let dodoApiKey = process.env.DODO_PAYMENTS_TEST_API_KEY || process.env.DODO_PAYMENTS_API_KEY;
         
         // Trim whitespace in case there are extra spaces
         if (dodoApiKey) {
             dodoApiKey = dodoApiKey.trim();
         }
         
+        const isTestKey = !!process.env.DODO_PAYMENTS_TEST_API_KEY;
+        const isLiveKey = !!process.env.DODO_PAYMENTS_API_KEY && !isTestKey;
+        
         console.log('🔑 API Key check:');
+        console.log('   Using:', isTestKey ? 'TEST key' : isLiveKey ? 'LIVE key' : 'NO KEY');
         console.log('   Key exists:', !!dodoApiKey);
         console.log('   Key length:', dodoApiKey ? dodoApiKey.length : 0);
         console.log('   Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 5) + '...' : 'N/A');
         console.log('   Key ends with:', dodoApiKey ? '...' + dodoApiKey.substring(dodoApiKey.length - 5) : 'N/A');
+        console.log('   ⚠️ IMPORTANT: Test subscriptions require TEST API key, Live subscriptions require LIVE API key');
         
         if (!dodoApiKey) {
             console.error('❌ DODO_PAYMENTS_API_KEY not configured');
@@ -197,6 +203,18 @@ export default async function handler(req, res) {
                 console.error('❌ Error response:', errorText);
                 
                 // DO NOT update Supabase if API call failed
+                // 401 specifically means wrong API key type (test vs live)
+                if (dodoResponse.status === 401) {
+                    const keyType = isTestKey ? 'TEST' : isLiveKey ? 'LIVE' : 'UNKNOWN';
+                    return res.status(401).json({ 
+                        success: false,
+                        error: 'Authentication failed - API key mismatch',
+                        message: `401 Unauthorized: You are using a ${keyType} API key, but this subscription requires a ${isTestKey ? 'LIVE' : 'TEST'} key. Test subscriptions must use TEST API key, Live subscriptions must use LIVE API key.`,
+                        dodoError: errorText,
+                        hint: 'Check if subscription is test or live, and use matching API key'
+                    });
+                }
+                
                 return res.status(dodoResponse.status).json({ 
                     success: false,
                     error: 'Failed to cancel subscription in Dodo Payments',
