@@ -45,17 +45,36 @@ export default async function handler(req, res) {
         console.log('✅ User authenticated:', user.id, user.email);
         
         // Get user's subscription from Supabase
-        const { data: subscription, error: subError } = await supabase
+        // Use service role key to bypass RLS if needed
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseAdmin = supabaseServiceKey 
+            ? createClient(supabaseUrl, supabaseServiceKey, {
+                auth: { autoRefreshToken: false, persistSession: false }
+            })
+            : supabase;
+        
+        const { data: subscription, error: subError } = await supabaseAdmin
             .from('subscriptions')
             .select('*')
             .eq('user_id', user.id)
             .eq('status', 'active')
-            .single();
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
         
-        if (subError || !subscription) {
-            console.error('Error fetching subscription:', subError);
+        console.log('🔍 Subscription query result:', { subscription, subError });
+        
+        if (subError) {
+            console.error('❌ Error fetching subscription:', subError);
+            return res.status(500).json({ error: 'Error fetching subscription: ' + subError.message });
+        }
+        
+        if (!subscription) {
+            console.error('❌ No active subscription found for user:', user.id);
             return res.status(404).json({ error: 'No active subscription found' });
         }
+        
+        console.log('✅ Found subscription:', subscription.id, subscription.status);
         
         // Check if we have Dodo Payments subscription ID
         const dodoSubscriptionId = subscription.dodo_subscription_id;
