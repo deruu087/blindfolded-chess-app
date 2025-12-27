@@ -632,27 +632,35 @@ async function createOrUpdateSubscription(subscriptionData) {
  * This calls the backend API endpoint which handles Dodo Payments cancellation
  */
 async function cancelSubscription() {
-    const supabase = getSupabase();
-    if (!supabase) {
-        console.error('Supabase not initialized');
-        return { success: false, error: 'Supabase not initialized' };
-    }
+    console.log('🚀 cancelSubscription() called');
+    try {
+        const supabase = getSupabase();
+        if (!supabase) {
+            console.error('❌ Supabase not initialized');
+            return { success: false, error: 'Supabase not initialized' };
+        }
 
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-        console.log('No user logged in');
-        return { success: false, error: 'User not logged in' };
-    }
+        console.log('✅ Supabase initialized');
 
-    // Get the user's session token for API authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session || !session.access_token) {
-        console.error('No session token available');
-        return { success: false, error: 'No session token available' };
-    }
+        // Get the current user
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+            console.log('❌ No user logged in:', authError);
+            return { success: false, error: 'User not logged in' };
+        }
+
+        console.log('✅ User authenticated:', user.id);
+
+        // Get the user's session token for API authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session || !session.access_token) {
+            console.error('❌ No session token available');
+            return { success: false, error: 'No session token available' };
+        }
+
+        console.log('✅ Session token available');
 
     // Determine API endpoint (production vs local)
     const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
