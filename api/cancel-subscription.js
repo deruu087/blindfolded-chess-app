@@ -159,18 +159,30 @@ export default async function handler(req, res) {
         console.log('📞 API Key exists:', !!dodoApiKey);
         
         try {
+            // Dodo Payments might use different auth format - try both
+            // Option 1: Bearer token (standard)
+            // Option 2: Direct API key in header
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Try Bearer token first
+            headers['Authorization'] = `Bearer ${dodoApiKey}`;
+            
+            console.log('📞 Request headers:', JSON.stringify(headers, null, 2));
+            console.log('📞 API Key length:', dodoApiKey ? dodoApiKey.length : 0);
+            console.log('📞 API Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 20) + '...' : 'N/A');
+            
             dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
                 method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${dodoApiKey}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: headers,
                 body: JSON.stringify({
                     cancel_at_next_billing_date: true
                 })
             });
             
             console.log('📞 Dodo Payments response status:', dodoResponse.status);
+            console.log('📞 Response headers:', JSON.stringify(Object.fromEntries(dodoResponse.headers.entries()), null, 2));
             
             if (dodoResponse.ok) {
                 try {
@@ -182,7 +194,14 @@ export default async function handler(req, res) {
                 }
             } else {
                 const errorText = await dodoResponse.text();
-                console.error('❌ Dodo Payments API error:', dodoResponse.status, errorText);
+                console.error('❌ Dodo Payments API error:', dodoResponse.status);
+                console.error('❌ Error response:', errorText);
+                
+                // If 401, try alternative auth methods
+                if (dodoResponse.status === 401) {
+                    console.warn('⚠️ 401 Unauthorized - API key might be incorrect or need different format');
+                    console.warn('⚠️ Check: 1) API key is correct 2) Key has cancel subscription permission 3) Using correct environment (sandbox vs live)');
+                }
             }
         } catch (fetchError) {
             console.error('❌ Fetch error calling Dodo Payments:', fetchError);
