@@ -133,29 +133,24 @@ export default async function handler(req, res) {
         }
         
         // Determine API endpoint (test vs production)
-        // NOTE: Dodo Payments API endpoint might be different - check their docs
-        // For now, try common patterns or check Dodo Payments dashboard for API docs
+        // According to Dodo Payments docs: https://docs.dodopayments.com/api-reference/subscription-integration-guide
+        // The API endpoint is typically: https://api.dodopayments.com or similar
+        // Check Dodo Payments dashboard → Settings → API for the correct endpoint
         const isTestMode = process.env.DODO_PAYMENTS_TEST_MODE === 'true' || dodoApiKey.includes('test');
         
-        // Try different possible API endpoints - update based on Dodo Payments documentation
-        // Option 1: Same domain as checkout
-        // const apiBaseUrl = isTestMode 
-        //     ? 'https://test.checkout.dodopayments.com/api'
-        //     : 'https://checkout.dodopayments.com/api';
+        // Common API endpoint patterns - update based on your Dodo Payments dashboard
+        // Option 1: Standard API subdomain (most common)
+        const apiBaseUrl = isTestMode 
+            ? 'https://api.test.dodopayments.com'
+            : 'https://api.dodopayments.com';
         
-        // Option 2: Different subdomain
+        // Option 2: If above doesn't work, try these alternatives:
         // const apiBaseUrl = isTestMode 
-        //     ? 'https://api-test.dodopayments.com'
+        //     ? 'https://test.api.dodopayments.com'
         //     : 'https://api.dodopayments.com';
         
-        // Option 3: Check Dodo Payments dashboard for actual API endpoint
-        // For now, skip API call if endpoint doesn't exist
-        console.warn('⚠️ Dodo Payments API endpoint not configured correctly');
-        console.warn('⚠️ Please check Dodo Payments documentation for the correct API endpoint');
-        console.warn('⚠️ Skipping Dodo Payments API call, updating Supabase only');
-        
-        // Skip Dodo Payments API call for now - just update Supabase
-        const apiBaseUrl = null; // Will skip API call
+        // Option 3: Check your Dodo Payments dashboard for the actual API base URL
+        console.log('📞 Using API base URL:', apiBaseUrl);
         
         // Call Dodo Payments API to cancel subscription
         // NOTE: Check Dodo Payments documentation for correct API endpoint
@@ -179,7 +174,7 @@ export default async function handler(req, res) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        cancel_at_next_billing_date: true
+                        cancel_at_period_end: true  // Correct parameter name per Dodo Payments docs
                     })
                 });
                 console.log('📞 Dodo Payments response status:', dodoResponse.status);
