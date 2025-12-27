@@ -710,6 +710,10 @@ async function cancelSubscription() {
         });
         return { success: false, error: error.message || 'Network error' };
     }
+    } catch (outerError) {
+        console.error('❌ Outer error in cancelSubscription:', outerError);
+        return { success: false, error: outerError.message || 'Unexpected error' };
+    }
 }
 
 /**
