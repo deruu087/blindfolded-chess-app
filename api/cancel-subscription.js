@@ -140,7 +140,15 @@ export default async function handler(req, res) {
         // According to Dodo Payments documentation:
         // Production: https://live.dodopayments.com
         // Sandbox: https://sandbox.dodopayments.com
-        const isTestMode = process.env.DODO_PAYMENTS_TEST_MODE === 'true' || dodoApiKey.includes('test') || dodoApiKey.includes('sandbox');
+        // Check environment variable first, then auto-detect from key
+        const testModeEnv = process.env.DODO_PAYMENTS_TEST_MODE === 'true';
+        const keyHasTest = dodoApiKey && (dodoApiKey.includes('test') || dodoApiKey.includes('sandbox'));
+        const isTestMode = testModeEnv || keyHasTest;
+        
+        console.log('🔍 Environment detection:');
+        console.log('   DODO_PAYMENTS_TEST_MODE env:', process.env.DODO_PAYMENTS_TEST_MODE);
+        console.log('   Key contains test/sandbox:', keyHasTest);
+        console.log('   Final test mode:', isTestMode);
         
         const apiBaseUrl = isTestMode 
             ? 'https://sandbox.dodopayments.com'
