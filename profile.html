@@ -3101,16 +3101,6 @@
         // Cancel subscription functionality - REMOVED
         // This old function was overriding the one from supabase-helpers.js
         // The real cancelSubscription() is now in supabase-helpers.js and calls the API
-        // function cancelSubscription() {
-        //     // OLD CODE - REMOVED
-        // }
-            
-            // Close the modal and refresh the page to update the interface
-            closeModal();
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }
 
         // Clear all data function (for testing)
         function clearAllData() {
@@ -3209,11 +3199,7 @@
                 }
             });
             
-            // Add event listener for cancel button
-            const cancelBtn = document.getElementById('cancelSubscriptionBtn');
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', cancelSubscription);
-            }
+            // Cancel button is handled in loadBillingInfo() - no need for separate listener here
             
             // Logout button already has onclick="window.logout()" in HTML, no need for event listener
             // Confirm logout button uses onclick="confirmLogout()" directly in HTML
