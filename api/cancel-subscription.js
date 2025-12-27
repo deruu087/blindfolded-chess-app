@@ -108,33 +108,18 @@ export default async function handler(req, res) {
             });
         }
         
-        // Get Dodo Payments API keys from environment variables
-        // Support both TEST and LIVE keys
-        const testApiKey = process.env.DODO_PAYMENTS_TEST_API_KEY?.trim();
-        const liveApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
-        
-        // Strategy: Try TEST key first for test subscriptions, then LIVE key
-        // If only one key is set, use it (could be test or live)
-        let dodoApiKey = testApiKey || liveApiKey;
-        let isUsingTestKey = !!testApiKey; // Only true if DODO_PAYMENTS_TEST_API_KEY is explicitly set
-        
-        // If both keys are available, prefer TEST key for test subscriptions
-        // If only one key is available, we'll try it first and retry with the other if 401
-        const hasBothKeys = !!testApiKey && !!liveApiKey;
+        // Get Dodo Payments API key from environment variable
+        // Dodo Payments determines test/live mode by the key itself, not by a separate flag
+        const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
         
         console.log('🔑 API Key check:');
-        console.log('   TEST key (DODO_PAYMENTS_TEST_API_KEY) available:', !!testApiKey);
-        console.log('   LIVE key (DODO_PAYMENTS_API_KEY) available:', !!liveApiKey);
-        console.log('   Has both keys:', hasBothKeys);
-        console.log('   Using:', isUsingTestKey ? 'TEST key' : liveApiKey ? 'LIVE key' : 'NO KEY');
         console.log('   Key exists:', !!dodoApiKey);
         console.log('   Key length:', dodoApiKey ? dodoApiKey.length : 0);
         if (dodoApiKey) {
-            console.log('   Key starts with:', dodoApiKey.substring(0, 5) + '...');
-            console.log('   Key ends with:', '...' + dodoApiKey.substring(dodoApiKey.length - 5));
+            console.log('   Key starts with:', dodoApiKey.substring(0, 10) + '...');
+            console.log('   Key ends with:', '...' + dodoApiKey.substring(dodoApiKey.length - 10));
         }
-        console.log('   ⚠️ IMPORTANT: Test subscriptions require TEST API key, Live subscriptions require LIVE API key');
-        console.log('   💡 If 401 occurs, code will automatically try the other key type');
+        console.log('   ⚠️ IMPORTANT: Ensure the API key matches your subscription type (test or live)');
         
         if (!dodoApiKey) {
             console.error('❌ DODO_PAYMENTS_API_KEY not configured');
@@ -221,91 +206,19 @@ export default async function handler(req, res) {
                 console.error('   Status Text:', dodoResponse.statusText);
                 console.error('   Response Headers:', JSON.stringify(Object.fromEntries(dodoResponse.headers.entries()), null, 2));
                 console.error('   Error Body:', errorText);
-                console.error('   API Key Used:', isUsingTestKey ? 'TEST (DODO_PAYMENTS_TEST_API_KEY)' : 'LIVE (DODO_PAYMENTS_API_KEY)');
+                console.error('   API Key Used: DODO_PAYMENTS_API_KEY');
                 console.error('   Subscription ID:', dodoSubscriptionId);
                 console.error('   Full URL:', fullUrl);
                 
-                // 401 means wrong API key type - try the other key if available
+                // 401 means authentication failed - could be wrong key, expired key, or key doesn't have permission
                 if (dodoResponse.status === 401) {
-                    // Determine which key to try next
-                    // If we were using TEST key, try LIVE key (and vice versa)
-                    // Special case: If only DODO_PAYMENTS_API_KEY is set and it's actually a test key,
-                    // we need to check if DODO_PAYMENTS_TEST_API_KEY exists (it might be the same key)
-                    const otherKey = isUsingTestKey ? liveApiKey : testApiKey;
-                    
-                    // If otherKey is not available but we only have one key set,
-                    // and it's stored in DODO_PAYMENTS_API_KEY, check if we should use it as test key
-                    if (!otherKey && !isUsingTestKey && liveApiKey) {
-                        console.log('🔄 401 received - only DODO_PAYMENTS_API_KEY is set');
-                        console.log('   💡 This might be a test key stored in the wrong env var');
-                        console.log('   💡 Solution: Add the same key to DODO_PAYMENTS_TEST_API_KEY in Vercel');
-                    }
-                    
-                    if (otherKey && otherKey !== dodoApiKey) {
-                        console.log('🔄 401 received - trying other API key type...');
-                        console.log('   Was using:', isUsingTestKey ? 'TEST key (DODO_PAYMENTS_TEST_API_KEY)' : 'LIVE key (DODO_PAYMENTS_API_KEY)');
-                        console.log('   Now trying:', isUsingTestKey ? 'LIVE key (DODO_PAYMENTS_API_KEY)' : 'TEST key (DODO_PAYMENTS_TEST_API_KEY)');
-                        
-                        // Try with the other key
-                        dodoApiKey = otherKey;
-                        isUsingTestKey = !isUsingTestKey;
-                        
-                        const dodoAuthHeaderRetry = `Bearer ${dodoApiKey}`;
-                        const headersRetry = {
-                            'Authorization': dodoAuthHeaderRetry,
-                            'Content-Type': 'application/json'
-                        };
-                        
-                        const retryResponse = await fetch(fullUrl, {
-                            method: 'PATCH',
-                            headers: headersRetry,
-                            body: JSON.stringify({
-                                cancel_at_next_billing_date: true
-                            })
-                        });
-                        
-                        console.log('📞 Retry response status:', retryResponse.status);
-                        
-                        if (retryResponse.ok) {
-                            console.log('✅ Retry successful with', isUsingTestKey ? 'TEST' : 'LIVE', 'key');
-                            // Continue with success flow below
-                            dodoResponse = retryResponse;
-                        } else {
-                            const retryErrorText = await retryResponse.text();
-                            console.error('❌ Retry also failed:', retryResponse.status);
-                            console.error('❌ Retry error:', retryErrorText);
-                            
-                            return res.status(401).json({ 
-                                success: false,
-                                error: 'Authentication failed - API key mismatch',
-                                message: `401 Unauthorized: Both TEST and LIVE keys failed. This subscription may require a different API key. Check your Dodo Payments dashboard to confirm if this is a test or live subscription.`,
-                                dodoError: errorText,
-                                retryError: retryErrorText,
-                                hint: 'Verify subscription type in Dodo Payments dashboard and use matching API key'
-                            });
-                        }
-                    } else {
-                        // No other key available
-                        const keyType = isUsingTestKey ? 'TEST' : 'LIVE';
-                        const requiredKey = isUsingTestKey ? 'DODO_PAYMENTS_API_KEY (LIVE)' : 'DODO_PAYMENTS_TEST_API_KEY (TEST)';
-                        
-                        // Special message if they have test subscription but only LIVE key set
-                        let hintMessage = `Add ${requiredKey} to Vercel`;
-                        if (!isUsingTestKey && !testApiKey) {
-                            hintMessage = `Your test subscription requires a TEST API key. Add DODO_PAYMENTS_TEST_API_KEY to Vercel with the same key value (${dodoApiKey.substring(0, 10)}...). Alternatively, if this is actually a test key, add it to DODO_PAYMENTS_TEST_API_KEY instead of DODO_PAYMENTS_API_KEY.`;
-                        }
-                        
-                        return res.status(401).json({ 
-                            success: false,
-                            error: 'Authentication failed - API key mismatch',
-                            message: `401 Unauthorized: Using ${keyType} API key (from ${isUsingTestKey ? 'DODO_PAYMENTS_TEST_API_KEY' : 'DODO_PAYMENTS_API_KEY'}), but this test subscription requires a TEST API key. ${hintMessage}`,
-                            dodoError: errorText,
-                            hint: hintMessage,
-                            subscriptionType: 'test',
-                            currentKeyEnvVar: isUsingTestKey ? 'DODO_PAYMENTS_TEST_API_KEY' : 'DODO_PAYMENTS_API_KEY',
-                            requiredKeyEnvVar: 'DODO_PAYMENTS_TEST_API_KEY'
-                        });
-                    }
+                    return res.status(401).json({ 
+                        success: false,
+                        error: 'Authentication failed',
+                        message: `401 Unauthorized: The API key in DODO_PAYMENTS_API_KEY does not have permission to cancel this subscription, or the key/subscription type mismatch (test vs live). Verify in Dodo Payments dashboard: 1) The API key is correct and active, 2) The subscription ID belongs to the same account as the API key, 3) The API key has subscription cancellation permissions.`,
+                        dodoError: errorText,
+                        hint: 'Check Dodo Payments dashboard: API key permissions, subscription account, and key/subscription type match'
+                    });
                 }
                 
                 // For other errors, return immediately
