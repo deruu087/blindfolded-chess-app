@@ -77,7 +77,11 @@ export default async function handler(req, res) {
         console.log('✅ Found subscription:', subscription.id, subscription.status);
         
         // Check if we have Dodo Payments subscription ID
+        // IMPORTANT: Use subscription ID from Subscriptions dashboard, NOT payment ID
         const dodoSubscriptionId = subscription.dodo_subscription_id;
+        
+        console.log('🔍 Subscription ID from database:', dodoSubscriptionId);
+        console.log('🔍 Full subscription object:', JSON.stringify(subscription, null, 2));
         
         if (!dodoSubscriptionId) {
             console.warn('⚠️ No Dodo Payments subscription ID found, updating Supabase only');
@@ -146,32 +150,28 @@ export default async function handler(req, res) {
         console.log('📞 Test mode:', isTestMode);
         
         // Call Dodo Payments API to cancel subscription
-        // NOTE: Check Dodo Payments documentation for correct API endpoint
-        // The endpoint might be different from what we're using
+        // PATCH /subscriptions/{subscription_id}
+        // Base URL: sandbox.dodopayments.com (test) or live.dodopayments.com (production)
+        // Auth: Authorization: Bearer DODO_PAYMENTS_API_KEY
+        // Body: { "cancel_at_next_billing_date": true }
+        
+        console.log('📞 Calling Dodo Payments API to cancel subscription');
+        console.log('📞 Subscription ID:', dodoSubscriptionId);
+        console.log('📞 API Base URL:', apiBaseUrl);
+        console.log('📞 Full URL:', `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`);
+        console.log('📞 Test mode:', isTestMode);
         
         let dodoResponse = null;
         let dodoData = null;
         
-        if (apiBaseUrl) {
-            console.log('📞 Calling Dodo Payments API to cancel subscription:', dodoSubscriptionId);
-            console.log('📞 API Base URL:', apiBaseUrl);
-        console.log('📞 Full URL:', `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`);
-        console.log('📞 API Key exists:', !!dodoApiKey);
-        
         try {
-            // Dodo Payments might use different auth format - try both
-            // Option 1: Bearer token (standard)
-            // Option 2: Direct API key in header
             const headers = {
+                'Authorization': `Bearer ${dodoApiKey}`,
                 'Content-Type': 'application/json'
             };
             
-            // Try Bearer token first
-            headers['Authorization'] = `Bearer ${dodoApiKey}`;
-            
-            console.log('📞 Request headers:', JSON.stringify(headers, null, 2));
-            console.log('📞 API Key length:', dodoApiKey ? dodoApiKey.length : 0);
-            console.log('📞 API Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 20) + '...' : 'N/A');
+            console.log('📞 Request method: PATCH');
+            console.log('📞 Request body:', JSON.stringify({ cancel_at_next_billing_date: true }));
             
             dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
                 method: 'PATCH',
