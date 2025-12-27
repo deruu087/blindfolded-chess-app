@@ -169,9 +169,9 @@ export default async function handler(req, res) {
         // Headers: Authorization: Bearer {API_KEY}, Content-Type: application/json
         
         const fullUrl = `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`;
-        const authHeader = `Bearer ${dodoApiKey}`;
+        const dodoAuthHeader = `Bearer ${dodoApiKey}`;
         const headers = {
-            'Authorization': authHeader,
+            'Authorization': dodoAuthHeader,
             'Content-Type': 'application/json'
         };
         
@@ -180,8 +180,8 @@ export default async function handler(req, res) {
         console.log('📞 Full URL:', fullUrl);
         console.log('📞 Request method: PATCH');
         console.log('📞 Request body:', JSON.stringify({ cancel_at_next_billing_date: true }));
-        console.log('📞 Auth header length:', authHeader.length);
-        console.log('📞 Auth header starts with:', authHeader.substring(0, 20) + '...');
+        console.log('📞 Auth header length:', dodoAuthHeader.length);
+        console.log('📞 Auth header starts with:', dodoAuthHeader.substring(0, 20) + '...');
         
         let dodoResponse;
         let dodoData;
