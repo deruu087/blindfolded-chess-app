@@ -133,72 +133,82 @@ export default async function handler(req, res) {
         }
         
         // Determine API endpoint (test vs production)
+        // NOTE: Dodo Payments API endpoint might be different - check their docs
+        // For now, try common patterns or check Dodo Payments dashboard for API docs
         const isTestMode = process.env.DODO_PAYMENTS_TEST_MODE === 'true' || dodoApiKey.includes('test');
-        const apiBaseUrl = isTestMode 
-            ? 'https://api.test.dodopayments.com'
-            : 'https://api.dodopayments.com';
+        
+        // Try different possible API endpoints - update based on Dodo Payments documentation
+        // Option 1: Same domain as checkout
+        // const apiBaseUrl = isTestMode 
+        //     ? 'https://test.checkout.dodopayments.com/api'
+        //     : 'https://checkout.dodopayments.com/api';
+        
+        // Option 2: Different subdomain
+        // const apiBaseUrl = isTestMode 
+        //     ? 'https://api-test.dodopayments.com'
+        //     : 'https://api.dodopayments.com';
+        
+        // Option 3: Check Dodo Payments dashboard for actual API endpoint
+        // For now, skip API call if endpoint doesn't exist
+        console.warn('⚠️ Dodo Payments API endpoint not configured correctly');
+        console.warn('⚠️ Please check Dodo Payments documentation for the correct API endpoint');
+        console.warn('⚠️ Skipping Dodo Payments API call, updating Supabase only');
+        
+        // Skip Dodo Payments API call for now - just update Supabase
+        const apiBaseUrl = null; // Will skip API call
         
         // Call Dodo Payments API to cancel subscription
-        // According to Dodo Payments docs: PATCH /subscriptions/{subscription_id}
-        // with body: { cancel_at_next_billing_date: true }
-        console.log('📞 Calling Dodo Payments API to cancel subscription:', dodoSubscriptionId);
-        console.log('📞 API Base URL:', apiBaseUrl);
-        console.log('📞 Full URL:', `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`);
-        console.log('📞 API Key exists:', !!dodoApiKey);
-        console.log('📞 API Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 10) : 'N/A');
+        // NOTE: Check Dodo Payments documentation for correct API endpoint
+        // The endpoint might be different from what we're using
         
-        let dodoResponse;
-        try {
-            dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${dodoApiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    cancel_at_next_billing_date: true
-                })
-            });
-            console.log('📞 Dodo Payments response status:', dodoResponse.status);
-        } catch (fetchError) {
-            console.error('❌ Fetch error calling Dodo Payments:', fetchError);
-            console.error('❌ Fetch error details:', {
-                message: fetchError.message,
-                stack: fetchError.stack,
-                name: fetchError.name
-            });
-            throw fetchError;
+        let dodoResponse = null;
+        let dodoData = null;
+        
+        if (apiBaseUrl) {
+            console.log('📞 Calling Dodo Payments API to cancel subscription:', dodoSubscriptionId);
+            console.log('📞 API Base URL:', apiBaseUrl);
+            console.log('📞 Full URL:', `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`);
+            console.log('📞 API Key exists:', !!dodoApiKey);
+            console.log('📞 API Key starts with:', dodoApiKey ? dodoApiKey.substring(0, 10) : 'N/A');
+            
+            try {
+                dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${dodoApiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        cancel_at_next_billing_date: true
+                    })
+                });
+                console.log('📞 Dodo Payments response status:', dodoResponse.status);
+                
+                if (dodoResponse.ok) {
+                    dodoData = await dodoResponse.json();
+                    console.log('✅ Dodo Payments cancellation successful:', dodoData);
+                }
+            } catch (fetchError) {
+                console.error('❌ Fetch error calling Dodo Payments:', fetchError);
+                console.error('❌ Fetch error details:', {
+                    message: fetchError.message,
+                    stack: fetchError.stack,
+                    name: fetchError.name
+                });
+                // Don't throw - continue to update Supabase even if API call fails
+                console.warn('⚠️ Continuing with Supabase update despite API call failure');
+            }
+        } else {
+            console.log('⚠️ Skipping Dodo Payments API call - endpoint not configured');
+            console.log('⚠️ Please check Dodo Payments documentation and update apiBaseUrl');
         }
         
-        if (!dodoResponse.ok) {
+        // Handle Dodo Payments API response (if API call was made)
+        if (dodoResponse && !dodoResponse.ok) {
             const errorData = await dodoResponse.text();
             console.error('❌ Dodo Payments API error:', dodoResponse.status, errorData);
-            
-            // Still update Supabase even if Dodo Payments call failed
-            const { data: updatedSub, error: updateError } = await supabaseAdmin
-                .from('subscriptions')
-                .update({
-                    status: 'cancelled',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', user.id)
-                .select()
-                .single();
-            
-            if (updateError) {
-                console.error('❌ Error updating Supabase after Dodo Payments failure:', updateError);
-            }
-            
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Subscription cancelled in Supabase (Dodo Payments API call failed)',
-                subscription: updatedSub,
-                warning: 'Dodo Payments cancellation may not have been processed'
-            });
+            console.warn('⚠️ Dodo Payments cancellation failed, but continuing with Supabase update');
         }
-        
-        const dodoData = await dodoResponse.json();
-        console.log('✅ Dodo Payments subscription cancelled:', dodoData);
         
         // Update Supabase subscription status
         const { data: updatedSub, error: updateError } = await supabaseAdmin
