@@ -147,13 +147,14 @@ export default async function handler(req, res) {
         }
         
         // Dodo Payments API endpoint
-        // IMPORTANT: There is only ONE API base URL: https://live.dodopayments.com
-        // Test vs live mode is determined by the API key itself, not the URL
-        // Test keys don't hit real money, but use the same endpoint
-        const apiBaseUrl = 'https://live.dodopayments.com';
+        // Test mode uses: https://test.dodopayments.com
+        // Live mode uses: https://live.dodopayments.com
+        // Since we're using test subscriptions, use test endpoint
+        // TODO: Add environment variable or detection for test vs live mode
+        const apiBaseUrl = 'https://test.dodopayments.com';
         
         console.log('📞 Using API base URL:', apiBaseUrl);
-        console.log('📞 Note: Test/live mode determined by API key, not URL');
+        console.log('📞 Note: Using test endpoint for test subscriptions');
         
         // Call Dodo Payments API to cancel subscription
         // IMPORTANT: Only update Supabase AFTER successful API call
