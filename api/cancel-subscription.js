@@ -173,15 +173,27 @@ export default async function handler(req, res) {
         let dodoData = null;
         
         try {
+            const fullUrl = `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`;
             const headers = {
                 'Authorization': `Bearer ${dodoApiKey}`,
                 'Content-Type': 'application/json'
             };
             
             console.log('📞 Request method: PATCH');
+            console.log('📞 Full URL:', fullUrl);
             console.log('📞 Request body:', JSON.stringify({ cancel_at_next_billing_date: true }));
+            console.log('📞 Headers:', JSON.stringify(headers, null, 2));
             
-            dodoResponse = await fetch(`${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`, {
+            // Test if URL is reachable first
+            try {
+                const testResponse = await fetch(apiBaseUrl, { method: 'HEAD' });
+                console.log('📞 Base URL test response:', testResponse.status);
+            } catch (testError) {
+                console.error('❌ Cannot reach base URL:', apiBaseUrl);
+                console.error('❌ Test error:', testError.message);
+            }
+            
+            dodoResponse = await fetch(fullUrl, {
                 method: 'PATCH',
                 headers: headers,
                 body: JSON.stringify({
