@@ -2728,7 +2728,7 @@
         window.closeCancelSubscriptionModal = closeCancelSubscriptionModal;
 
         async function confirmCancelSubscription() {
-            console.log('confirmCancelSubscription function called!');
+            console.log('🔴 confirmCancelSubscription function called!');
             
             // Hide modal first
             const modal = document.getElementById('cancelSubscriptionModal');
@@ -2738,20 +2738,26 @@
             
             if (typeof window.cancelSubscription === 'function') {
                 try {
+                    console.log('🔴 Calling window.cancelSubscription()...');
                     const result = await window.cancelSubscription();
+                    console.log('🔴 Result:', result);
+                    
                     if (result.success) {
                         // Show success message
                         alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
                         // Reload billing info to show updated status
                         loadBillingInfo();
                     } else {
-                        alert('Error cancelling subscription. Please try again or contact support.');
+                        console.error('🔴 Cancellation failed:', result.error);
+                        alert('Error cancelling subscription: ' + (result.error || 'Unknown error') + '. Please try again or contact support.');
                     }
                 } catch (error) {
-                    console.error('Error cancelling subscription:', error);
-                    alert('Error cancelling subscription. Please try again or contact support.');
+                    console.error('🔴 Error cancelling subscription:', error);
+                    console.error('🔴 Error details:', error.message, error.stack);
+                    alert('Error cancelling subscription: ' + error.message + '. Please try again or contact support.');
                 }
             } else {
+                console.error('🔴 window.cancelSubscription function not found!');
                 alert('Cancel subscription function not available. Please contact support.');
             }
         }

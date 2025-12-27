@@ -662,6 +662,7 @@ async function cancelSubscription() {
 
     try {
         console.log('📞 Calling cancel subscription API:', apiUrl);
+        console.log('📞 Session token exists:', !!session.access_token);
         
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -671,18 +672,34 @@ async function cancelSubscription() {
             }
         });
 
-        const result = await response.json();
+        console.log('📞 Response status:', response.status);
+        console.log('📞 Response ok:', response.ok);
+
+        let result;
+        try {
+            result = await response.json();
+            console.log('📞 Response data:', result);
+        } catch (jsonError) {
+            const text = await response.text();
+            console.error('📞 Failed to parse JSON response:', text);
+            return { success: false, error: `Server error: ${response.status} - ${text}` };
+        }
 
         if (!response.ok) {
-            console.error('API error:', result);
-            return { success: false, error: result.error || 'Failed to cancel subscription' };
+            console.error('❌ API error:', result);
+            return { success: false, error: result.error || result.message || 'Failed to cancel subscription' };
         }
 
         console.log('✅ Subscription cancelled successfully!', result);
         return { success: true, subscription: result.subscription, message: result.message };
         
     } catch (error) {
-        console.error('Error calling cancel subscription API:', error);
+        console.error('❌ Error calling cancel subscription API:', error);
+        console.error('❌ Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         return { success: false, error: error.message || 'Network error' };
     }
 }
