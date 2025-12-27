@@ -113,13 +113,19 @@ export default async function handler(req, res) {
         const testApiKey = process.env.DODO_PAYMENTS_TEST_API_KEY?.trim();
         const liveApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
         
-        // Try TEST key first (for test subscriptions), fallback to LIVE key
+        // Strategy: Try TEST key first for test subscriptions, then LIVE key
+        // If only one key is set, use it (could be test or live)
         let dodoApiKey = testApiKey || liveApiKey;
-        let isUsingTestKey = !!testApiKey;
+        let isUsingTestKey = !!testApiKey; // Only true if DODO_PAYMENTS_TEST_API_KEY is explicitly set
+        
+        // If both keys are available, prefer TEST key for test subscriptions
+        // If only one key is available, we'll try it first and retry with the other if 401
+        const hasBothKeys = !!testApiKey && !!liveApiKey;
         
         console.log('🔑 API Key check:');
-        console.log('   TEST key available:', !!testApiKey);
-        console.log('   LIVE key available:', !!liveApiKey);
+        console.log('   TEST key (DODO_PAYMENTS_TEST_API_KEY) available:', !!testApiKey);
+        console.log('   LIVE key (DODO_PAYMENTS_API_KEY) available:', !!liveApiKey);
+        console.log('   Has both keys:', hasBothKeys);
         console.log('   Using:', isUsingTestKey ? 'TEST key' : liveApiKey ? 'LIVE key' : 'NO KEY');
         console.log('   Key exists:', !!dodoApiKey);
         console.log('   Key length:', dodoApiKey ? dodoApiKey.length : 0);
@@ -128,6 +134,7 @@ export default async function handler(req, res) {
             console.log('   Key ends with:', '...' + dodoApiKey.substring(dodoApiKey.length - 5));
         }
         console.log('   ⚠️ IMPORTANT: Test subscriptions require TEST API key, Live subscriptions require LIVE API key');
+        console.log('   💡 If 401 occurs, code will automatically try the other key type');
         
         if (!dodoApiKey) {
             console.error('❌ DODO_PAYMENTS_API_KEY not configured');
@@ -205,12 +212,15 @@ export default async function handler(req, res) {
                 
                 // 401 means wrong API key type - try the other key if available
                 if (dodoResponse.status === 401) {
+                    // Determine which key to try next
+                    // If we were using TEST key, try LIVE key (and vice versa)
+                    // If only one key was set, try the other env var
                     const otherKey = isUsingTestKey ? liveApiKey : testApiKey;
                     
-                    if (otherKey) {
+                    if (otherKey && otherKey !== dodoApiKey) {
                         console.log('🔄 401 received - trying other API key type...');
-                        console.log('   Was using:', isUsingTestKey ? 'TEST' : 'LIVE');
-                        console.log('   Now trying:', isUsingTestKey ? 'LIVE' : 'TEST');
+                        console.log('   Was using:', isUsingTestKey ? 'TEST key (DODO_PAYMENTS_TEST_API_KEY)' : 'LIVE key (DODO_PAYMENTS_API_KEY)');
+                        console.log('   Now trying:', isUsingTestKey ? 'LIVE key (DODO_PAYMENTS_API_KEY)' : 'TEST key (DODO_PAYMENTS_TEST_API_KEY)');
                         
                         // Try with the other key
                         dodoApiKey = otherKey;
