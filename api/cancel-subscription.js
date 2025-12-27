@@ -147,14 +147,13 @@ export default async function handler(req, res) {
         }
         
         // Dodo Payments API endpoint
-        // Test mode uses: https://test.dodopayments.com
-        // Live mode uses: https://live.dodopayments.com
-        // Since we're using test subscriptions, use test endpoint
-        // TODO: Add environment variable or detection for test vs live mode
-        const apiBaseUrl = 'https://test.dodopayments.com';
+        // TODO: Update with correct API base URL from Dodo Payments documentation
+        // The user confirmed that live.dodopayments.com and test.dodopayments.com are not real domains
+        // Need to find the correct API endpoint URL
+        const apiBaseUrl = 'https://live.dodopayments.com'; // TEMPORARY - needs to be updated with correct URL
         
         console.log('📞 Using API base URL:', apiBaseUrl);
-        console.log('📞 Note: Using test endpoint for test subscriptions');
+        console.log('⚠️ WARNING: This URL may be incorrect - need to verify with Dodo Payments documentation');
         
         // Call Dodo Payments API to cancel subscription
         // IMPORTANT: Only update Supabase AFTER successful API call
