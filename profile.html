@@ -2710,6 +2710,74 @@
         // Make cancelLogout globally accessible (for onclick handlers)
         window.cancelLogout = cancelLogout;
 
+        // Cancel Subscription Modal Functions
+        function showCancelSubscriptionModal() {
+            const modal = document.getElementById('cancelSubscriptionModal');
+            if (modal) {
+                modal.style.display = 'block';
+            }
+        }
+        window.showCancelSubscriptionModal = showCancelSubscriptionModal;
+
+        function closeCancelSubscriptionModal() {
+            const modal = document.getElementById('cancelSubscriptionModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        window.closeCancelSubscriptionModal = closeCancelSubscriptionModal;
+
+        async function confirmCancelSubscription() {
+            console.log('confirmCancelSubscription function called!');
+            
+            // Hide modal first
+            const modal = document.getElementById('cancelSubscriptionModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            if (typeof window.cancelSubscription === 'function') {
+                try {
+                    const result = await window.cancelSubscription();
+                    if (result.success) {
+                        // Show success message
+                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                        // Reload billing info to show updated status
+                        loadBillingInfo();
+                    } else {
+                        alert('Error cancelling subscription. Please try again or contact support.');
+                    }
+                } catch (error) {
+                    console.error('Error cancelling subscription:', error);
+                    alert('Error cancelling subscription. Please try again or contact support.');
+                }
+            } else {
+                alert('Cancel subscription function not available. Please contact support.');
+            }
+        }
+        window.confirmCancelSubscription = confirmCancelSubscription;
+
+        // Helper function for fallback (if modal functions not available)
+        async function handleCancelSubscription() {
+            if (typeof window.cancelSubscription === 'function') {
+                try {
+                    const result = await window.cancelSubscription();
+                    if (result.success) {
+                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                        loadBillingInfo();
+                    } else {
+                        alert('Error cancelling subscription. Please try again or contact support.');
+                    }
+                } catch (error) {
+                    console.error('Error cancelling subscription:', error);
+                    alert('Error cancelling subscription. Please try again or contact support.');
+                }
+            } else {
+                alert('Cancel subscription function not available. Please contact support.');
+            }
+        }
+        window.handleCancelSubscription = handleCancelSubscription;
+
         // Modal functions
         function showSignInModal() {
             document.getElementById('signInModal').style.display = 'block';
