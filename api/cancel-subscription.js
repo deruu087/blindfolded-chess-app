@@ -136,26 +136,14 @@ export default async function handler(req, res) {
             });
         }
         
-        // Determine API endpoint (test vs production)
-        // According to Dodo Payments documentation:
-        // Production: https://live.dodopayments.com
-        // Sandbox: https://sandbox.dodopayments.com
-        // Check environment variable first, then auto-detect from key
-        const testModeEnv = process.env.DODO_PAYMENTS_TEST_MODE === 'true';
-        const keyHasTest = dodoApiKey && (dodoApiKey.includes('test') || dodoApiKey.includes('sandbox'));
-        const isTestMode = testModeEnv || keyHasTest;
-        
-        console.log('🔍 Environment detection:');
-        console.log('   DODO_PAYMENTS_TEST_MODE env:', process.env.DODO_PAYMENTS_TEST_MODE);
-        console.log('   Key contains test/sandbox:', keyHasTest);
-        console.log('   Final test mode:', isTestMode);
-        
-        const apiBaseUrl = isTestMode 
-            ? 'https://sandbox.dodopayments.com'
-            : 'https://live.dodopayments.com';
+        // Dodo Payments API endpoint
+        // IMPORTANT: There is only ONE API base URL: https://live.dodopayments.com
+        // Test vs live mode is determined by the API key itself, not the URL
+        // Test keys don't hit real money, but use the same endpoint
+        const apiBaseUrl = 'https://live.dodopayments.com';
         
         console.log('📞 Using API base URL:', apiBaseUrl);
-        console.log('📞 Test mode:', isTestMode);
+        console.log('📞 Note: Test/live mode determined by API key, not URL');
         
         // Call Dodo Payments API to cancel subscription
         // PATCH /subscriptions/{subscription_id}
