@@ -189,11 +189,13 @@ export default async function handler(req, res) {
         let dodoData;
         
         try {
+            // Cancel immediately in Dodo Payments (not scheduled)
+            // Use status: 'cancelled' for immediate cancellation
             dodoResponse = await fetch(fullUrl, {
                 method: 'PATCH',
                 headers: headers,
                 body: JSON.stringify({
-                    cancel_at_next_billing_date: true
+                    status: 'cancelled'
                 })
             });
             
@@ -263,14 +265,31 @@ export default async function handler(req, res) {
             });
         }
         
-        // Only update Supabase AFTER successful API call
-        console.log('✅ Dodo Payments API call succeeded, updating Supabase...');
+        // IMPORTANT: Dodo Payments is cancelled immediately, but Supabase stays active until billing period ends
+        console.log('✅ Dodo Payments API call succeeded - subscription cancelled immediately in Dodo');
+        console.log('📋 Keeping Supabase subscription active until next billing date:', subscription.next_billing_date);
         
+        // Calculate when subscription should be marked as cancelled in Supabase (end of current billing period)
+        const nextBillingDate = subscription.next_billing_date ? new Date(subscription.next_billing_date) : null;
+        const cancellationDate = nextBillingDate || (subscription.start_date ? new Date(subscription.start_date) : new Date());
+        
+        // If monthly, add 1 month; if quarterly, add 3 months
+        if (subscription.plan_type === 'monthly') {
+            cancellationDate.setMonth(cancellationDate.getMonth() + 1);
+        } else if (subscription.plan_type === 'quarterly') {
+            cancellationDate.setMonth(cancellationDate.getMonth() + 3);
+        }
+        
+        // Update Supabase with cancellation scheduled date, but keep status as 'active'
+        // Add a field to track that cancellation is scheduled
         const { data: updatedSub, error: updateError } = await supabaseAdmin
             .from('subscriptions')
             .update({
-                status: 'cancelled',
-                updated_at: new Date().toISOString()
+                // Keep status as 'active' - don't change to 'cancelled'
+                // Add metadata or note that cancellation is scheduled
+                updated_at: new Date().toISOString(),
+                // Store the cancellation date for reference
+                end_date: cancellationDate.toISOString().split('T')[0]
             })
             .eq('user_id', user.id)
             .select()
@@ -281,22 +300,22 @@ export default async function handler(req, res) {
             // Dodo Payments cancelled but Supabase update failed
             return res.status(200).json({ 
                 success: true, 
-                message: 'Subscription cancelled in Dodo Payments (Supabase update failed)',
+                message: 'Subscription cancelled immediately in Dodo Payments (Supabase update failed)',
                 dodoResponse: dodoData,
                 warning: 'Supabase may not reflect cancellation - please check manually'
             });
         }
         
-        console.log('✅ Subscription cancelled successfully in both Dodo Payments and Supabase');
-        console.log('📋 Important: Subscription is scheduled to cancel at next billing date');
-        console.log('📋 Subscription will remain active until:', subscription.next_billing_date || 'next billing cycle');
+        console.log('✅ Subscription cancelled immediately in Dodo Payments');
+        console.log('✅ Supabase subscription remains active until:', cancellationDate.toISOString().split('T')[0]);
         
         return res.status(200).json({ 
             success: true, 
-            message: 'Subscription cancelled successfully. It will remain active until the end of the current billing period.',
+            message: 'Subscription cancelled immediately in Dodo Payments. Access will remain active until the end of the current billing period.',
             subscription: updatedSub,
             dodoResponse: dodoData,
-            note: 'Subscription is scheduled to cancel at next billing date. It will remain active until then.'
+            cancellationDate: cancellationDate.toISOString().split('T')[0],
+            note: 'Subscription is cancelled in Dodo Payments but remains active in Supabase until billing period ends'
         });
         
     } catch (error) {
