@@ -3098,17 +3098,12 @@
         // This logout function is now handled by the confirmation modal above
         // Keeping this for compatibility but it will show the confirmation modal
 
-        // Cancel subscription functionality
-        function cancelSubscription() {
-            // Set cancellation date and mark as cancelled
-            const currentDate = new Date();
-            localStorage.setItem('subscriptionCancelled', 'true');
-            localStorage.setItem('cancellationDate', currentDate.toISOString());
-            localStorage.setItem('subscriptionPlan', userData.subscription + '_cancelled');
-            
-            // Update user data
-            userData.subscription = userData.subscription + '_cancelled';
-            updateSubscriptionStatus();
+        // Cancel subscription functionality - REMOVED
+        // This old function was overriding the one from supabase-helpers.js
+        // The real cancelSubscription() is now in supabase-helpers.js and calls the API
+        // function cancelSubscription() {
+        //     // OLD CODE - REMOVED
+        // }
             
             // Close the modal and refresh the page to update the interface
             closeModal();
