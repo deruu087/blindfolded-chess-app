@@ -132,6 +132,9 @@ export default async function handler(req, res) {
                     nextBillingDate = data.next_billing_date.split('T')[0]; // Extract date part
                 }
                 
+                // Extract Dodo Payments subscription ID
+                const dodoSubscriptionId = data.subscription_id || orderId;
+                
                 const subscriptionData = {
                     user_id: userId,
                     email: customerEmail, // Add email for easier querying
@@ -143,6 +146,7 @@ export default async function handler(req, res) {
                     amount_paid: amountNum,
                     currency: currency || 'EUR',
                     payment_method: 'dodo_payments',
+                    dodo_subscription_id: dodoSubscriptionId, // Store Dodo Payments subscription ID for API calls
                     updated_at: new Date().toISOString()
                 };
                 

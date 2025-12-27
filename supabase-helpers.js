@@ -628,7 +628,8 @@ async function createOrUpdateSubscription(subscriptionData) {
 }
 
 /**
- * Cancel a subscription (sets status to 'cancelled' but keeps it active until end_date)
+ * Cancel a subscription via Dodo Payments API and update Supabase
+ * This calls the backend API endpoint which handles Dodo Payments cancellation
  */
 async function cancelSubscription() {
     const supabase = getSupabase();
@@ -638,31 +639,52 @@ async function cancelSubscription() {
     }
 
     // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (authError || !user) {
         console.log('No user logged in');
         return { success: false, error: 'User not logged in' };
     }
 
-    // Update subscription status to cancelled
-    const { data, error } = await supabase
-        .from('subscriptions')
-        .update({
-            status: 'cancelled',
-            updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error cancelling subscription:', error);
-        return { success: false, error: error.message };
+    // Get the user's session token for API authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session || !session.access_token) {
+        console.error('No session token available');
+        return { success: false, error: 'No session token available' };
     }
 
-    console.log('✅ Subscription cancelled successfully!', data);
-    return { success: true, subscription: data };
+    // Determine API endpoint (production vs local)
+    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+    const apiUrl = isProduction 
+        ? 'https://memo-chess.vercel.app/api/cancel-subscription'
+        : 'http://localhost:3000/api/cancel-subscription';
+
+    try {
+        console.log('📞 Calling cancel subscription API:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('API error:', result);
+            return { success: false, error: result.error || 'Failed to cancel subscription' };
+        }
+
+        console.log('✅ Subscription cancelled successfully!', result);
+        return { success: true, subscription: result.subscription, message: result.message };
+        
+    } catch (error) {
+        console.error('Error calling cancel subscription API:', error);
+        return { success: false, error: error.message || 'Network error' };
+    }
 }
 
 /**
