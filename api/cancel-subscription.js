@@ -184,13 +184,26 @@ export default async function handler(req, res) {
             console.log('📞 Request body:', JSON.stringify({ cancel_at_next_billing_date: true }));
             console.log('📞 Headers:', JSON.stringify(headers, null, 2));
             
-            // Test if URL is reachable first
+            // Log the exact URL we're trying to call
+            console.log('📞 Attempting to call:', fullUrl);
+            console.log('📞 Domain:', new URL(fullUrl).hostname);
+            
+            // Test if base URL is reachable (with timeout)
             try {
-                const testResponse = await fetch(apiBaseUrl, { method: 'HEAD' });
-                console.log('📞 Base URL test response:', testResponse.status);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                const testResponse = await fetch(apiBaseUrl, { 
+                    method: 'HEAD',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                console.log('✅ Base URL is reachable, status:', testResponse.status);
             } catch (testError) {
                 console.error('❌ Cannot reach base URL:', apiBaseUrl);
                 console.error('❌ Test error:', testError.message);
+                console.error('❌ Error code:', testError.code);
+                console.error('❌ Error cause:', testError.cause);
+                throw new Error(`Cannot reach Dodo Payments API at ${apiBaseUrl}: ${testError.message}`);
             }
             
             dodoResponse = await fetch(fullUrl, {
