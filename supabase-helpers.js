@@ -552,7 +552,9 @@ async function getUserSubscription() {
 
 /**
  * Check if the current user has an active subscription
- * Returns true if subscription exists and status is 'active'
+ * Returns true if subscription exists and:
+ * - Status is 'active', OR
+ * - Status is 'cancelled' but end_date is in the future (user still has access)
  */
 async function hasActiveSubscription() {
     const subscription = await getUserSubscription();
@@ -561,19 +563,28 @@ async function hasActiveSubscription() {
         return false;
     }
 
-    // Check if subscription is active and not expired
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check if subscription is active
     if (subscription.status === 'active') {
         // If there's an end_date, check if it's in the future
         if (subscription.end_date) {
             const endDate = new Date(subscription.end_date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
             return endDate >= today;
         }
         // If no end_date (lifetime plan), it's active
         return true;
     }
 
+    // Check if subscription is cancelled but user still has access (end_date in future)
+    if (subscription.status === 'cancelled' && subscription.end_date) {
+        const endDate = new Date(subscription.end_date);
+        // User has access until end_date, even though subscription is cancelled
+        return endDate >= today;
+    }
+
+    // Subscription is cancelled and past end_date, or expired
     return false;
 }
 
