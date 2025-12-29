@@ -2676,28 +2676,23 @@
                 localStorage.removeItem(key);
             });
             
-            // Also try to sign out from Supabase directly (non-blocking)
+            // Sign out from Supabase in background (non-blocking, don't wait for it)
             if (typeof window.signOut === 'function') {
-                try {
-                    await window.signOut();
-                    console.log('✅ Signed out from Supabase');
-                } catch (error) {
-                    console.error('Error signing out from Supabase:', error);
+                window.signOut().catch(() => {
                     // Ignore errors, we've already cleared localStorage
-                }
+                });
             } else if (typeof getSupabase === 'function') {
                 const supabase = getSupabase();
                 if (supabase) {
-                    console.log('Calling supabase.auth.signOut() directly...');
                     supabase.auth.signOut().catch(() => {
                         // Ignore errors, we've already cleared localStorage
                     });
                 }
             }
             
-            // Redirect to home page - this will automatically refresh/load the page fresh
+            // Redirect to home page immediately (use replace to avoid adding to history)
             console.log('Redirecting to index.html...');
-            window.location.href = 'index.html';
+            window.location.replace('index.html');
         }
         
         // Make confirmLogout globally accessible (for onclick handlers)

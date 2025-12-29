@@ -2988,24 +2988,40 @@
         }
 
         // Confirm logout function
-        function confirmLogout() {
+        async function confirmLogout() {
             // Clear user data and localStorage
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userName');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('subscriptionPlan');
             localStorage.removeItem('hasActiveSubscription');
+            localStorage.removeItem('cachedSubscriptionStatus');
+            localStorage.removeItem('cachedSubscriptionPlan');
             // CRITICAL: Clear progress data to prevent data leakage between accounts
             localStorage.removeItem('chessProgress');
             
-            // Update navigation
-            updateNavigation();
+            // Sign out from Supabase in background (non-blocking, don't wait for it)
+            if (typeof window.signOut === 'function') {
+                window.signOut().catch(() => {
+                    // Ignore errors, we've already cleared localStorage
+                });
+            } else if (typeof getSupabase === 'function') {
+                const supabase = getSupabase();
+                if (supabase) {
+                    supabase.auth.signOut().catch(() => {
+                        // Ignore errors, we've already cleared localStorage
+                    });
+                }
+            }
             
             // Hide modal
-            document.getElementById('logoutConfirmModal').style.display = 'none';
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
             
-            // Redirect to home page
-            window.location.href = 'index.html';
+            // Redirect to home page immediately (use replace to avoid adding to history)
+            window.location.replace('index.html');
         }
 
         // Cancel logout function
