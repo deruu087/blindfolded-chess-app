@@ -2826,19 +2826,31 @@
                             const customGamesData = await window.getUserCustomGames();
                             
                             if (customGamesData && Array.isArray(customGamesData) && customGamesData.length > 0) {
-                                // Extract game_data from each custom game record
-                                const customGames = customGamesData.map(record => {
-                                    const gameData = record.game_data;
-                                    // Add the Supabase record ID for deletion purposes
-                                    if (record.id) {
-                                        gameData.supabase_id = record.id;
-                                    }
-                                    return gameData;
-                                });
+                                // Extract game_data from each custom game record, filtering out invalid records
+                                const customGames = customGamesData
+                                    .map(record => {
+                                        const gameData = record.game_data;
+                                        
+                                        // Validate that game_data exists and has required fields
+                                        if (!gameData || typeof gameData !== 'object' || !gameData.id) {
+                                            console.warn('⚠️ Invalid game_data in record:', record.id, gameData);
+                                            return null;
+                                        }
+                                        
+                                        // Add the Supabase record ID for deletion purposes
+                                        if (record.id) {
+                                            gameData.supabase_id = record.id;
+                                        }
+                                        return gameData;
+                                    })
+                                    .filter(game => game !== null && game !== undefined); // Remove null/undefined entries
                                 
-                                if (customGames && Array.isArray(customGames)) {
-                                    allGames = allGames.concat(customGames);
-                                    console.log(`✅ Loaded ${customGames.length} custom games from Supabase`);
+                                if (customGames && Array.isArray(customGames) && customGames.length > 0) {
+                                    // Avoid duplicates
+                                    const existingIds = allGames.map(g => g && g.id).filter(id => id !== undefined);
+                                    const newCustomGames = customGames.filter(g => g && g.id && !existingIds.includes(g.id));
+                                    allGames = allGames.concat(newCustomGames);
+                                    console.log(`✅ Loaded ${newCustomGames.length} custom games from Supabase`);
                                 }
                             } else {
                                 console.log('No custom games found in Supabase');
@@ -3776,7 +3788,7 @@
                 gamesData = await GameLoader.loadGamesFromFiles();
                 console.log('📊 Reloaded games:', gamesData);
                 console.log('📊 Total games loaded:', gamesData ? gamesData.games.length : 0);
-                console.log('📊 Custom games:', gamesData ? gamesData.games.filter(g => g.id.startsWith('custom-game-')).length : 0);
+                console.log('📊 Custom games:', gamesData ? gamesData.games.filter(g => g && g.id && g.id.startsWith('custom-game-')).length : 0);
                 updateGameButtons();
                 console.log('✅ Game buttons updated');
             } catch (error) {
@@ -4014,7 +4026,7 @@
             }
             
             // Filter out custom games
-            const standardGames = gamesData.games.filter(g => !g.id.startsWith('custom-game-'));
+            const standardGames = gamesData.games.filter(g => g && g.id && !g.id.startsWith('custom-game-'));
             
             // Group games by opening
             const gamesByOpening = {};

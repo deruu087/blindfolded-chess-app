@@ -376,30 +376,45 @@ class GameLoader {
                 if (customGamesData && Array.isArray(customGamesData) && customGamesData.length > 0) {
                     console.log('Custom games data received from Supabase:', customGamesData);
                     
-                    // Extract game_data from each custom game record
-                    const customGames = customGamesData.map(record => {
-                        // The game_data is stored as JSONB in Supabase
-                        const gameData = record.game_data;
-                        // Add the Supabase record ID for deletion purposes
-                        if (record.id) {
-                            gameData.supabase_id = record.id;
-                        }
-                        return gameData;
-                    });
+                    // Extract game_data from each custom game record, filtering out invalid records
+                    const customGames = customGamesData
+                        .map(record => {
+                            // The game_data is stored as JSONB in Supabase
+                            const gameData = record.game_data;
+                            
+                            // Validate that game_data exists and has required fields
+                            if (!gameData || typeof gameData !== 'object') {
+                                console.warn('⚠️ Invalid game_data in record:', record.id, gameData);
+                                return null;
+                            }
+                            
+                            // Validate that game has an ID
+                            if (!gameData.id) {
+                                console.warn('⚠️ Game data missing ID:', gameData);
+                                return null;
+                            }
+                            
+                            // Add the Supabase record ID for deletion purposes
+                            if (record.id) {
+                                gameData.supabase_id = record.id;
+                            }
+                            return gameData;
+                        })
+                        .filter(game => game !== null && game !== undefined); // Remove null/undefined entries
                     
                     console.log('Extracted custom games:', customGames.length);
                     console.log('Custom games array length:', customGames.length);
                     
                     if (customGames.length > 0) {
                         // Add custom games to the main games array, but avoid duplicates
-                        const existingIds = allGames.map(g => g.id);
-                        const newCustomGames = customGames.filter(g => !existingIds.includes(g.id));
+                        const existingIds = allGames.map(g => g && g.id).filter(id => id !== undefined);
+                        const newCustomGames = customGames.filter(g => g && g.id && !existingIds.includes(g.id));
                         allGames = allGames.concat(newCustomGames);
                         console.log('Successfully loaded custom games from Supabase:', newCustomGames.length);
                         console.log('Total games now:', allGames.length);
                         console.log('Custom game IDs:', newCustomGames.map(g => g.id));
                     } else {
-                        console.log('No custom games found in Supabase');
+                        console.log('No valid custom games found in Supabase');
                     }
                 } else {
                     console.log('No custom games found in Supabase (empty or null response)');
@@ -417,26 +432,33 @@ class GameLoader {
             console.log('Continuing with main games only...');
         }
         
+        // Filter out any null/undefined games before deduplication
+        allGames = allGames.filter(game => game && game.id);
+        
         // Final deduplication to ensure no duplicate games
         console.log('Before deduplication - Total games:', allGames.length);
-        console.log('Before deduplication - All game IDs:', allGames.map(g => g.id));
+        console.log('Before deduplication - All game IDs:', allGames.map(g => g ? g.id : 'undefined'));
         
         // Use Map to ensure only unique games by ID
         const gameMap = new Map();
         
         for (const game of allGames) {
-            if (!gameMap.has(game.id)) {
-                gameMap.set(game.id, game);
-                console.log('Added unique game:', game.id);
+            if (game && game.id) {
+                if (!gameMap.has(game.id)) {
+                    gameMap.set(game.id, game);
+                    console.log('Added unique game:', game.id);
+                } else {
+                    console.log('Skipped duplicate game:', game.id);
+                }
             } else {
-                console.log('Skipped duplicate game:', game.id);
+                console.warn('⚠️ Skipped invalid game (no ID):', game);
             }
         }
         
         const uniqueGames = Array.from(gameMap.values());
         
         console.log('Final deduplication - Total unique games:', uniqueGames.length);
-        console.log('Final deduplication - All game IDs:', uniqueGames.map(g => g.id));
+        console.log('Final deduplication - All game IDs:', uniqueGames.map(g => g ? g.id : 'undefined'));
         
         return { games: uniqueGames };
     }
