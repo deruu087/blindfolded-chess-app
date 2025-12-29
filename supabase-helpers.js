@@ -297,6 +297,17 @@ async function testDatabaseConnection() {
  * Save a custom game to the database
  */
 async function saveCustomGame(gameData) {
+    console.log('📥 saveCustomGame called with gameData:', gameData);
+    console.log('📥 gameData type:', typeof gameData);
+    console.log('📥 gameData is null?', gameData === null);
+    console.log('📥 gameData is undefined?', gameData === undefined);
+    
+    // Validate gameData
+    if (!gameData) {
+        console.error('❌ gameData is null or undefined!');
+        return { success: false, error: 'Game data is required' };
+    }
+    
     const supabase = getSupabase();
     if (!supabase) {
         console.error('Supabase not initialized');
@@ -320,8 +331,10 @@ async function saveCustomGame(gameData) {
     
     // Only add updated_at if the column exists and doesn't have a default/trigger
     // Most Supabase tables auto-update this field
-
+    
     console.log('📤 Data to save:', JSON.stringify(dataToSave, null, 2));
+    console.log('📤 game_data value:', gameData);
+    console.log('📤 game_data type:', typeof gameData);
     
     // Insert the new custom game
     const { data, error } = await supabase

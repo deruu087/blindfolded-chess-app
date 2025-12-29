@@ -1859,9 +1859,16 @@ async function saveGameToServer(gameData) {
         
         // Use Supabase function if available
         console.log('🔍 Checking for window.saveCustomGame:', typeof window.saveCustomGame);
+        console.log('🔍 gameData before calling window.saveCustomGame:', gameData);
+        console.log('🔍 gameData type:', typeof gameData);
+        console.log('🔍 gameData is null?', gameData === null);
+        console.log('🔍 gameData is undefined?', gameData === undefined);
+        
         if (typeof window.saveCustomGame === 'function') {
             console.log('💾 Saving game to Supabase...');
+            console.log('💾 Calling window.saveCustomGame with:', gameData);
             const result = await window.saveCustomGame(gameData);
+            console.log('💾 Result from window.saveCustomGame:', result);
             
             if (result && result.success) {
                 console.log('✅ Game saved to Supabase successfully!');
