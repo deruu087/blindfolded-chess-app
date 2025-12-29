@@ -706,7 +706,7 @@ async function cancelSubscription() {
     // Determine API endpoint (production vs local)
     const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
     const apiUrl = isProduction 
-        ? 'https://memo-chess.vercel.app/api/cancel-subscription'
+        ? 'https://memo-chess.com/api/cancel-subscription'
         : 'http://localhost:3000/api/cancel-subscription';
 
     try {

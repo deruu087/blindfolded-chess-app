@@ -2116,7 +2116,7 @@
             // Build checkout URL with redirect_url parameter
             // According to Dodo Payments docs: https://docs.dodopayments.com/api-reference/integration-guide
             // Use redirect_url parameter for static payment links
-            const redirectUrl = encodeURIComponent('https://memo-chess.vercel.app/payment-success.html');
+            const redirectUrl = encodeURIComponent('https://memo-chess.com/payment-success.html');
             
             let checkoutUrl = `${checkoutBaseUrl}${productId}?quantity=1&redirect_url=${redirectUrl}`;
             
