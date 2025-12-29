@@ -1146,9 +1146,15 @@
             border: 3px solid #2c3e50;
             border-radius: 10px;
             box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f5f5;
             padding: 6px;
             position: relative;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .chess-board.ready {
+            opacity: 1;
         }
 
         .chess-square {
@@ -3815,6 +3821,11 @@
                     board.appendChild(square);
                 }
             }
+            
+            // Show board after rendering is complete
+            setTimeout(() => {
+                board.classList.add('ready');
+            }, 0);
         }
 
         // Set up initial board position
