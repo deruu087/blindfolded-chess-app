@@ -2306,6 +2306,27 @@
             return false;
         }
 
+        // Hide video until it's ready to play (prevents showing first frame/black image)
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.querySelector('.demo-video');
+            if (video) {
+                // Hide video initially
+                video.style.opacity = '0';
+                
+                // Show video when it can play
+                video.addEventListener('canplay', function() {
+                    video.classList.add('ready');
+                }, { once: true });
+                
+                // Fallback: show after a short delay if canplay doesn't fire
+                setTimeout(function() {
+                    if (!video.classList.contains('ready')) {
+                        video.classList.add('ready');
+                    }
+                }, 500);
+            }
+        });
+        
         // Load statistics when page loads
         document.addEventListener('DOMContentLoaded', async function() {
             // Don't handle OAuth here - it will be handled after Supabase initializes
