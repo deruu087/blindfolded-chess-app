@@ -3980,11 +3980,12 @@
                 return;
             }
             
-            // Group games by category
-            const shortGames = gamesData.games.filter(g => g.moves <= 10 && !g.id.startsWith('custom-game-'));
-            const mediumGames = gamesData.games.filter(g => g.moves > 10 && g.moves <= 30 && !g.id.startsWith('custom-game-'));
-            const longGames = gamesData.games.filter(g => g.moves > 30 && !g.id.startsWith('custom-game-'));
-            const customGames = gamesData.games.filter(g => g.id.startsWith('custom-game-'));
+            // Group games by category (filter out undefined/null games first)
+            const validGames = gamesData.games.filter(g => g && g.id);
+            const shortGames = validGames.filter(g => g.moves <= 10 && !g.id.startsWith('custom-game-'));
+            const mediumGames = validGames.filter(g => g.moves > 10 && g.moves <= 30 && !g.id.startsWith('custom-game-'));
+            const longGames = validGames.filter(g => g.moves > 30 && !g.id.startsWith('custom-game-'));
+            const customGames = validGames.filter(g => g.id.startsWith('custom-game-'));
             
             console.log('=== GAME CATEGORIZATION DEBUG ===');
             console.log('Total games loaded:', gamesData.games.length);
