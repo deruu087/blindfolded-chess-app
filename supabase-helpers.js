@@ -322,6 +322,12 @@ async function saveCustomGame(gameData) {
         return { success: false, error: 'User not logged in' };
     }
 
+    // Validate gameData before proceeding
+    if (!gameData || typeof gameData !== 'object') {
+        console.error('❌ Invalid gameData:', gameData);
+        return { success: false, error: 'Invalid game data provided' };
+    }
+    
     // Prepare data to save
     // Note: Supabase will auto-set created_at and updated_at if they have triggers
     const dataToSave = {
@@ -333,6 +339,8 @@ async function saveCustomGame(gameData) {
     // Most Supabase tables auto-update this field
     
     console.log('📤 Data to save:', JSON.stringify(dataToSave, null, 2));
+    console.log('📤 game_data in dataToSave:', dataToSave.game_data);
+    console.log('📤 game_data type check:', typeof dataToSave.game_data);
     console.log('📤 game_data value:', gameData);
     console.log('📤 game_data type:', typeof gameData);
     
