@@ -1817,64 +1817,111 @@ function saveCustomGame() {
     resetCustomGameMode();
 }
 
-// Function to save game to server
+// Function to save game to server (using Supabase)
 async function saveGameToServer(gameData) {
     try {
-        const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
-        const apiUrl = isProduction ? '/api/save-game' : 'http://localhost:3001/save-game';
+        // Check if user is logged in
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (!isLoggedIn) {
+            console.error('❌ User not logged in. Please sign in to save games.');
+            alert('Please sign in to save custom games.');
+            return;
+        }
         
-        console.log('🌐 Hostname:', window.location.hostname);
-        console.log('🏭 Is production:', isProduction);
-        console.log('🔗 API URL:', apiUrl);
-        
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(gameData)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            console.log('✅ Game saved via', isProduction ? 'Vercel API' : 'local server');
+        // Use Supabase function if available
+        if (typeof window.saveCustomGame === 'function') {
+            console.log('💾 Saving game to Supabase...');
+            const result = await window.saveCustomGame(gameData);
             
-            // Show success message
-            const saveButton = document.getElementById('custom-save-btn');
-            if (saveButton) {
-                const originalText = saveButton.textContent;
-                saveButton.textContent = '✅ Saved!';
-                saveButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+            if (result && result.success) {
+                console.log('✅ Game saved to Supabase successfully!');
+                
+                // Show success message
+                const saveButton = document.getElementById('custom-save-btn');
+                if (saveButton) {
+                    const originalText = saveButton.textContent;
+                    saveButton.textContent = '✅ Saved!';
+                    saveButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+                    
+                    setTimeout(() => {
+                        saveButton.textContent = originalText;
+                        saveButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    }, 2000);
+                }
+                
+                // Reset the custom game mode after successful save
+                resetCustomGameMode();
+                
+                // Refresh the games list to show the new custom game
+                setTimeout(() => {
+                    if (typeof window.reloadGamesData === 'function') {
+                        console.log('Reloading games data...');
+                        window.reloadGamesData();
+                    } else if (typeof window.updateGameButtons === 'function') {
+                        console.log('Updating game buttons...');
+                        window.updateGameButtons();
+                    } else {
+                        // Fallback: reload the page to show the new game
+                        console.log('Refreshing page to show new custom game...');
+                        window.location.reload();
+                    }
+                }, 1000);
+            } else {
+                const errorMsg = result?.error || 'Failed to save game';
+                console.error('❌ Failed to save game:', errorMsg);
+                alert('Failed to save game: ' + errorMsg);
+            }
+        } else {
+            // Fallback to old API method if Supabase not available
+            console.warn('⚠️ Supabase saveCustomGame not available, using fallback API');
+            const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+            const apiUrl = isProduction ? '/api/save-game' : 'http://localhost:3001/save-game';
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(gameData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('✅ Game saved via fallback API');
+                
+                // Show success message
+                const saveButton = document.getElementById('custom-save-btn');
+                if (saveButton) {
+                    const originalText = saveButton.textContent;
+                    saveButton.textContent = '✅ Saved!';
+                    saveButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+                    
+                    setTimeout(() => {
+                        saveButton.textContent = originalText;
+                        saveButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    }, 2000);
+                }
+                
+                resetCustomGameMode();
                 
                 setTimeout(() => {
-                    saveButton.textContent = originalText;
-                    saveButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                }, 2000);
+                    if (typeof window.reloadGamesData === 'function') {
+                        window.reloadGamesData();
+                    } else if (typeof window.updateGameButtons === 'function') {
+                        window.updateGameButtons();
+                    } else {
+                        window.location.reload();
+                    }
+                }, 1000);
+            } else {
+                console.error('❌ Failed to save game:', result.message);
+                alert('Failed to save game: ' + (result.message || 'Unknown error'));
             }
-            
-            // Reset the custom game mode after successful save
-            resetCustomGameMode();
-            
-            // Refresh the games list to show the new custom game
-            setTimeout(() => {
-                if (typeof window.reloadGamesData === 'function') {
-                    console.log('Reloading games data...');
-                    window.reloadGamesData();
-                } else if (typeof window.updateGameButtons === 'function') {
-                    console.log('Updating game buttons...');
-                    window.updateGameButtons();
-                } else {
-                    // Fallback: reload the page to show the new game
-                    console.log('Refreshing page to show new custom game...');
-                    window.location.reload();
-                }
-            }, 1000);
-        } else {
-            console.error('❌ Failed to save game:', result.message);
         }
     } catch (error) {
         console.error('❌ Error saving game to server:', error);
+        alert('Error saving game: ' + error.message);
     }
 }
 
