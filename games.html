@@ -3058,20 +3058,97 @@
         }
 
         // Sign in form handler
-        function handleSignIn(event) {
+        async function handleSignIn(event) {
             event.preventDefault();
-            const email = document.getElementById('signInEmail').value;
+            const email = document.getElementById('signInEmail').value.trim();
             const password = document.getElementById('signInPassword').value;
             
-            // Check if user exists in localStorage
-            const storedEmail = localStorage.getItem('userEmail');
-            const storedPassword = localStorage.getItem('userPassword');
+            // Get form elements for error display
+            const signInForm = document.getElementById('signInForm');
+            const errorMessage = signInForm.querySelector('.error-message');
             
-            if (email === storedEmail && password === storedPassword) {
-                localStorage.setItem('isLoggedIn', 'true');
-                updateNavigation();
-                closeModal();
-                window.location.href = 'profile.html';
+            // Remove any existing error messages
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            // Validate inputs
+            if (!email || !password) {
+                showError(signInForm, 'Please enter both email and password');
+                return;
+            }
+            
+            // Show loading state
+            const submitButton = signInForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing In...';
+            
+            try {
+                // Sign in with Supabase
+                if (typeof signInWithEmail === 'function') {
+                    const result = await signInWithEmail(email, password);
+                    
+                    if (result.success && result.user) {
+                        console.log('✅ Sign in successful!', result.user);
+                        
+                        // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
+                        localStorage.removeItem('chessProgress');
+                        console.log('🔒 Cleared localStorage progress on sign in');
+                        
+                        // Hide page content immediately to prevent flash
+                        document.body.style.display = 'none';
+                        
+                        // Store user data in localStorage
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', result.user.email || email);
+                        localStorage.setItem('userName', result.user.user_metadata?.name || result.user.user_metadata?.full_name || 'User');
+                        
+                        // Redirect to profile immediately after sign-in
+                        window.location.replace('profile.html');
+                    } else {
+                        // Sign in failed
+                        showError(signInForm, result.error || 'Invalid email or password. Please try again.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+                } else {
+                    // Supabase not available
+                    showError(signInForm, 'Authentication service not available. Please refresh the page.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalButtonText;
+                }
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showError(signInForm, error.message || 'An error occurred. Please try again.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+            }
+        }
+        
+        // Helper function to show error messages
+        function showError(form, message) {
+            // Remove any existing error messages
+            const existingError = form.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Create error message element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.color = '#ef4444';
+            errorDiv.style.fontSize = '0.9rem';
+            errorDiv.style.marginTop = '0.5rem';
+            errorDiv.style.textAlign = 'center';
+            errorDiv.textContent = message;
+            
+            // Insert error message before the submit button
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton && submitButton.parentElement) {
+                submitButton.parentElement.insertBefore(errorDiv, submitButton);
+            } else {
+                form.appendChild(errorDiv);
             }
         }
 
