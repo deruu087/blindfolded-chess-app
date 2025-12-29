@@ -312,18 +312,6 @@
             width: 100%;
             height: auto;
             display: block;
-            /* Optimize video rendering */
-            object-fit: cover;
-            /* Prevent layout shift while loading */
-            min-height: 200px;
-            background-color: #f5f5f5;
-            /* Hide video until it's ready to play */
-            opacity: 0;
-            transition: opacity 0.3s ease-in;
-        }
-        
-        .demo-video.ready {
-            opacity: 1;
         }
 
         @media (max-width: 768px) {
@@ -1136,15 +1124,9 @@
                 
                 <div class="hero-video">
                     <div class="video-container">
-                        <video 
-                            autoplay 
-                            muted 
-                            loop 
-                            playsinline 
-                            preload="metadata" 
-                            loading="lazy"
-                            class="demo-video">
+                        <video autoplay muted loop playsinline class="demo-video" preload="auto">
                             <source src="sounds/recording.mp4" type="video/mp4">
+                            <source src="sounds/demo.mp4" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
                     </div>
@@ -2306,27 +2288,6 @@
             return false;
         }
 
-        // Hide video until it's ready to play (prevents showing first frame/black image)
-        document.addEventListener('DOMContentLoaded', function() {
-            const video = document.querySelector('.demo-video');
-            if (video) {
-                // Hide video initially
-                video.style.opacity = '0';
-                
-                // Show video when it can play
-                video.addEventListener('canplay', function() {
-                    video.classList.add('ready');
-                }, { once: true });
-                
-                // Fallback: show after a short delay if canplay doesn't fire
-                setTimeout(function() {
-                    if (!video.classList.contains('ready')) {
-                        video.classList.add('ready');
-                    }
-                }, 500);
-            }
-        });
-        
         // Load statistics when page loads
         document.addEventListener('DOMContentLoaded', async function() {
             // Don't handle OAuth here - it will be handled after Supabase initializes
