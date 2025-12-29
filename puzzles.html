@@ -3867,6 +3867,10 @@
 
         function initializeChessBoard() {
             const board = document.getElementById('chess-board');
+            if (!board) {
+                console.error('Chess board element not found!');
+                return;
+            }
             board.innerHTML = '';
             
             // Create 64 squares (8x8)
@@ -3913,7 +3917,10 @@
             
             // Show board after rendering is complete
             setTimeout(() => {
-                board.classList.add('ready');
+                if (board) {
+                    board.classList.add('ready');
+                    console.log('✅ Board ready - added ready class');
+                }
             }, 0);
         }
 
