@@ -312,12 +312,17 @@ async function saveCustomGame(gameData) {
     }
 
     // Prepare data to save
+    // Note: Supabase will auto-set created_at and updated_at if they have triggers
     const dataToSave = {
         user_id: user.id,
-        game_data: gameData, // Store all game data as JSON
-        updated_at: new Date().toISOString()
+        game_data: gameData // Store all game data as JSONB
     };
+    
+    // Only add updated_at if the column exists and doesn't have a default/trigger
+    // Most Supabase tables auto-update this field
 
+    console.log('📤 Data to save:', JSON.stringify(dataToSave, null, 2));
+    
     // Insert the new custom game
     const { data, error } = await supabase
         .from('custom_games')
@@ -326,8 +331,12 @@ async function saveCustomGame(gameData) {
         .single();
 
     if (error) {
-        console.error('Error saving custom game:', error);
-        return { success: false, error: error.message };
+        console.error('❌ Error saving custom game:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error hint:', error.hint);
+        return { success: false, error: error.message || 'Failed to save game' };
     }
 
     console.log('✅ Custom game saved successfully!', data);
