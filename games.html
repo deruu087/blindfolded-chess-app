@@ -4127,18 +4127,29 @@
         }
         
         function updateGameCategory(categoryId, games) {
-            console.log(`Updating category ${categoryId} with ${games.length} games`);
-            console.log(`Games for ${categoryId}:`, games.map(g => ({ id: g.id, name: g.name })));
+            console.log(`📋 Updating category ${categoryId} with ${games.length} games`);
+            console.log(`📋 Games for ${categoryId}:`, games.map(g => g ? { id: g.id, name: g.name } : 'null/undefined'));
+            
+            // Filter out any null/undefined games
+            const validGames = games.filter(g => g && g.id);
+            console.log(`📋 Valid games after filtering: ${validGames.length}`);
+            
             const categoryElement = document.getElementById(categoryId);
             if (!categoryElement) {
-                console.error(`Category element not found: ${categoryId}`);
+                console.error(`❌ Category element not found: ${categoryId}`);
                 return;
             }
+            
+            console.log(`✅ Found category element: ${categoryId}`);
             
             // Clear existing content
             categoryElement.innerHTML = '';
             
-            games.forEach(game => {
+            if (validGames.length === 0) {
+                console.log(`⚠️ No valid games to display for ${categoryId}`);
+            }
+            
+            validGames.forEach(game => {
                 const gameButton = document.createElement('a');
                 gameButton.href = '#';
                 gameButton.className = 'submenu-button';
