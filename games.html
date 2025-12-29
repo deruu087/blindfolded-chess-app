@@ -2817,24 +2817,41 @@
                         console.error('❌ Error loading games.json:', error);
                     }
                     
-                    // Load custom games
+                    // Load custom games from Supabase
                     try {
-                        console.log('Fetching custom games from:', customApiUrl);
-                        const customGamesResponse = await fetch(customApiUrl);
-                        
-                        if (customGamesResponse.ok) {
-                            const customGamesData = await customGamesResponse.json();
-                            if (customGamesData.games && Array.isArray(customGamesData.games)) {
-                                allGames = allGames.concat(customGamesData.games);
-                                console.log(`✅ Loaded ${customGamesData.games.length} custom games`);
+                        console.log('=== LOADING CUSTOM GAMES FROM SUPABASE ===');
+                        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+                        if (isLoggedIn && typeof window.getUserCustomGames === 'function') {
+                            console.log('User is logged in, loading custom games from Supabase...');
+                            const customGamesData = await window.getUserCustomGames();
+                            
+                            if (customGamesData && Array.isArray(customGamesData) && customGamesData.length > 0) {
+                                // Extract game_data from each custom game record
+                                const customGames = customGamesData.map(record => {
+                                    const gameData = record.game_data;
+                                    // Add the Supabase record ID for deletion purposes
+                                    if (record.id) {
+                                        gameData.supabase_id = record.id;
+                                    }
+                                    return gameData;
+                                });
+                                
+                                if (customGames && Array.isArray(customGames)) {
+                                    allGames = allGames.concat(customGames);
+                                    console.log(`✅ Loaded ${customGames.length} custom games from Supabase`);
+                                }
                             } else {
-                                console.warn('Custom games response does not have a games array:', customGamesData);
+                                console.log('No custom games found in Supabase');
                             }
                         } else {
-                            console.warn('Could not load custom games:', customGamesResponse.status, customGamesResponse.statusText);
+                            if (!isLoggedIn) {
+                                console.log('User not logged in, skipping custom games load');
+                            } else {
+                                console.log('getUserCustomGames function not available');
+                            }
                         }
                     } catch (error) {
-                        console.error('❌ Error loading custom games:', error);
+                        console.error('❌ Error loading custom games from Supabase:', error);
                     }
                     
                     console.log(`📊 Total games loaded: ${allGames.length}`);

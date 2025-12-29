@@ -363,38 +363,57 @@ class GameLoader {
             allGames = GameLoader.getEmbeddedGames().games;
         }
         
-        // Load custom games from API (always try to load, regardless of main games)
+        // Load custom games from Supabase (always try to load, regardless of main games)
         try {
-            console.log('=== LOADING CUSTOM GAMES ===');
-            const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
-            const customApiUrl = isProduction ? '/api/get-games' : 'http://localhost:3001/get-games';
-            console.log('Attempting to load custom games from API:', customApiUrl);
-            const customResponse = await fetch(customApiUrl + '?t=' + Date.now());
-            console.log('Custom games response status:', customResponse.status);
-            console.log('Custom games response ok:', customResponse.ok);
+            console.log('=== LOADING CUSTOM GAMES FROM SUPABASE ===');
             
-            if (!customResponse.ok) {
-                throw new Error(`HTTP error! status: ${customResponse.status}`);
-            }
-            
-            const customData = await customResponse.json();
-            console.log('Custom games data received:', customData);
-            console.log('Custom games array length:', customData.games ? customData.games.length : 'no games array');
-            
-            if (customData.games && customData.games.length > 0) {
-                // Add custom games to the main games array, but avoid duplicates
-                const existingIds = allGames.map(g => g.id);
-                const newCustomGames = customData.games.filter(g => !existingIds.includes(g.id));
-                allGames = allGames.concat(newCustomGames);
-                console.log('Successfully loaded custom games:', newCustomGames.length);
-                console.log('Total games now:', allGames.length);
-                console.log('Custom game IDs:', newCustomGames.map(g => g.id));
+            // Check if user is logged in and Supabase function is available
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            if (isLoggedIn && typeof window.getUserCustomGames === 'function') {
+                console.log('User is logged in, loading custom games from Supabase...');
+                const customGamesData = await window.getUserCustomGames();
+                
+                if (customGamesData && Array.isArray(customGamesData) && customGamesData.length > 0) {
+                    console.log('Custom games data received from Supabase:', customGamesData);
+                    
+                    // Extract game_data from each custom game record
+                    const customGames = customGamesData.map(record => {
+                        // The game_data is stored as JSONB in Supabase
+                        const gameData = record.game_data;
+                        // Add the Supabase record ID for deletion purposes
+                        if (record.id) {
+                            gameData.supabase_id = record.id;
+                        }
+                        return gameData;
+                    });
+                    
+                    console.log('Extracted custom games:', customGames.length);
+                    console.log('Custom games array length:', customGames.length);
+                    
+                    if (customGames.length > 0) {
+                        // Add custom games to the main games array, but avoid duplicates
+                        const existingIds = allGames.map(g => g.id);
+                        const newCustomGames = customGames.filter(g => !existingIds.includes(g.id));
+                        allGames = allGames.concat(newCustomGames);
+                        console.log('Successfully loaded custom games from Supabase:', newCustomGames.length);
+                        console.log('Total games now:', allGames.length);
+                        console.log('Custom game IDs:', newCustomGames.map(g => g.id));
+                    } else {
+                        console.log('No custom games found in Supabase');
+                    }
+                } else {
+                    console.log('No custom games found in Supabase (empty or null response)');
+                }
             } else {
-                console.log('No custom games found in response');
+                if (!isLoggedIn) {
+                    console.log('User not logged in, skipping custom games load');
+                } else {
+                    console.log('getUserCustomGames function not available, skipping Supabase load');
+                }
             }
             console.log('=== END LOADING CUSTOM GAMES ===');
         } catch (customError) {
-            console.error('Could not load custom games:', customError);
+            console.error('Could not load custom games from Supabase:', customError);
             console.log('Continuing with main games only...');
         }
         
