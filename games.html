@@ -3058,45 +3058,227 @@
         }
 
         // Sign in form handler
-        function handleSignIn(event) {
+        async function handleSignIn(event) {
             event.preventDefault();
-            const email = document.getElementById('signInEmail').value;
+            const email = document.getElementById('signInEmail').value.trim();
             const password = document.getElementById('signInPassword').value;
             
-            // Check if user exists in localStorage
-            const storedEmail = localStorage.getItem('userEmail');
-            const storedPassword = localStorage.getItem('userPassword');
+            // Get form elements for error display
+            const signInForm = document.getElementById('signInForm');
+            const errorMessage = signInForm.querySelector('.error-message');
             
-            if (email === storedEmail && password === storedPassword) {
-                localStorage.setItem('isLoggedIn', 'true');
-                updateNavigation();
-                closeModal();
-                window.location.href = 'profile.html';
+            // Remove any existing error messages
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            // Validate inputs
+            if (!email || !password) {
+                showError(signInForm, 'Please enter both email and password');
+                return;
+            }
+            
+            // Show loading state
+            const submitButton = signInForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing In...';
+            
+            try {
+                // Sign in with Supabase
+                if (typeof signInWithEmail === 'function') {
+                    const result = await signInWithEmail(email, password);
+                    
+                    if (result.success && result.user) {
+                        console.log('✅ Sign in successful!', result.user);
+                        
+                        // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
+                        localStorage.removeItem('chessProgress');
+                        console.log('🔒 Cleared localStorage progress on sign in');
+                        
+                        // Hide page content immediately to prevent flash
+                        document.body.style.display = 'none';
+                        
+                        // Store user data in localStorage
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', result.user.email || email);
+                        localStorage.setItem('userName', result.user.user_metadata?.name || result.user.user_metadata?.full_name || 'User');
+                        
+                        // Check if there's a pending subscription
+                        const pendingPlan = localStorage.getItem('pendingSubscription');
+                        if (pendingPlan) {
+                            // User was trying to subscribe before signing in
+                            localStorage.removeItem('pendingSubscription');
+                            // Redirect to subscription flow
+                            if (typeof redirectToDodoPayments === 'function') {
+                                redirectToDodoPayments(pendingPlan);
+                            } else {
+                                window.location.href = 'index.html';
+                            }
+                        } else {
+                            // Redirect to profile immediately after sign-in (no delay)
+                            window.location.replace('profile.html');
+                        }
+                    } else {
+                        // Sign in failed
+                        showError(signInForm, result.error || 'Invalid email or password. Please try again.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+                } else {
+                    // Supabase not available - fallback to localStorage (for testing)
+                    console.warn('Supabase not available, using localStorage fallback');
+                    const storedEmail = localStorage.getItem('userEmail');
+                    const storedPassword = localStorage.getItem('userPassword');
+                    
+                    if (email === storedEmail && password === storedPassword) {
+                        localStorage.setItem('isLoggedIn', 'true');
+                        updateNavigation();
+                        closeModal();
+                        window.location.href = 'profile.html';
+                    } else {
+                        showError(signInForm, 'Invalid email or password');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+                }
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showError(signInForm, error.message || 'An error occurred. Please try again.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
             }
         }
 
         // Register form handler
-        function handleRegister(event) {
+        async function handleRegister(event) {
             event.preventDefault();
-            const email = document.getElementById('registerEmail').value;
+            const email = document.getElementById('registerEmail').value.trim();
             const password = document.getElementById('registerPassword').value;
-            const name = document.getElementById('registerName').value;
+            const name = document.getElementById('registerName').value.trim();
             
-            // Check if email already exists
-            const existingEmail = localStorage.getItem('userEmail');
-            if (existingEmail === email) {
-                showSignInModal();
+            // Get form elements for error display
+            const registerForm = document.getElementById('registerForm');
+            const errorMessage = registerForm.querySelector('.error-message');
+            
+            // Remove any existing error messages
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            // Validate inputs
+            if (!email || !password || !name) {
+                showError(registerForm, 'Please fill in all fields');
                 return;
             }
             
-            // Create new account
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('userName', name);
-            localStorage.setItem('userPassword', password);
-            updateNavigation();
-            closeModal();
-            window.location.href = 'profile.html';
+            if (password.length < 6) {
+                showError(registerForm, 'Password must be at least 6 characters');
+                return;
+            }
+            
+            // Show loading state
+            const submitButton = registerForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Creating Account...';
+            
+            try {
+                // Register with Supabase
+                if (typeof signUpWithEmail === 'function') {
+                    const result = await signUpWithEmail(email, password, name);
+                    
+                    if (result.success) {
+                        console.log('✅ Registration successful!', result.user);
+                        
+                        // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
+                        localStorage.removeItem('chessProgress');
+                        console.log('🔒 Cleared localStorage progress for new account');
+                        
+                        // Store user data in localStorage
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', email);
+                        localStorage.setItem('userName', name);
+                        
+                        // Create initial user_progress record in Supabase
+                        if (result.user && typeof window.saveUserProgress === 'function') {
+                            try {
+                                await window.saveUserProgress({
+                                    completedGames: [],
+                                    completedPuzzles: [],
+                                    totalGamesPlayed: 0,
+                                    trainingHours: 0,
+                                    currentStreak: 0
+                                });
+                                console.log('✅ Initial user progress created');
+                            } catch (progressError) {
+                                console.log('Note: Could not create initial progress (will be created on first activity)', progressError);
+                            }
+                        }
+                        
+                        // Update navigation
+                        updateNavigation();
+                        closeModal();
+                        
+                        // Check if there's a pending subscription
+                        const pendingPlan = localStorage.getItem('pendingSubscription');
+                        if (pendingPlan) {
+                            // User was trying to subscribe before registering
+                            localStorage.removeItem('pendingSubscription');
+                            // Redirect to subscription flow
+                            if (typeof redirectToDodoPayments === 'function') {
+                                redirectToDodoPayments(pendingPlan);
+                            } else {
+                                window.location.href = 'index.html';
+                            }
+                        } else {
+                            // Redirect to profile
+                            window.location.href = 'profile.html';
+                        }
+                    } else {
+                        // Registration failed
+                        showError(registerForm, result.error || 'Registration failed. Please try again.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+                } else {
+                    // Supabase not available - fallback to localStorage (for testing)
+                    console.warn('Supabase not available, using localStorage fallback');
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('userName', name);
+                    localStorage.setItem('userPassword', password);
+                    updateNavigation();
+                    closeModal();
+                    window.location.href = 'profile.html';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showError(registerForm, error.message || 'An error occurred. Please try again.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+            }
+        }
+        
+        // Helper function to show error messages
+        function showError(form, message) {
+            // Remove existing error
+            const existingError = form.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Create error element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.color = '#e74c3c';
+            errorDiv.style.marginTop = '0.5rem';
+            errorDiv.style.fontSize = '0.9rem';
+            errorDiv.textContent = message;
+            
+            // Insert before submit button
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.parentElement.insertBefore(errorDiv, submitButton);
         }
 
         // Google sign-in handler
@@ -3153,9 +3335,14 @@
                         if (!error && data.session && data.session.user) {
                             console.log('✅ Google OAuth successful!', data.session.user);
                             
+                            // Hide page content immediately to prevent flash
+                            if (document.body) {
+                                document.body.style.display = 'none';
+                            }
+                            
                             // Store user data in localStorage
                             const user = data.session.user;
-                localStorage.setItem('isLoggedIn', 'true');
+                            localStorage.setItem('isLoggedIn', 'true');
                             localStorage.setItem('userEmail', user.email || '');
                             const userName = user.user_metadata?.name || 
                                            user.user_metadata?.full_name || 
@@ -3186,9 +3373,13 @@
                             const pendingPlan = localStorage.getItem('pendingSubscription');
                             if (pendingPlan) {
                                 localStorage.removeItem('pendingSubscription');
-                                redirectToDodoPayments(pendingPlan);
+                                if (typeof redirectToDodoPayments === 'function') {
+                                    redirectToDodoPayments(pendingPlan);
+                                } else {
+                                    window.location.href = 'index.html';
+                                }
                             } else {
-                                // Redirect to profile immediately after Google sign-in
+                                // Redirect to profile immediately after Google sign-in (no delay)
                                 window.location.replace('profile.html');
                             }
                             
