@@ -1149,12 +1149,6 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 6px;
             position: relative;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .chess-board.ready {
-            opacity: 1;
         }
 
         .chess-square {
@@ -3918,13 +3912,6 @@
                 }
             }
             
-            // Show board after rendering is complete - use requestAnimationFrame for better timing
-            requestAnimationFrame(() => {
-                if (board) {
-                    board.classList.add('ready');
-                    console.log('✅ Board ready - added ready class');
-                }
-            });
         }
 
         // Set up initial board position
