@@ -1546,12 +1546,19 @@ function addCustomGameSaveButton() {
         this.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
     });
     
-    // Add click event
+    // Add click event - use a named function to avoid scope issues
     saveButton.addEventListener('click', function(e) {
         console.log('💾 Save button clicked!');
         e.preventDefault();
         e.stopPropagation();
-        saveCustomGame();
+        // Call the local saveCustomGameLocal function explicitly
+        if (typeof saveCustomGameLocal === 'function') {
+            console.log('✅ Local saveCustomGameLocal function found, calling it...');
+            saveCustomGameLocal();
+        } else {
+            console.error('❌ Local saveCustomGameLocal function not found!');
+            alert('Error: Save function not available. Please refresh the page.');
+        }
     });
     
     // Insert after moves list
@@ -1633,9 +1640,9 @@ function resetCustomGameMode() {
     console.log('Custom game mode reset complete - right section is now empty');
 }
 
-// Function to save custom game
-function saveCustomGame() {
-    console.log('💾 saveCustomGame called');
+// Function to save custom game (local function, not the Supabase one)
+function saveCustomGameLocal() {
+    console.log('💾 saveCustomGameLocal (local function) called');
     console.log('customGameMode:', customGameMode);
     console.log('customGameMoves.length:', customGameMoves ? customGameMoves.length : 'customGameMoves is null/undefined');
     
