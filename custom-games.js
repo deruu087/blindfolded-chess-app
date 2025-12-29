@@ -1547,7 +1547,12 @@ function addCustomGameSaveButton() {
     });
     
     // Add click event
-    saveButton.addEventListener('click', saveCustomGame);
+    saveButton.addEventListener('click', function(e) {
+        console.log('💾 Save button clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        saveCustomGame();
+    });
     
     // Insert after moves list
     const movesList = document.getElementById('moves-list');
@@ -1630,7 +1635,19 @@ function resetCustomGameMode() {
 
 // Function to save custom game
 function saveCustomGame() {
-    if (!customGameMode || customGameMoves.length === 0) {
+    console.log('💾 saveCustomGame called');
+    console.log('customGameMode:', customGameMode);
+    console.log('customGameMoves.length:', customGameMoves ? customGameMoves.length : 'customGameMoves is null/undefined');
+    
+    if (!customGameMode) {
+        console.error('❌ Cannot save: customGameMode is not active');
+        alert('Please enter "Add Game" mode first to create a custom game.');
+        return;
+    }
+    
+    if (!customGameMoves || customGameMoves.length === 0) {
+        console.error('❌ Cannot save: No moves have been made');
+        alert('Please make at least one move before saving the game.');
         return;
     }
     
@@ -1646,6 +1663,7 @@ function saveCustomGame() {
     
     // Validate that title is not empty
     if (!customGameName) {
+        console.error('❌ Cannot save: Game title is required');
         if (titleInput) {
             titleInput.focus();
             titleInput.style.border = '1px solid #e74c3c';
@@ -1657,8 +1675,11 @@ function saveCustomGame() {
                 this.style.background = 'none';
             }, { once: true });
         }
+        alert('Please enter a game title before saving.');
         return;
     }
+    
+    console.log('✅ Validation passed, proceeding to save game...');
     const description = descriptionInput ? descriptionInput.value.trim() || 'Custom chess game created by user' : 'Custom chess game created by user';
     const whitePlayer = whitePlayerInput ? whitePlayerInput.value.trim() || 'White' : 'White';
     const blackPlayer = blackPlayerInput ? blackPlayerInput.value.trim() || 'Black' : 'Black';
@@ -1782,8 +1803,14 @@ function saveCustomGame() {
     // Add new game to the collection
     customGamesData.games.push(gameData);
     
+    console.log('📦 Game data prepared:', gameData);
+    console.log('💾 Calling saveGameToServer...');
+    
     // Save to server
-    saveGameToServer(gameData);
+    saveGameToServer(gameData).catch(error => {
+        console.error('❌ Error in saveGameToServer:', error);
+        alert('Error saving game: ' + error.message);
+    });
     
     // Show success message
     const saveButton = document.getElementById('custom-save-btn');
@@ -1819,9 +1846,11 @@ function saveCustomGame() {
 
 // Function to save game to server (using Supabase)
 async function saveGameToServer(gameData) {
+    console.log('🚀 saveGameToServer called with gameData:', gameData);
     try {
         // Check if user is logged in
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        console.log('🔐 User logged in:', isLoggedIn);
         if (!isLoggedIn) {
             console.error('❌ User not logged in. Please sign in to save games.');
             alert('Please sign in to save custom games.');
@@ -1829,6 +1858,7 @@ async function saveGameToServer(gameData) {
         }
         
         // Use Supabase function if available
+        console.log('🔍 Checking for window.saveCustomGame:', typeof window.saveCustomGame);
         if (typeof window.saveCustomGame === 'function') {
             console.log('💾 Saving game to Supabase...');
             const result = await window.saveCustomGame(gameData);
