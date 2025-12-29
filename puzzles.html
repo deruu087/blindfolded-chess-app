@@ -3871,6 +3871,9 @@
                 console.error('Chess board element not found!');
                 return;
             }
+            
+            // Remove ready class temporarily while rebuilding
+            board.classList.remove('ready');
             board.innerHTML = '';
             
             // Create 64 squares (8x8)
@@ -3915,13 +3918,13 @@
                 }
             }
             
-            // Show board after rendering is complete
-            setTimeout(() => {
+            // Show board after rendering is complete - use requestAnimationFrame for better timing
+            requestAnimationFrame(() => {
                 if (board) {
                     board.classList.add('ready');
                     console.log('✅ Board ready - added ready class');
                 }
-            }, 0);
+            });
         }
 
         // Set up initial board position
