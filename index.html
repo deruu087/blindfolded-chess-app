@@ -317,6 +317,13 @@
             /* Prevent layout shift while loading */
             min-height: 200px;
             background-color: #f5f5f5;
+            /* Hide video until it's ready to play */
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        
+        .demo-video.ready {
+            opacity: 1;
         }
 
         @media (max-width: 768px) {
