@@ -825,6 +825,8 @@ async function sendEmail(type, to, name, data = {}) {
             ? 'http://localhost:3000/api/send-email'
             : `${window.location.origin}/api/send-email`;
 
+        console.log('📧 [EMAIL DEBUG] sendEmail called:', { type, to, name, apiUrl });
+
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -838,17 +840,27 @@ async function sendEmail(type, to, name, data = {}) {
             })
         });
 
+        console.log('📧 [EMAIL DEBUG] Response status:', response.status, response.statusText);
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.warn('Email API error (non-critical):', errorData);
+            console.warn('❌ [EMAIL DEBUG] Email API error (non-critical):', {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorData
+            });
             return { success: false, error: errorData.error || `HTTP ${response.status}` };
         }
 
         const result = await response.json();
+        console.log('✅ [EMAIL DEBUG] Email sent successfully:', result);
         return { success: true, messageId: result.messageId };
     } catch (error) {
         // SAFETY: Never throw - just log and return failure
-        console.warn('Email sending failed (non-critical):', error.message);
+        console.warn('❌ [EMAIL DEBUG] Email sending failed (non-critical):', {
+            message: error.message,
+            stack: error.stack
+        });
         return { success: false, error: error.message };
     }
 }

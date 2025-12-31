@@ -1943,10 +1943,15 @@
                 closeModal();
                         
                         // Send welcome email (NON-BLOCKING - wrapped in try-catch, won't affect registration flow)
+                        console.log('📧 [EMAIL DEBUG] Attempting to send welcome email after registration');
                         if (typeof window.sendEmail === 'function') {
-                            window.sendEmail('welcome', email, name).catch(() => {
-                                // Silently fail - email is optional, registration already succeeded
+                            window.sendEmail('welcome', email, name).then(result => {
+                                console.log('📧 [EMAIL DEBUG] Welcome email result:', result);
+                            }).catch(error => {
+                                console.warn('❌ [EMAIL DEBUG] Welcome email error (non-critical):', error);
                             });
+                        } else {
+                            console.warn('⚠️ [EMAIL DEBUG] window.sendEmail function not available');
                         }
                         
                         // Check if there's a pending subscription
