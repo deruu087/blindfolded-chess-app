@@ -37,9 +37,16 @@ export default async function handler(req, res) {
     }
     
     try {
+        console.log('📧 [EMAIL API] Request received:', {
+            method: req.method,
+            body: req.body,
+            hasApiKey: !!resendApiKey
+        });
+        
         const { type, to, name, data } = req.body;
         
         if (!type || !to) {
+            console.error('❌ [EMAIL API] Missing required fields:', { type, to });
             return res.status(400).json({ error: 'Missing required fields: type and to' });
         }
         
@@ -65,6 +72,7 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: 'Invalid email type' });
         }
         
+        console.log('📧 [EMAIL API] Attempting to send email via Resend...');
         const { data: emailData, error } = await resend.emails.send({
             from: 'Memo Chess <hello@memo-chess.com>',
             to: [to],
@@ -73,11 +81,12 @@ export default async function handler(req, res) {
         });
         
         if (error) {
-            console.error('❌ Resend API error:', error);
+            console.error('❌ [EMAIL API] Resend API error:', error);
+            console.error('❌ [EMAIL API] Error details:', JSON.stringify(error, null, 2));
             return res.status(500).json({ error: 'Failed to send email', details: error });
         }
         
-        console.log('✅ Email sent successfully:', emailData);
+        console.log('✅ [EMAIL API] Email sent successfully:', emailData);
         return res.status(200).json({ success: true, messageId: emailData?.id });
         
     } catch (error) {
