@@ -808,6 +808,51 @@ async function getPaymentHistory() {
     return payments;
 }
 
+/**
+ * Send an email via the Resend API
+ * SAFE: Non-blocking, wrapped in try-catch, never throws errors
+ * @param {string} type - Email type: 'welcome', 'subscription_confirmed', 'subscription_cancelled'
+ * @param {string} to - Recipient email address
+ * @param {string} name - Recipient name (optional)
+ * @param {object} data - Additional data for the email (optional)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function sendEmail(type, to, name, data = {}) {
+    // SAFETY: Wrap everything in try-catch to prevent any errors from breaking the app
+    try {
+        // Use current origin to avoid CORS issues
+        const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000/api/send-email'
+            : `${window.location.origin}/api/send-email`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type,
+                to,
+                name,
+                data
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn('Email API error (non-critical):', errorData);
+            return { success: false, error: errorData.error || `HTTP ${response.status}` };
+        }
+
+        const result = await response.json();
+        return { success: true, messageId: result.messageId };
+    } catch (error) {
+        // SAFETY: Never throw - just log and return failure
+        console.warn('Email sending failed (non-critical):', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
 // Make functions available globally
 window.getUserProgress = getUserProgress;
 window.saveUserProgress = saveUserProgress;
@@ -821,4 +866,5 @@ window.hasActiveSubscription = hasActiveSubscription;
 window.createOrUpdateSubscription = createOrUpdateSubscription;
 window.cancelSubscription = cancelSubscription;
 window.getPaymentHistory = getPaymentHistory;
+window.sendEmail = sendEmail;
 

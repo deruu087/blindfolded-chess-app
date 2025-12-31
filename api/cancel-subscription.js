@@ -318,6 +318,31 @@ export default async function handler(req, res) {
         console.log('✅ Subscription cancelled immediately in Dodo Payments');
         console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
         
+        // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
+        try {
+            const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Chess Player';
+            
+            const emailApiUrl = process.env.VERCEL_URL 
+                ? `https://${process.env.VERCEL_URL}/api/send-email`
+                : 'https://memo-chess.com/api/send-email';
+            
+            // Don't await - fire and forget, non-blocking
+            fetch(emailApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'subscription_cancelled',
+                    to: user.email,
+                    name: userName
+                })
+            }).catch(() => {
+                // Silently fail - email is optional, cancellation already succeeded
+            });
+        } catch (emailError) {
+            // Silently fail - email is optional
+            console.log('Note: Could not send cancellation email (non-critical)');
+        }
+        
         return res.status(200).json({ 
             success: true, 
             message: 'Subscription cancelled successfully. Your access will continue until the end of your current billing period.',

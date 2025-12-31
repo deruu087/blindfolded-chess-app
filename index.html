@@ -1942,6 +1942,13 @@
                 updateNavigation();
                 closeModal();
                         
+                        // Send welcome email (NON-BLOCKING - wrapped in try-catch, won't affect registration flow)
+                        if (typeof window.sendEmail === 'function') {
+                            window.sendEmail('welcome', email, name).catch(() => {
+                                // Silently fail - email is optional, registration already succeeded
+                            });
+                        }
+                        
                         // Check if there's a pending subscription
                         const pendingPlan = localStorage.getItem('pendingSubscription');
                         if (pendingPlan) {
@@ -2261,6 +2268,24 @@
                             
                             // Clean up URL (remove hash) BEFORE redirect
                             window.history.replaceState({}, document.title, window.location.pathname);
+                            
+                            // Send welcome email for new users (NON-BLOCKING - check if new user first)
+                            // Check if this is a new user by checking if progress exists
+                            if (typeof window.getUserProgress === 'function' && typeof window.sendEmail === 'function' && user.email) {
+                                window.getUserProgress().then(progress => {
+                                    // If no progress exists, it's likely a new user
+                                    if (!progress) {
+                                        window.sendEmail('welcome', user.email, userName).catch(() => {
+                                            // Silently fail - email is optional
+                                        });
+                                    }
+                                }).catch(() => {
+                                    // If we can't check, assume new user and send email
+                                    window.sendEmail('welcome', user.email, userName).catch(() => {
+                                        // Silently fail - email is optional
+                                    });
+                                });
+                            }
                             
                             // Check for pending subscription
                             const pendingPlan = localStorage.getItem('pendingSubscription');

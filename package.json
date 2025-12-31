@@ -4,7 +4,8 @@
   "description": "Memo Chess - Blindfold Chess Training Platform",
   "type": "module",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "resend": "^3.2.0"
   },
   "engines": {
     "node": ">=18.x"

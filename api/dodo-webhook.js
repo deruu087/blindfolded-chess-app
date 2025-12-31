@@ -202,6 +202,33 @@ export default async function handler(req, res) {
                     console.log('💰 Amount:', amount, currency);
                     console.log('📦 Plan:', planType);
                     
+                    // Send subscription confirmation email (NON-BLOCKING - wrapped in try-catch)
+                    try {
+                        const userName = foundUser?.user_metadata?.name || customerEmail?.split('@')[0] || 'Chess Player';
+                        const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
+                        
+                        const emailApiUrl = process.env.VERCEL_URL 
+                            ? `https://${process.env.VERCEL_URL}/api/send-email`
+                            : 'https://memo-chess.com/api/send-email';
+                        
+                        // Don't await - fire and forget, non-blocking
+                        fetch(emailApiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                type: 'subscription_confirmed',
+                                to: customerEmail,
+                                name: userName,
+                                data: { planName, amount, currency }
+                            })
+                        }).catch(() => {
+                            // Silently fail - email is optional, payment already succeeded
+                        });
+                    } catch (emailError) {
+                        // Silently fail - email is optional
+                        console.log('Note: Could not send subscription email (non-critical)');
+                    }
+                    
                     return res.status(200).json({ 
                         success: true, 
                         message: 'Webhook processed successfully',

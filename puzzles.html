@@ -3173,6 +3173,13 @@
                         updateNavigation();
                         closeModal();
                         
+                        // Send welcome email (NON-BLOCKING - wrapped in try-catch, won't affect registration flow)
+                        if (typeof window.sendEmail === 'function') {
+                            window.sendEmail('welcome', email, name).catch(() => {
+                                // Silently fail - email is optional, registration already succeeded
+                            });
+                        }
+                        
                         // Check if there's a pending subscription
                         const pendingPlan = localStorage.getItem('pendingSubscription');
                         if (pendingPlan) {
