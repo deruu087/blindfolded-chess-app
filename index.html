@@ -1944,6 +1944,8 @@
                         
                         // Send welcome email (NON-BLOCKING - wrapped in try-catch, won't affect registration flow)
                         console.log('📧 [EMAIL DEBUG] Attempting to send welcome email after registration');
+                        console.log('📧 [EMAIL DEBUG] Email address:', email);
+                        console.log('📧 [EMAIL DEBUG] Name:', name);
                         if (typeof window.sendEmail === 'function') {
                             // Start sending email but don't wait for it
                             window.sendEmail('welcome', email, name).then(result => {
