@@ -2236,11 +2236,6 @@
                         if (!error && data.session && data.session.user) {
                             console.log('✅ Google OAuth successful!', data.session.user);
                             
-                            // Hide page content immediately to prevent flash
-                            if (document.body) {
-                                document.body.style.display = 'none';
-                            }
-                            
                             // Store user data in localStorage
                             const user = data.session.user;
                             localStorage.setItem('isLoggedIn', 'true');
@@ -2251,23 +2246,20 @@
                                            'User';
                             localStorage.setItem('userName', userName);
                             
-                            // Create initial user_progress if new user
+                            // Create initial user_progress if new user (non-blocking)
                             if (typeof window.saveUserProgress === 'function') {
-                                try {
-                                    await window.saveUserProgress({
-                                        completedGames: [],
-                                        completedPuzzles: [],
-                                        totalGamesPlayed: 0,
-                                        trainingHours: 0,
-                                        currentStreak: 0
-                                    });
-                                    console.log('✅ Initial user progress created');
-                                } catch (progressError) {
+                                window.saveUserProgress({
+                                    completedGames: [],
+                                    completedPuzzles: [],
+                                    totalGamesPlayed: 0,
+                                    trainingHours: 0,
+                                    currentStreak: 0
+                                }).catch(progressError => {
                                     console.log('Note: Progress may already exist or will be created on first activity', progressError);
-                                }
+                                });
                             }
                             
-                            // Clean up URL (remove hash)
+                            // Clean up URL (remove hash) BEFORE redirect
                             window.history.replaceState({}, document.title, window.location.pathname);
                             
                             // Check for pending subscription
@@ -2276,19 +2268,37 @@
                                 localStorage.removeItem('pendingSubscription');
                                 redirectToDodoPayments(pendingPlan);
                             } else {
-                                // Redirect to profile immediately after Google sign-in (no delay)
+                                // Redirect to profile immediately - use replace to avoid back button issues
                                 window.location.replace('profile.html');
                             }
                             
                             return true; // Success
                         } else if (error) {
                             console.error('OAuth session error:', error);
+                            // Show body again if OAuth failed
+                            if (document.body) {
+                                document.body.style.display = '';
+                            }
                             return false;
                         }
                     } catch (error) {
                         console.error('OAuth callback error:', error);
+                        // Show body again if callback failed
+                        if (document.body) {
+                            document.body.style.display = '';
+                        }
                         return false;
                     }
+                } else {
+                    // Supabase not initialized - show body
+                    if (document.body) {
+                        document.body.style.display = '';
+                    }
+                }
+            } else {
+                // No OAuth hash - ensure body is visible
+                if (document.body) {
+                    document.body.style.display = '';
                 }
             }
             return false;
@@ -2373,7 +2383,16 @@
                 // Handle OAuth callback FIRST (if user just signed in with Google)
                 // This must happen after Supabase is initialized
                 if (typeof handleOAuthCallback === 'function') {
-                    await handleOAuthCallback();
+                    const oauthHandled = await handleOAuthCallback();
+                    // If OAuth was handled and redirect happened, don't continue with page load
+                    if (oauthHandled) {
+                        return; // Exit early - redirect is happening
+                    }
+                }
+                
+                // Ensure body is visible if we're not redirecting
+                if (document.body) {
+                    document.body.style.display = '';
                 }
                 
                 // Check if we just logged out
