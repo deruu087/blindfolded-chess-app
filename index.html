@@ -1942,6 +1942,12 @@
                 updateNavigation();
                 closeModal();
                         
+                        // DEBUG: Verify we reached this point
+                        console.log('🔍 [DEBUG] Reached email sending code block');
+                        console.log('🔍 [DEBUG] Email variable:', email);
+                        console.log('🔍 [DEBUG] Name variable:', name);
+                        console.log('🔍 [DEBUG] window.sendEmail type:', typeof window.sendEmail);
+                        
                         // Send welcome email (NON-BLOCKING - wrapped in try-catch, won't affect registration flow)
                         console.log('📧 [EMAIL DEBUG] Attempting to send welcome email after registration');
                         console.log('📧 [EMAIL DEBUG] Email address:', email);
