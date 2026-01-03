@@ -204,12 +204,21 @@ export default async function handler(req, res) {
                     
                     // Send subscription confirmation email (NON-BLOCKING - wrapped in try-catch)
                     try {
+                        console.log('📧 [EMAIL DEBUG] Attempting to send subscription confirmation email');
                         const userName = foundUser?.user_metadata?.name || customerEmail?.split('@')[0] || 'Chess Player';
                         const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
                         
-                        const emailApiUrl = process.env.VERCEL_URL 
-                            ? `https://${process.env.VERCEL_URL}/api/send-email`
-                            : 'https://memo-chess.com/api/send-email';
+                        // Use memo-chess.com directly (webhook runs server-side, no CORS issues)
+                        const emailApiUrl = 'https://memo-chess.com/api/send-email';
+                        
+                        console.log('📧 [EMAIL DEBUG] Subscription email details:', {
+                            to: customerEmail,
+                            name: userName,
+                            planName,
+                            amount,
+                            currency,
+                            apiUrl: emailApiUrl
+                        });
                         
                         // Don't await - fire and forget, non-blocking
                         fetch(emailApiUrl, {
@@ -221,12 +230,21 @@ export default async function handler(req, res) {
                                 name: userName,
                                 data: { planName, amount, currency }
                             })
-                        }).catch(() => {
-                            // Silently fail - email is optional, payment already succeeded
+                        }).then(response => {
+                            console.log('📧 [EMAIL DEBUG] Subscription email response status:', response.status);
+                            if (response.ok) {
+                                return response.json().then(result => {
+                                    console.log('✅ [EMAIL DEBUG] Subscription email sent successfully:', result);
+                                });
+                            } else {
+                                console.warn('⚠️ [EMAIL DEBUG] Subscription email failed:', response.status);
+                            }
+                        }).catch(error => {
+                            console.warn('❌ [EMAIL DEBUG] Subscription email error (non-critical):', error.message);
                         });
                     } catch (emailError) {
                         // Silently fail - email is optional
-                        console.log('Note: Could not send subscription email (non-critical)');
+                        console.warn('❌ [EMAIL DEBUG] Subscription email exception (non-critical):', emailError.message);
                     }
                     
                     return res.status(200).json({ 
