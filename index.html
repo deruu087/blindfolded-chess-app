@@ -2283,20 +2283,42 @@
                             window.history.replaceState({}, document.title, window.location.pathname);
                             
                             // Send welcome email for new users (NON-BLOCKING - check if new user first)
+                            console.log('📧 [EMAIL DEBUG] OAuth registration - checking if new user for email:', user.email);
                             // Check if this is a new user by checking if progress exists
                             if (typeof window.getUserProgress === 'function' && typeof window.sendEmail === 'function' && user.email) {
                                 window.getUserProgress().then(progress => {
+                                    console.log('📧 [EMAIL DEBUG] getUserProgress result:', progress ? 'has progress (existing user)' : 'no progress (new user)');
                                     // If no progress exists, it's likely a new user
                                     if (!progress) {
-                                        window.sendEmail('welcome', user.email, userName).catch(() => {
-                                            // Silently fail - email is optional
+                                        console.log('📧 [EMAIL DEBUG] Sending welcome email to new OAuth user:', user.email);
+                                        window.sendEmail('welcome', user.email, userName).then(result => {
+                                            console.log('📧 [EMAIL DEBUG] OAuth welcome email result:', result);
+                                            if (result && result.success) {
+                                                console.log('✅ [EMAIL DEBUG] OAuth welcome email sent successfully!');
+                                            }
+                                        }).catch(error => {
+                                            console.warn('❌ [EMAIL DEBUG] OAuth welcome email error (non-critical):', error);
                                         });
+                                    } else {
+                                        console.log('📧 [EMAIL DEBUG] Existing user - skipping welcome email');
                                     }
                                 }).catch(() => {
                                     // If we can't check, assume new user and send email
-                                    window.sendEmail('welcome', user.email, userName).catch(() => {
-                                        // Silently fail - email is optional
+                                    console.log('📧 [EMAIL DEBUG] Cannot check progress - assuming new user, sending welcome email');
+                                    window.sendEmail('welcome', user.email, userName).then(result => {
+                                        console.log('📧 [EMAIL DEBUG] OAuth welcome email result:', result);
+                                        if (result && result.success) {
+                                            console.log('✅ [EMAIL DEBUG] OAuth welcome email sent successfully!');
+                                        }
+                                    }).catch(error => {
+                                        console.warn('❌ [EMAIL DEBUG] OAuth welcome email error (non-critical):', error);
                                     });
+                                });
+                            } else {
+                                console.warn('⚠️ [EMAIL DEBUG] Cannot send OAuth welcome email:', {
+                                    hasGetUserProgress: typeof window.getUserProgress === 'function',
+                                    hasSendEmail: typeof window.sendEmail === 'function',
+                                    hasEmail: !!user.email
                                 });
                             }
                             
