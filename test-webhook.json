@@ -1,0 +1,11 @@
+{
+  "event": "payment.completed",
+  "order_id": "test_order_123",
+  "customer": {
+    "email": "test@example.com"
+  },
+  "amount": 3.52,
+  "currency": "EUR",
+  "status": "completed"
+}
+
