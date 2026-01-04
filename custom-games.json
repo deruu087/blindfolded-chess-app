@@ -1,0 +1,72 @@
+{
+  "games": [
+    {
+      "id": "custom-game-1758641660162",
+      "name": "afgadga",
+      "white_player": "White",
+      "black_player": "Black",
+      "description": "Custom chess game created by user",
+      "moves": 4,
+      "result": "In progress",
+      "opening": "Custom Opening",
+      "date": "2025-09-23",
+      "difficulty": "Custom",
+      "moves_notation": [
+        "e4",
+        "d5",
+        "f4",
+        "f6"
+      ],
+      "moves_detailed": [
+        {
+          "move_number": 1,
+          "white": "e4",
+          "black": null,
+          "description": "P from e2 to e4",
+          "white_from": "e2",
+          "white_to": "e4",
+          "black_from": null,
+          "black_to": null,
+          "annotation": "",
+          "commentary": ""
+        },
+        {
+          "move_number": 1,
+          "white": null,
+          "black": "d5",
+          "description": "p from d7 to d5",
+          "white_from": null,
+          "white_to": null,
+          "black_from": "d7",
+          "black_to": "d5",
+          "annotation": "",
+          "commentary": ""
+        },
+        {
+          "move_number": 2,
+          "white": "f4",
+          "black": null,
+          "description": "P from f2 to f4",
+          "white_from": "f2",
+          "white_to": "f4",
+          "black_from": null,
+          "black_to": null,
+          "annotation": "",
+          "commentary": ""
+        },
+        {
+          "move_number": 2,
+          "white": null,
+          "black": "f6",
+          "description": "p from f7 to f6",
+          "white_from": null,
+          "white_to": null,
+          "black_from": "f7",
+          "black_to": "f6",
+          "annotation": "",
+          "commentary": ""
+        }
+      ]
+    }
+  ]
+}

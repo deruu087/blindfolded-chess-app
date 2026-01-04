@@ -1,0 +1,75 @@
+{
+  "games": [
+    {
+      "id": "custom-game-1761267647531",
+      "name": "hello",
+      "white_player": "White",
+      "black_player": "Black",
+      "description": "Custom chess game created by user",
+      "moves": 2,
+      "result": "In progress",
+      "opening": "Custom Opening",
+      "date": "2025-10-24",
+      "difficulty": "Custom",
+      "moves_notation": [
+        "d4",
+        "f5"
+      ],
+      "moves_detailed": [
+        {
+          "move_number": 1,
+          "white": "d4",
+          "black": null,
+          "description": "P from d2 to d4",
+          "white_from": "d2",
+          "white_to": "d4",
+          "black_from": null,
+          "black_to": null,
+          "annotation": "",
+          "commentary": ""
+        },
+        {
+          "move_number": 1,
+          "white": null,
+          "black": "f5",
+          "description": "p from f7 to f5",
+          "white_from": null,
+          "white_to": null,
+          "black_from": "f7",
+          "black_to": "f5",
+          "annotation": "",
+          "commentary": ""
+        }
+      ]
+    },
+    {
+      "id": "custom-game-1761521065079",
+      "name": "ho",
+      "white_player": "White",
+      "black_player": "Black",
+      "description": "Custom chess game created by user",
+      "moves": 1,
+      "result": "In progress",
+      "opening": "Custom Opening",
+      "date": "2025-10-26",
+      "difficulty": "Custom",
+      "moves_notation": [
+        "e4"
+      ],
+      "moves_detailed": [
+        {
+          "move_number": 1,
+          "white": "e4",
+          "black": null,
+          "description": "P from e2 to e4",
+          "white_from": "e2",
+          "white_to": "e4",
+          "black_from": null,
+          "black_to": null,
+          "annotation": "",
+          "commentary": ""
+        }
+      ]
+    }
+  ]
+}
