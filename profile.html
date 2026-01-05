@@ -1217,7 +1217,7 @@
                 <div class="profile-avatar">
                     ♟️
                 </div>
-                <p class="profile-email" id="userEmail">guest@example.com</p>
+                <p class="profile-email" id="userEmail">Loading...</p>
                 
                 <div class="profile-links">
                     <a href="#progress" class="profile-link active" data-tab="progress">Progress</a>
@@ -1966,8 +1966,8 @@
         
         // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
         let userData = {
-            name: localStorage.getItem('userName') || "Guest User",
-            email: localStorage.getItem('userEmail') || "guest@example.com",
+            name: "Loading...",
+            email: "", // Will be set from Supabase auth - no fallback to prevent showing guest@example.com
             subscription: "free", // CRITICAL: Always start as 'free', updated ONLY from Supabase
             gamesPlayed: 0,
             trainingHours: 0,
@@ -2176,7 +2176,7 @@
             // Update email (use real email from Supabase, not placeholder)
             const userEmailElement = document.getElementById('userEmail');
             if (userEmailElement) {
-                userEmailElement.textContent = userData.email || 'guest@example.com';
+                userEmailElement.textContent = userData.email || 'Not logged in';
             }
         }
 
@@ -2676,23 +2676,34 @@
                 localStorage.removeItem(key);
             });
             
-            // Sign out from Supabase in background (non-blocking, don't wait for it)
-            if (typeof window.signOut === 'function') {
-                window.signOut().catch(() => {
-                    // Ignore errors, we've already cleared localStorage
-                });
-            } else if (typeof getSupabase === 'function') {
-                const supabase = getSupabase();
-                if (supabase) {
-                    supabase.auth.signOut().catch(() => {
-                        // Ignore errors, we've already cleared localStorage
-                    });
+            // Sign out from Supabase - wait for it to complete before redirecting
+            console.log('Signing out from Supabase...');
+            try {
+                if (typeof window.signOut === 'function') {
+                    await window.signOut();
+                    console.log('✅ Signed out via window.signOut()');
+                } else if (typeof getSupabase === 'function') {
+                    const supabase = getSupabase();
+                    if (supabase) {
+                        const { error } = await supabase.auth.signOut();
+                        if (error) {
+                            console.error('Error signing out from Supabase:', error);
+                        } else {
+                            console.log('✅ Signed out from Supabase');
+                        }
+                    }
                 }
+            } catch (error) {
+                console.error('Error during sign out:', error);
+                // Continue with redirect even if signOut fails
             }
             
-            // Redirect to home page immediately (use replace to avoid adding to history)
+            // Small delay to ensure session is cleared before redirect
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Redirect to home page with loggedout parameter to clear any remaining state
             console.log('Redirecting to index.html...');
-            window.location.replace('index.html');
+            window.location.replace('index.html?loggedout=true');
         }
         
         // Make confirmLogout globally accessible (for onclick handlers)
