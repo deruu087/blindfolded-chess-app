@@ -2667,25 +2667,38 @@
                 modal.style.display = 'none';
             }
             
-            // STEP 1: Sign out from Supabase FIRST (before clearing localStorage)
+            // STEP 1: Sign out from Supabase FIRST (with timeout to prevent hanging)
             console.log('🔴 LOGOUT: Signing out from Supabase...');
             try {
-                if (typeof window.signOut === 'function') {
-                    await window.signOut();
-                    console.log('✅ Signed out via window.signOut()');
-                } else if (typeof getSupabase === 'function') {
-                    const supabase = getSupabase();
-                    if (supabase) {
-                        const { error } = await supabase.auth.signOut();
-                        if (error) {
-                            console.error('Error signing out from Supabase:', error);
-                        } else {
-                            console.log('✅ Signed out from Supabase');
+                // Use Promise.race to timeout after 2 seconds
+                const signOutPromise = (async () => {
+                    if (typeof window.signOut === 'function') {
+                        await window.signOut();
+                        console.log('✅ Signed out via window.signOut()');
+                    } else if (typeof getSupabase === 'function') {
+                        const supabase = getSupabase();
+                        if (supabase) {
+                            const { error } = await supabase.auth.signOut();
+                            if (error) {
+                                console.error('Error signing out from Supabase:', error);
+                            } else {
+                                console.log('✅ Signed out from Supabase');
+                            }
                         }
                     }
-                }
+                })();
+                
+                const timeoutPromise = new Promise((resolve) => {
+                    setTimeout(() => {
+                        console.log('⚠️ SignOut timeout - continuing anyway');
+                        resolve();
+                    }, 2000);
+                });
+                
+                await Promise.race([signOutPromise, timeoutPromise]);
             } catch (error) {
                 console.error('Error during sign out:', error);
+                // Continue anyway
             }
             
             // STEP 2: Clear ALL localStorage items
