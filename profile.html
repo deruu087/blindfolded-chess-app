@@ -1990,12 +1990,6 @@
             let authStatus;
             try {
                 authStatus = await window.checkAuthStatus();
-                console.log('🔍 checkAuthStatus() returned:', {
-                    isLoggedIn: authStatus.isLoggedIn,
-                    email: authStatus.email,
-                    name: authStatus.name,
-                    hasUser: !!authStatus.user
-                });
             } catch (error) {
                 console.error('Error checking auth status:', error);
                 window.location.href = 'index.html';
@@ -2009,14 +2003,10 @@
                 return;
             }
             
-            // REMOVED: Email validation - trust Supabase authentication
-            const userEmail = authStatus.email || '';
-            
             // User is logged in - proceed with loading profile data
             // Update user info immediately from authStatus (instant display)
             userData.name = authStatus.name || 'User';
-            userData.email = userEmail;
-            console.log('✅ Setting userData:', { name: userData.name, email: userData.email });
+            userData.email = authStatus.email || '';
             updateUserInfo();
             
             // SIMPLIFIED: Load Supabase data - Wait for Supabase to be ready first
