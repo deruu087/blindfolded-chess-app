@@ -129,25 +129,15 @@ async function isSignedIn() {
  */
 async function checkAuthStatus() {
     // Always check Supabase session first (source of truth)
-    // Wait for Supabase to initialize (important on production where it may load slower)
-    let supabase = getSupabase();
-    
+    const supabase = getSupabase();
     if (!supabase) {
-        // Wait up to 2 seconds for Supabase to initialize
-        for (let i = 0; i < 20; i++) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            supabase = getSupabase();
-            if (supabase) break;
-        }
-    }
-    
-    if (!supabase) {
-        // Supabase not initialized after waiting - return logged out
+        // Supabase not initialized - check localStorage as fallback
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         return {
-            isLoggedIn: false,
+            isLoggedIn: isLoggedIn,
             user: null,
-            email: null,
-            name: null
+            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
+            name: isLoggedIn ? localStorage.getItem('userName') : null
         };
     }
 
@@ -190,15 +180,13 @@ async function checkAuthStatus() {
         };
     } catch (error) {
         console.error('Error checking auth status:', error);
-        // On error, return logged out
-        localStorage.setItem('isLoggedIn', 'false');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('userName');
+        // On error, check localStorage as fallback
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         return {
-            isLoggedIn: false,
+            isLoggedIn: isLoggedIn,
             user: null,
-            email: null,
-            name: null
+            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
+            name: isLoggedIn ? localStorage.getItem('userName') : null
         };
     }
 }

@@ -1209,7 +1209,7 @@
                 <div class="profile-avatar">
                     ♟️
                 </div>
-                <p class="profile-email" id="userEmail">Loading...</p>
+                <p class="profile-email" id="userEmail">guest@example.com</p>
                 
                 <div class="profile-links">
                     <a href="#progress" class="profile-link active" data-tab="progress">Progress</a>
@@ -1958,8 +1958,8 @@
         
         // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
         let userData = {
-            name: "Loading...",
-            email: "", // Will be set from Supabase auth - no fallback to prevent showing guest@example.com
+            name: localStorage.getItem('userName') || "Guest User",
+            email: localStorage.getItem('userEmail') || "",
             subscription: "free", // CRITICAL: Always start as 'free', updated ONLY from Supabase
             gamesPlayed: 0,
             trainingHours: 0,
@@ -1967,22 +1967,11 @@
         };
         
         // Clear any stale billing-related localStorage on page load
-        // Also clear any test/mock user data (like guest@example.com)
         (function() {
             localStorage.removeItem('cachedSubscriptionStatus');
             localStorage.removeItem('cachedSubscriptionPlan');
             localStorage.removeItem('subscriptionData');
             localStorage.removeItem('userSubscription');
-            
-            // Clear any test/mock user data
-            const userEmail = localStorage.getItem('userEmail');
-            if (userEmail && (userEmail.includes('guest@example.com') || userEmail.includes('test@') || userEmail.includes('mock@'))) {
-                console.log('🧹 Clearing test/mock user data:', userEmail);
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('userName');
-            }
-            
             console.log('🧹 Cleared stale billing localStorage on page load');
         })();
 
