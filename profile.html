@@ -1,0 +1,3493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memo Chess - My Profile</title>
+    
+    <!-- Supabase JavaScript Library - Load in head for early availability -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Subscription tab removed - content is now on home page
+        
+        // Check cached subscription status immediately to prevent flash
+        (function() {
+            // Always hide both elements initially with CSS
+                const style = document.createElement('style');
+            style.id = 'subscription-initial-hide';
+            style.textContent = `
+                #subscriptionStatus { 
+                    display: none !important; 
+                    visibility: hidden !important; 
+                    opacity: 0 !important;
+                }
+                #subscriptionInfoSubtle { 
+                    display: none !important; 
+                    visibility: hidden !important; 
+                    opacity: 0 !important;
+                }
+            `;
+                document.head.appendChild(style);
+            
+            // Function to update subscription display
+            // CRITICAL: Removed localStorage fallback - only runs after Supabase is ready
+            function updateSubscriptionDisplay() {
+                // Don't use localStorage - wait for Supabase
+                // This function is called early, so we'll just hide elements until Supabase loads
+                const statusEl = document.getElementById('subscriptionStatus');
+                const subtleEl = document.getElementById('subscriptionInfoSubtle');
+                
+                // Hide both until Supabase confirms status
+                if (statusEl) {
+                    statusEl.style.setProperty('display', 'none', 'important');
+                }
+                if (subtleEl) {
+                    subtleEl.style.setProperty('display', 'none', 'important');
+                }
+                
+                // Early return - don't use cached status
+                return;
+                
+                // OLD CODE BELOW - REMOVED localStorage fallback
+                /*
+                const cachedStatus = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+                
+                if (cachedStatus) {
+                    // User has paid account - keep both hidden and remove from layout
+                    if (statusEl) {
+                        statusEl.style.setProperty('display', 'none', 'important');
+                        statusEl.style.setProperty('visibility', 'hidden', 'important');
+                        statusEl.style.setProperty('height', '0', 'important');
+                        statusEl.style.setProperty('margin', '0', 'important');
+                        statusEl.style.setProperty('padding', '0', 'important');
+                        statusEl.classList.remove('show-subscription');
+                    }
+                    if (subtleEl) {
+                        subtleEl.style.setProperty('display', 'none', 'important');
+                        subtleEl.style.setProperty('visibility', 'hidden', 'important');
+                        subtleEl.style.setProperty('height', '0', 'important');
+                        subtleEl.style.setProperty('margin', '0', 'important');
+                        subtleEl.style.setProperty('padding', '0', 'important');
+                        subtleEl.classList.remove('show-subscription');
+                    }
+                } else {
+                    // User is free - show subscription info
+                    if (statusEl) {
+                        statusEl.style.setProperty('display', 'none', 'important');
+                    }
+                    if (subtleEl) {
+                        subtleEl.classList.add('show-subscription');
+                    }
+                }
+                */
+            }
+            
+            // Run immediately - don't wait for DOM
+            updateSubscriptionDisplay();
+            
+            // Also run when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', updateSubscriptionDisplay);
+            } else {
+                updateSubscriptionDisplay();
+            }
+            
+            // Run multiple times to catch any late renders
+            setTimeout(updateSubscriptionDisplay, 0);
+            setTimeout(updateSubscriptionDisplay, 10);
+            setTimeout(updateSubscriptionDisplay, 50);
+        })();
+        
+        // Immediately update profile title and email from localStorage (before Supabase loads)
+        (function() {
+            function updateProfileInstantly() {
+                // Get cached user data
+                const cachedName = localStorage.getItem('userName');
+                const cachedEmail = localStorage.getItem('userEmail');
+                
+                // Update profile title immediately
+                if (cachedName) {
+                    const firstName = cachedName.split(' ')[0];
+                    const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+                    const profileTitle = document.querySelector('.profile-title');
+                    if (profileTitle) {
+                        profileTitle.textContent = welcomeMessage;
+                    }
+                }
+                
+                // Update email immediately
+                if (cachedEmail) {
+                    const emailElement = document.getElementById('userEmail');
+                    if (emailElement) {
+                        emailElement.textContent = cachedEmail;
+                    }
+                }
+                
+                // Try to update stats immediately if progressTracker is available
+                // This will show cached progress data instantly
+                // NOTE: This runs BEFORE initProfile() loads Supabase data, so it will use localStorage fallback
+                // initProfile() will call updateStats() again with Supabase data
+                // Don't call updateStats() here - wait for initProfile() to load Supabase data first
+                // This prevents the table from showing "No data available" before data loads
+            }
+            
+            // Run immediately if DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    updateProfileInstantly();
+                    // Also try after a short delay to ensure progress-tracker.js is loaded
+                    setTimeout(updateProfileInstantly, 100);
+                });
+            } else {
+                updateProfileInstantly();
+                setTimeout(updateProfileInstantly, 100);
+            }
+            
+            // Also run with slight delays to catch elements that load later
+            setTimeout(updateProfileInstantly, 0);
+            setTimeout(updateProfileInstantly, 10);
+            setTimeout(updateProfileInstantly, 50);
+        })();
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            color: #1e3a8a;
+        }
+
+        .navbar {
+            background-color: #f5f5f5;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            color: #1e3a8a;
+            font-size: 1.5rem;
+            font-weight: normal;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .logo:hover {
+            color: #1e3a8a;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #1e3a8a;
+            text-decoration: none;
+            font-weight: normal;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-links a:hover {
+            background-color: #e5e7eb;
+        }
+
+        /* Profile Button Styles */
+        .profile-button {
+            color: #1e3a8a;
+            text-decoration: none;
+            font-weight: normal;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .profile-button:hover {
+            background-color: #e5e7eb;
+        }
+
+        .profile-button.active {
+            background-color: #1e3a8a;
+            color: #ffffff;
+        }
+
+        .profile-button.active:hover {
+            background-color: #1e40af;
+        }
+
+
+        .nav-links a.active {
+            background-color: #1e3a8a;
+            color: #ffffff;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            min-height: calc(100vh - 60px);
+            justify-content: flex-start;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .profile-title {
+            font-size: 2.5rem;
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+            font-weight: normal;
+        }
+
+        .profile-subtitle {
+            font-size: 1.15rem;
+            color: #4b5563;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .profile-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .profile-sidebar {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+            margin: 0 auto 1rem;
+        }
+
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-email {
+            color: #4b5563;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+        }
+
+        .profile-link {
+            color: #4b5563;
+            text-decoration: none;
+            font-size: 0.95rem;
+            padding: 0.5rem 0;
+            text-align: center;
+            transition: color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .profile-link:hover {
+            color: #374151;
+            text-decoration: underline;
+        }
+
+        .profile-link.active {
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+
+        .subscription-status {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .subscription-status.free {
+            background: #f8f9fa;
+            border-color: #95a5a6;
+        }
+
+        .subscription-status.premium {
+            background: #e8f5e8;
+            border-color: #27ae60;
+        }
+
+        .status-text {
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-details {
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+
+        /* Subtle subscription info - Hidden by default, shown only for free users */
+        .subscription-info-subtle {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+        }
+        
+        /* Only show if explicitly enabled with class */
+        .subscription-info-subtle.show-subscription {
+            display: block !important;
+            visibility: visible !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin-bottom: 1.5rem !important;
+            padding: 1rem !important;
+            background: #f8f9fa !important;
+            border: 1px solid #e9ecef !important;
+            border-radius: 8px !important;
+            text-align: center !important;
+        }
+
+        .subscription-plan-subtle {
+            margin-bottom: 0.75rem;
+        }
+
+        .plan-name-subtle {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-features-subtle {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .feature-dot.available {
+            background-color: #27ae60;
+        }
+
+        .feature-dot.locked {
+            background-color: #bdc3c7;
+        }
+
+        .upgrade-link-subtle {
+            margin-top: 0.5rem;
+        }
+
+        .upgrade-text {
+            color: #1e3a8a;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: normal;
+            transition: color 0.3s ease;
+        }
+
+        .upgrade-text:hover {
+            color: #1e40af;
+            text-decoration: underline;
+        }
+
+
+        .profile-stats {
+            list-style: none;
+        }
+
+        .profile-stats li {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .profile-stats li:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #4b5563;
+        }
+
+        .stat-value {
+            font-weight: normal;
+            color: #1e3a8a;
+        }
+
+        .training-time-breakdown {
+            text-align: center;
+        }
+
+        .total-time {
+            font-size: inherit;
+            font-weight: inherit;
+            color: inherit;
+            margin-bottom: 0.5rem;
+        }
+
+        .current-session {
+            font-size: 0.9rem;
+            color: #27ae60;
+            font-weight: 500;
+            background: rgba(39, 174, 96, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .profile-main {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            height: fit-content;
+        }
+
+        .profile-section {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            height: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #progress-section {
+            min-height: 400px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            flex: 1;
+            justify-content: flex-start;
+        }
+
+        .progress-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            padding-top: 30px;
+            border: 1px solid #e9ecef;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-title {
+            font-weight: normal;
+            color: #1e3a8a;
+            font-size: 1.1rem;
+        }
+
+        .progress-count {
+            font-weight: normal;
+            color: #27ae60;
+            font-size: 1.2rem;
+        }
+
+        .progress-bar-container {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            border-radius: 10px;
+            transition: width 0.6s ease;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-goal {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        /* Leaderboard Widget Styles */
+        .leaderboard-widget {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .leaderboard-widget .progress-header {
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
+            color: white;
+            margin: -1rem -1rem 1rem -1rem;
+            padding: 1rem;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .leaderboard-widget .progress-title {
+            color: white;
+            font-weight: normal;
+        }
+
+        .leaderboard-widget .progress-count {
+            color: white;
+            font-weight: normal;
+            font-size: 1.2rem;
+        }
+
+        .leaderboard-content {
+            padding: 0 1rem 1rem 1rem;
+        }
+
+        .ranking-info {
+            text-align: center;
+        }
+
+        .rank-text {
+            font-size: 1.1rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+        }
+
+        .percentile-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .percentile-fill {
+            background: linear-gradient(90deg, #1e3a8a, #2ecc71);
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .next-milestone {
+            font-size: 0.9rem;
+            color: #4b5563;
+            font-style: italic;
+        }
+
+        .percentile-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: normal;
+            margin-left: 0.5rem;
+        }
+
+        .percentile-badge.top-1 { background: linear-gradient(135deg, #f1c40f, #f39c12); }
+        .percentile-badge.top-5 { background: linear-gradient(135deg, #95a5a6, #7f8c8d); }
+        .percentile-badge.top-10 { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+        .percentile-badge.top-25 { background: linear-gradient(135deg, #1e3a8a, #1e40af); }
+
+
+        .recent-games {
+            list-style: none;
+        }
+
+        .recent-games li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .recent-games li:last-child {
+            border-bottom: none;
+        }
+
+        .game-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-name {
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 0.25rem;
+        }
+
+        .game-date {
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+
+        .game-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+
+        .game-status.completed {
+            background: #e8f5e8;
+            color: #27ae60;
+        }
+
+        .game-status.in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: normal;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #1e3a8a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1e40af;
+        }
+
+        .btn-secondary {
+            background: #4b5563;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #374151;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0.5rem 1rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .nav-links {
+                gap: 1rem;
+            }
+            
+            .profile-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-title {
+                font-size: 2rem;
+            }
+            
+            .progress-section {
+                gap: 1.5rem;
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.5rem;
+            font-weight: normal;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #1e3a8a;
+            font-weight: normal;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .account-info {
+            padding: 1rem 0;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item label {
+            font-weight: normal;
+            color: #1e3a8a;
+            min-width: 100px;
+        }
+
+        .info-item span {
+            color: #4b5563;
+            text-align: right;
+        }
+
+        .subscription-actions {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: center;
+        }
+
+        .subscription-actions .btn {
+            max-width: 200px;
+        }
+
+
+        .btn-primary {
+            background-color: #1e3a8a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1e40af;
+        }
+
+        .btn-secondary {
+            background-color: #4b5563;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #374151;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .register-link a {
+            color: #1e3a8a;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: normal;
+            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        /* Logout Confirmation Modal */
+        .logout-confirm-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .logout-confirm-content {
+            background-color: #ffffff;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+            text-align: center;
+        }
+
+        .logout-confirm-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .logout-confirm-header h2 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.25rem;
+            font-weight: normal;
+        }
+
+        .logout-confirm-message {
+            color: #4b5563;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .logout-confirm-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-logout-confirm {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: normal;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        /* Cancel Subscription Modal */
+        .cancel-subscription-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .cancel-subscription-content {
+            background-color: #ffffff;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+            text-align: center;
+        }
+
+        .cancel-subscription-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .cancel-subscription-header h2 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.25rem;
+            font-weight: normal;
+        }
+
+        .cancel-subscription-message {
+            color: #4b5563;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .cancel-subscription-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-cancel-subscription {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: normal;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .btn-cancel-subscription-yes {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .btn-cancel-subscription-yes:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-cancel-subscription-no {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .btn-cancel-subscription-no:hover {
+            background-color: #e5e7eb;
+        }
+
+        .btn-logout-yes {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-logout-yes:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-logout-no {
+            background-color: #4b5563;
+            color: white;
+        }
+
+        .btn-logout-no:hover {
+            background-color: #374151;
+        }
+
+        .btn-logout {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #6b7280;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background-color: #4b5563;
+        }
+
+        .logout-button-container {
+            margin-top: 2rem;
+        }
+
+        .google-signup {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .btn-google {
+            background-color: #ffffff;
+            color: #333;
+            border: 1px solid #dadce0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: normal;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn-google:hover {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+            background: url('images/google.png') no-repeat center;
+            background-size: contain;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <img src="images/chess-board.png" alt="Memo Chess" class="logo-icon">
+            <span>Memo Chess</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+                <li><a href="games.html">Games</a></li>
+                <li><a href="puzzles.html">Puzzles</a></li>
+                <!-- <li><a href="leaderboard.html">Community</a></li> -->
+                    <li><a href="profile.html" id="profileLink" class="profile-button active">Profile</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-content">
+        <div class="profile-header">
+            <h1 class="profile-title" id="profileTitle">My Profile</h1>
+            <p class="profile-subtitle">
+                Track your progress, monitor completion rates, and manage your chess training journey.
+            </p>
+        </div>
+
+        <div class="profile-container">
+            <div class="profile-sidebar">
+                <div class="profile-avatar">
+                    ♟️
+                </div>
+                <p class="profile-email" id="userEmail">Loading...</p>
+                
+                <div class="profile-links">
+                    <a href="#progress" class="profile-link active" data-tab="progress">Progress</a>
+                    <a href="#billings" class="profile-link" data-tab="billings">Billings</a>
+                    <a href="#contact" class="profile-link" data-tab="contact">Contact Us</a>
+                </div>
+                
+                <div class="subscription-status free" id="subscriptionStatus" style="display: none;">
+                    <div class="status-text">Free Account</div>
+                    <div class="status-details">Upgrade to unlock all content</div>
+                </div>
+
+                <div class="subscription-info-subtle" id="subscriptionInfoSubtle" style="display: none !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important;">
+                    <div class="subscription-plan-subtle">
+                        <div class="plan-name-subtle" id="planNameSubtle">Free Plan</div>
+                        <div class="plan-features-subtle" id="planFeaturesSubtle">
+                            <span class="feature-dot available"></span>
+                            <span class="feature-dot available"></span>
+                            <span class="feature-dot locked"></span>
+                            <span class="feature-dot locked"></span>
+                        </div>
+                    </div>
+                    <div class="upgrade-link-subtle">
+                        <a href="subscription.html" class="upgrade-text">Upgrade</a>
+                    </div>
+                </div>
+
+                <div class="logout-button-container">
+                    <button class="btn-logout" id="logoutButton" onclick="window.logout()">Logout</button>
+                </div>
+            </div>
+
+            <div class="profile-main">
+                <div class="profile-section" id="progress-section">
+                    <h3 class="section-title">Progress</h3>
+                    <div class="progress-section">
+                        <div class="progress-item">
+                            <div class="progress-header">
+                                <div class="progress-title">Chess Games Completed</div>
+                                <div class="progress-count" id="gamesProgressCount">0</div>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="gamesProgressBar" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-goal" id="gamesProgressGoal">Goal: Complete all available games</div>
+                        </div>
+                        
+                        <div class="progress-item">
+                            <div class="progress-header">
+                                <div class="progress-title">Puzzles Completed</div>
+                                <div class="progress-count" id="puzzlesProgressCount">0</div>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="puzzlesProgressBar" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-goal" id="puzzlesProgressGoal">Goal: Complete all available puzzles</div>
+                        </div>
+                        
+                        <div class="progress-item">
+                            <div class="progress-header">
+                                <div class="progress-title">Training Time</div>
+                                <div class="progress-count" id="trainingTimeProgress">0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-item">
+                            <div class="progress-header">
+                                <div class="progress-title">Current Streak</div>
+                                <div class="progress-count" id="currentStreakProgress">0 days</div>
+                            </div>
+                            <div class="progress-goal">Keep your streak going!</div>
+                        </div>
+                    </div>
+                    
+                </div>
+
+                <div class="profile-section" id="billings-section" style="display: none;">
+                    <h3 class="section-title">Billings</h3>
+                    <div class="billings-content">
+                        <!-- CRITICAL: Always start with loading state - prevents stale HTML -->
+                        <p style="color: #4b5563;">Loading billing information...</p>
+                    </div>
+                </div>
+
+                <div class="profile-section" id="contact-section" style="display: none;">
+                    <h3 class="section-title">Contact Us</h3>
+                    <div class="contact-content">
+                        <p style="color: #4b5563; line-height: 1.7; margin-top: 1rem;">
+                            For all support inquiries, including billing issues, receipts, and general assistance, please email <a href="mailto:hi@memo-chess.com" style="color: #1e3a8a; text-decoration: none;">hi@memo-chess.com</a>
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration - MUST load before any page scripts -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase Helper Functions - MUST load before any page scripts -->
+    <script src="supabase-helpers.js"></script>
+    
+    <!-- Supabase Authentication Functions - MUST load before any page scripts -->
+    <script src="supabase-auth.js"></script>
+    
+    <script src="progress-tracker.js"></script>
+    
+    <!-- Tab switching functionality -->
+    <script>
+        // Tab switching functionality
+        function initProfileTabs() {
+            const profileLinks = document.querySelectorAll('.profile-link[data-tab]');
+            const sections = {
+                progress: document.getElementById('progress-section'),
+                billings: document.getElementById('billings-section'),
+                contact: document.getElementById('contact-section')
+            };
+
+            // Function to switch tabs
+            function switchTab(tabName, saveToStorage = true) {
+                // Remove active class from all links
+                profileLinks.forEach(l => l.classList.remove('active'));
+                
+                // Hide all sections
+                Object.values(sections).forEach(section => {
+                    if (section) section.style.display = 'none';
+                });
+                
+                // Show selected section
+                if (sections[tabName]) {
+                    sections[tabName].style.display = 'block';
+                    
+                    // Add active class to corresponding link
+                    const activeLink = document.querySelector(`.profile-link[data-tab="${tabName}"]`);
+                    if (activeLink) {
+                        activeLink.classList.add('active');
+                    }
+                    
+                    // Load billing info if billings tab is clicked
+                    // CRITICAL: Only load if Supabase is ready AND user is authenticated
+                    if (tabName === 'billings') {
+                        // Clear any stale HTML immediately
+                        const billingsContent = document.querySelector('#billings-section .billings-content');
+                        if (billingsContent) {
+                            billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+                        }
+                        
+                        // Wait for Supabase AND auth to be ready
+                        waitForSupabaseAndAuth().then(() => {
+                            loadBillingInfo();
+                        }).catch((error) => {
+                            console.error('Failed to initialize Supabase/auth:', error);
+                            if (billingsContent) {
+                                billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Unable to load billing information. Please refresh.</p>';
+                            }
+                        });
+                    }
+                    
+                    // Save to localStorage
+                    if (saveToStorage) {
+                        localStorage.setItem('profileActiveTab', tabName);
+                        // Update URL hash
+                        window.location.hash = tabName;
+                    }
+                }
+            }
+
+            // Restore active tab on page load
+            function restoreActiveTab() {
+                // Check URL hash first (preserves tab on refresh)
+                const hash = window.location.hash.replace('#', '');
+                let activeTab = null;
+                
+                if (hash && ['progress', 'billings', 'contact'].includes(hash)) {
+                    // URL hash takes priority (user clicked a link or refreshed with hash)
+                    activeTab = hash;
+                } else {
+                    // No hash - check if this is a refresh (referrer is profile.html)
+                    const isRefresh = document.referrer && document.referrer.includes('profile.html');
+                    const savedTab = localStorage.getItem('profileActiveTab');
+                    
+                    if (isRefresh && savedTab && ['progress', 'billings', 'contact'].includes(savedTab)) {
+                        // Refresh without hash - restore saved tab and update hash
+                        activeTab = savedTab;
+                        window.location.hash = savedTab;
+                    } else {
+                        // External navigation or no saved tab - default to progress
+                        activeTab = 'progress';
+                        // Clear saved tab if coming from external navigation
+                        if (!isRefresh) {
+                            localStorage.removeItem('profileActiveTab');
+                        }
+                    }
+                }
+                
+                // CRITICAL: If billings tab, ensure Supabase is ready before switching
+                if (activeTab === 'billings') {
+                    // Clear billing HTML immediately
+                    const billingsContent = document.querySelector('#billings-section .billings-content');
+                    if (billingsContent) {
+                        billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+                    }
+                    
+                    // Switch to tab (shows loading state)
+                    switchTab(activeTab, false);
+                    
+                    // Then wait for Supabase and load data
+                    waitForSupabaseAndAuth().then(() => {
+                        loadBillingInfo();
+                    }).catch((error) => {
+                        console.error('Failed to initialize Supabase/auth for billing:', error);
+                        if (billingsContent) {
+                            billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Unable to load billing information. Please refresh.</p>';
+                        }
+                    });
+                } else {
+                    // For other tabs, switch immediately
+                    switchTab(activeTab, false);
+                }
+            }
+
+            // Add click handlers
+            profileLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tabName = this.getAttribute('data-tab');
+                    switchTab(tabName, true);
+                });
+            });
+
+            // Restore tab on page load
+            restoreActiveTab();
+        }
+
+        // Helper function to wait for Supabase and auth to be ready
+        async function waitForSupabaseAndAuth() {
+            // Wait for Supabase to initialize
+            let attempts = 0;
+            while (attempts < 50) {
+                if (typeof window.getSupabase === 'function' && window.getSupabase()) {
+                    // Supabase is ready, now check auth
+                    const supabase = window.getSupabase();
+                    const { data: { user }, error } = await supabase.auth.getUser();
+                    if (!error && user) {
+                        return; // Both Supabase and auth are ready
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            throw new Error('Supabase or auth not ready after 5 seconds');
+        }
+
+        // Initialize tabs when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initProfileTabs);
+        } else {
+            initProfileTabs();
+        }
+
+        // Load and display billing information
+        // VERSION: 3.0 - Blocks until Supabase + auth ready, no localStorage fallbacks
+        async function loadBillingInfo() {
+            console.log('🚀 loadBillingInfo() CALLED - VERSION 2.0');
+            console.log('🚀 Timestamp:', new Date().toISOString());
+            
+            const billingsContent = document.querySelector('#billings-section .billings-content');
+            if (!billingsContent) {
+                console.error('❌ billingsContent element not found');
+                return;
+            }
+            
+            // CRITICAL: Always show loading state first - clear any cached HTML
+            billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+            console.log('✅ Set loading state - cleared any cached HTML');
+
+            // CRITICAL: Wait for Supabase to be initialized before proceeding
+            if (typeof window.getSupabase !== 'function' || !window.getSupabase()) {
+                console.log('⏳ Supabase not ready yet, waiting...');
+                // Wait up to 3 seconds for Supabase to initialize
+                let attempts = 0;
+                while (attempts < 30 && (typeof window.getSupabase !== 'function' || !window.getSupabase())) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                // If still not ready, show error
+                if (typeof window.getSupabase !== 'function' || !window.getSupabase()) {
+                    billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Supabase not initialized. Please refresh the page.</p>';
+                    return;
+                }
+            }
+
+            // Show loading state
+            billingsContent.innerHTML = '<p style="color: #4b5563;">Loading billing information...</p>';
+
+            try {
+                // CRITICAL: Verify user is authenticated before fetching subscription
+                const supabase = window.getSupabase();
+                if (!supabase) {
+                    throw new Error('Supabase not initialized');
+                }
+                
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                if (authError || !user) {
+                    console.error('❌ User not authenticated, cannot fetch subscription:', authError);
+                    billingsContent.innerHTML = '<p style="color: #ef4444;">Error: Please log in to view billing information.</p>';
+                    return;
+                }
+                console.log('✅ User authenticated:', user.id, user.email);
+                
+                // CLEAR ANY CACHED DATA FIRST - FORCE FRESH FETCH
+                const loadTimestamp = Date.now();
+                console.log('🔄 loadBillingInfo called - Supabase is ready, fetching fresh data');
+                console.log('🔄 Load timestamp:', loadTimestamp);
+                console.log('🔄 User ID:', user.id);
+                console.log('🔄 CLEARING localStorage cache...');
+                // Don't clear everything, just subscription-related cache
+                localStorage.removeItem('cachedSubscriptionStatus');
+                localStorage.removeItem('cachedSubscriptionPlan');
+                // Also clear any old subscription data that might be cached
+                localStorage.removeItem('subscriptionData');
+                localStorage.removeItem('userSubscription');
+                
+                // CRITICAL: Initialize subscription as null - NO DEFAULT VALUES
+                let subscription = null;
+                
+                // Get subscription from Supabase ONLY - no fallbacks, no defaults, NO CACHE
+                if (typeof window.getUserSubscription === 'function') {
+                    console.log('🔍 Calling getUserSubscription() - FORCING FRESH FETCH FROM SUPABASE');
+                    console.log('🔍 Subscription variable BEFORE call:', subscription);
+                    
+                    // Force fresh fetch - don't use any cached data
+                    subscription = await window.getUserSubscription();
+                    
+                    console.log('🔍 Subscription variable AFTER call:', subscription);
+                    console.log('🔍 Subscription is null?', subscription === null);
+                    console.log('🔍 Subscription is undefined?', subscription === undefined);
+                    console.log('🔍 Raw subscription from Supabase (FRESH FETCH):', subscription);
+                    console.log('🔍 Full subscription object:', JSON.stringify(subscription, null, 2));
+                    
+                    // IMMEDIATE REJECTION: If amount_paid is 3.52, REJECT IT - DON'T USE IT
+                    if (subscription && (subscription.amount_paid == 3.52 || parseFloat(subscription.amount_paid) == 3.52)) {
+                        console.error('❌❌❌ REJECTING SUBSCRIPTION WITH 3.52 - HARDCODED TEST VALUE DETECTED');
+                        console.error('❌ Subscription:', JSON.stringify(subscription, null, 2));
+                        console.error('❌ Setting subscription to NULL - will show empty state');
+                        subscription = null; // REJECT IT IMMEDIATELY
+                    }
+                    
+                    // STRICT VALIDATION: Only accept subscription if it has all required fields
+                    // AND it must come from Supabase (not localStorage or defaults)
+                    if (subscription) {
+                        const hasRequiredFields = subscription.plan_type && 
+                                                 subscription.status && 
+                                                 subscription.user_id &&
+                                                 subscription.id; // Must have database ID
+                        
+                        if (!hasRequiredFields) {
+                            console.log('❌ Invalid subscription - missing required fields, treating as null');
+                            subscription = null;
+                        } else {
+                            console.log('✅ Valid subscription found in Supabase:', {
+                                id: subscription.id,
+                                plan_type: subscription.plan_type,
+                                status: subscription.status,
+                                amount_paid: subscription.amount_paid,
+                                user_id: subscription.user_id
+                            });
+                        }
+                    } else {
+                        console.log('ℹ️ No subscription returned from Supabase - showing empty state');
+                    }
+                } else {
+                    console.log('⚠️ getUserSubscription function not available');
+                }
+                
+                // ABSOLUTE CHECK: Force null if subscription is falsy or invalid
+                // NO DEFAULT VALUES, NO FALLBACKS, NO MOCK DATA
+                // REJECT 3.52 as it's a known hardcoded test value
+                if (!subscription || 
+                    !subscription.plan_type || 
+                    !subscription.status || 
+                    !subscription.id ||
+                    subscription.amount_paid == 3.52) {  // Use == to catch both string and number
+                    console.log('🔄 Setting subscription to null - invalid subscription or hardcoded 3.52 detected');
+                    console.log('🔄 Rejected subscription:', subscription);
+                    subscription = null;
+                }
+                
+                // EXTRA SAFETY: Double-check for 3.52
+                if (subscription && (subscription.amount_paid == 3.52 || parseFloat(subscription.amount_paid) == 3.52)) {
+                    console.error('❌ REJECTING SUBSCRIPTION WITH HARDCODED 3.52 VALUE');
+                    console.error('❌ This should never happen - subscription:', subscription);
+                    subscription = null;
+                }
+
+                // Format dates helper
+                const formatDate = (date) => {
+                    if (!date) return 'N/A';
+                    return date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                    });
+                };
+
+                // Calculate next payment date
+                let nextPaymentDate = null;
+                if (subscription && subscription.status === 'active') {
+                    // If we have next_billing_date from webhook, use it
+                    if (subscription.next_billing_date) {
+                        nextPaymentDate = new Date(subscription.next_billing_date);
+                    } else if (subscription.start_date) {
+                        // Calculate from start_date
+                        const startDate = new Date(subscription.start_date);
+                        const now = new Date();
+                        const monthsToAdd = subscription.plan_type === 'monthly' ? 1 : 3;
+                        
+                        // Find next payment date
+                        let nextPayment = new Date(startDate);
+                        while (nextPayment <= now) {
+                            nextPayment.setMonth(nextPayment.getMonth() + monthsToAdd);
+                        }
+                        nextPaymentDate = nextPayment;
+                    }
+                }
+
+                // Prepare subscription data - only if subscription exists and has plan_type
+                // Also check that it's not just an empty object or invalid data
+                if (!subscription || !subscription.plan_type || !subscription.status) {
+                    console.log('No valid subscription found, showing empty state');
+                    subscription = null;
+                } else {
+                    console.log('Valid subscription found:', {
+                        plan_type: subscription.plan_type,
+                        status: subscription.status,
+                        amount_paid: subscription.amount_paid
+                    });
+                }
+                
+                // Only build subscription display if we have valid subscription data
+                if (subscription && subscription.plan_type && subscription.status) {
+                    const subscriptionType = subscription.plan_type === 'monthly' ? 'Monthly' : 
+                                           subscription.plan_type === 'quarterly' ? 'Quarterly' : 
+                                           '-';
+                    
+                    const isActive = subscription.status === 'active';
+                    const statusText = isActive ? 'Active' : 'Not active';
+                    const statusColor = isActive ? '#27ae60' : '#9ca3af';
+                    
+                    // Format amount with currency - only show if amount_paid exists
+                    let amount = '-';
+                    if (subscription.amount_paid) {
+                        const currencySymbol = subscription.currency === 'EUR' ? '€' : 
+                                             subscription.currency === 'USD' ? '$' : 
+                                             subscription.currency || '€';
+                        amount = `${currencySymbol}${subscription.amount_paid.toFixed(2)}`;
+                    }
+                    
+                    const billingFrequency = subscription.plan_type === 'monthly' ? 'billed monthly' : 
+                                           subscription.plan_type === 'quarterly' ? 'billed quarterly' : 
+                                           '';
+                    const nextBillingDateText = nextPaymentDate ? formatDate(nextPaymentDate) : '-';
+                    
+                    // Build HTML with subscription data (existing code continues below)
+                    var subscriptionType_final = subscriptionType;
+                    var isActive_final = isActive;
+                    var statusText_final = statusText;
+                    var statusColor_final = statusColor;
+                    var amount_final = amount;
+                    var billingFrequency_final = billingFrequency;
+                    var nextBillingDateText_final = nextBillingDateText;
+                } else {
+                    // Set defaults for empty state
+                    var subscriptionType_final = '-';
+                    var isActive_final = false;
+                    var statusText_final = 'Not active';
+                    var statusColor_final = '#9ca3af';
+                    var amount_final = '-';
+                    var billingFrequency_final = '';
+                    var nextBillingDateText_final = '-';
+                }
+
+                // Fetch payment history from Supabase ONLY - no fallbacks, no mock data
+                let paymentHistory = [];
+                if (typeof window.getPaymentHistory === 'function') {
+                    try {
+                        paymentHistory = await window.getPaymentHistory();
+                        console.log('Payment history from Supabase:', paymentHistory);
+                        
+                        // CRITICAL: Filter out any payments with amount 3.52 (mock/test data)
+                        paymentHistory = paymentHistory.filter(payment => {
+                            if (payment.amount == 3.52 || parseFloat(payment.amount) == 3.52) {
+                                console.error('❌ Rejecting payment with amount 3.52 (mock data):', payment);
+                                return false;
+                            }
+                            return true;
+                        });
+                    } catch (error) {
+                        console.error('Error fetching payment history:', error);
+                        // NO FALLBACK - paymentHistory remains empty array
+                    }
+                }
+
+                // Build payment history table HTML
+                let paymentHistoryHTML = '';
+                if (paymentHistory.length > 0) {
+                    paymentHistoryHTML = `
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e5e7eb;">
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Amount</th>
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Status</th>
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Date</th>
+                                        <th style="padding: 0.75rem 1rem; text-align: left; color: #1e3a8a; font-weight: 600; font-size: 0.9rem;">Invoice</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${paymentHistory.map(payment => {
+                                        const paymentDate = payment.date ? formatDate(new Date(payment.date)) : 'N/A';
+                                        const paymentAmount = payment.amount ? 
+                                            `${payment.currency || 'EUR'} ${parseFloat(payment.amount).toFixed(2)}` : 
+                                            'N/A';
+                                        return `
+                                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                                <td style="padding: 0.75rem 1rem; color: #4b5563; font-size: 0.9rem;">${paymentAmount}</td>
+                                                <td style="padding: 0.75rem 1rem; color: #4b5563; font-size: 0.9rem;">
+                                                    <span style="color: #27ae60; font-weight: 500;">Paid</span>
+                                                </td>
+                                                <td style="padding: 0.75rem 1rem; color: #4b5563; font-size: 0.9rem;">${paymentDate}</td>
+                                                <td style="padding: 0.75rem 1rem;">
+                                                    <a href="${payment.invoice_url || 'https://checkout.dodopayments.com/account'}" target="_blank" style="color: #1e3a8a; text-decoration: none; font-weight: 500; font-size: 0.9rem;">
+                                                        Invoice →
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    paymentHistoryHTML = `
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                        <p style="color: #9ca3af; font-size: 0.9rem;">No payment history available.</p>
+                    `;
+                }
+
+                // FINAL SAFETY CHECK: Ensure subscription is valid before rendering
+                // Must have: plan_type, status, id, and amount_paid must NOT be 3.52
+                if (subscription) {
+                    const isValid = subscription.plan_type && 
+                                   subscription.status && 
+                                   subscription.id &&
+                                   subscription.amount_paid != 3.52 &&
+                                   parseFloat(subscription.amount_paid) != 3.52;
+                    
+                    if (!isValid) {
+                        console.error('❌ Invalid subscription detected before rendering:', subscription);
+                        console.error('❌ Rejecting subscription - will show empty state');
+                        subscription = null;
+                    }
+                }
+                
+                // Build HTML with 2 divs - only if we have valid subscription
+                let billingHTML = '';
+                console.log('🔍 Final subscription check before rendering:', subscription);
+                console.log('🔍 subscription.plan_type:', subscription?.plan_type);
+                console.log('🔍 subscription.status:', subscription?.status);
+                console.log('🔍 subscription.amount_paid:', subscription?.amount_paid);
+                
+                if (subscription && subscription.plan_type && subscription.status && subscription.id) {
+                    billingHTML = `
+                        <!-- First div: Subscription details with cancel button -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <!-- Left side: Subscription info -->
+                            <div style="flex: 1;">
+                                <!-- Line 1: Monthly/Quarterly (bold) -->
+                                <div style="font-weight: bold; font-size: 1.1rem; color: #1e3a8a; margin-bottom: 0.5rem;">
+                                    ${subscriptionType_final}
+                                </div>
+                                <!-- Line 2: Active/Not active -->
+                                <div style="margin-bottom: 0.5rem;">
+                                    <span style="color: ${statusColor_final}; font-size: 0.95rem;">
+                                        ${statusText_final}
+                                    </span>
+                                </div>
+                                <!-- Line 3: Amount + billed text -->
+                                <div style="margin-bottom: 0.5rem; color: #4b5563; font-size: 0.95rem;">
+                                    ${amount_final} ${billingFrequency_final}
+                                </div>
+                                <!-- Line 4: Next billing date -->
+                                <div style="color: #4b5563; font-size: 0.95rem;">
+                                    Next billing date: ${nextBillingDateText_final}
+                                </div>
+                            </div>
+                            <!-- Right side: Cancel subscription button -->
+                            <div style="margin-left: 2rem;">
+                                ${isActive_final ? `
+                                    <button id="cancelSubscriptionBtn" style="background-color: #f3f4f6; color: #ef4444; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s;">
+                                        Cancel Subscription
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Second div: Payment History -->
+                        <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            ${paymentHistoryHTML}
+                        </div>
+                    `;
+                }
+
+                // If no subscription, show empty state
+                if (!subscription || !subscription.plan_type) {
+                    billingHTML = `
+                        <!-- First div: No subscription -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 1.1rem; color: #1e3a8a; margin-bottom: 0.5rem;">
+                                    -
+                                </div>
+                                <div style="margin-bottom: 0.5rem;">
+                                    <span style="color: #9ca3af; font-size: 0.95rem;">
+                                        Not active
+                                    </span>
+                                </div>
+                                <div style="margin-bottom: 0.5rem; color: #4b5563; font-size: 0.95rem;">
+                                    -
+                                </div>
+                                <div style="color: #4b5563; font-size: 0.95rem;">
+                                    Next billing date: -
+                                </div>
+                            </div>
+                            <div style="margin-left: 2rem;">
+                                <!-- No cancel button when not subscribed -->
+                            </div>
+                        </div>
+                        
+                        <!-- Second div: Payment History -->
+                        <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                            <p style="color: #9ca3af; font-size: 0.9rem;">No payment history available.</p>
+                        </div>
+                    `;
+                }
+
+                billingsContent.innerHTML = billingHTML;
+
+                // Add cancel subscription handler
+                const cancelBtn = document.getElementById('cancelSubscriptionBtn');
+                console.log('🔵 Cancel button element:', cancelBtn);
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', function() {
+                        console.log('🔵 Cancel button clicked!');
+                        // Show modal instead of confirm popup
+                        if (typeof window.showCancelSubscriptionModal === 'function') {
+                            console.log('🔵 Calling showCancelSubscriptionModal...');
+                            window.showCancelSubscriptionModal();
+                        } else {
+                            console.error('🔵 showCancelSubscriptionModal function not found!');
+                            // Fallback to confirm if modal function not available
+                            if (confirm('Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period.')) {
+                                handleCancelSubscription();
+                            }
+                        }
+                    });
+                } else {
+                    console.error('🔵 Cancel button not found!');
+                }
+
+            } catch (error) {
+                console.error('Error loading billing info:', error);
+                // Show error state
+                billingsContent.innerHTML = `
+                    <!-- First div: Error state -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="flex: 1; color: #ef4444;">
+                            Error loading billing information. Please try again later.
+                        </div>
+                    </div>
+                    
+                    <!-- Second div: Payment History -->
+                    <div style="padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e3a8a; font-size: 1rem; font-weight: 600;">Payment History</h4>
+                        <p style="color: #9ca3af; font-size: 0.9rem;">Error loading payment history. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+    
+    <!-- Early auth check - runs after scripts load to prevent redirecting logged-in users -->
+    <script>
+        // Wait for DOM and scripts to load before checking auth
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Give Supabase time to initialize (especially important in production)
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Wait for checkAuthStatus to be available (up to 5 seconds)
+            let attempts = 0;
+            while (typeof window.checkAuthStatus !== 'function' && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            // Check auth status - MUST verify with Supabase, not just localStorage
+            let authStatus;
+            if (typeof window.checkAuthStatus === 'function') {
+                try {
+                    authStatus = await window.checkAuthStatus();
+                } catch (error) {
+                    console.error('Error checking auth status:', error);
+                    // If checkAuthStatus fails, user is NOT logged in - redirect
+                    console.log('Auth check failed, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
+            } else {
+                // If checkAuthStatus not available, try to verify with Supabase directly
+                console.log('checkAuthStatus not available, checking Supabase directly...');
+                if (typeof getSupabase === 'function') {
+                    const supabase = getSupabase();
+                    if (supabase) {
+                        try {
+                            const { data: { session }, error } = await supabase.auth.getSession();
+                            if (error || !session || !session.user) {
+                                console.log('No Supabase session, redirecting to home page');
+                                window.location.href = 'index.html';
+                                return;
+                            }
+                            // Has valid session
+                            authStatus = {
+                                isLoggedIn: true,
+                                user: session.user,
+                                email: session.user.email,
+                                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
+                            };
+                        } catch (e) {
+                            console.error('Error checking Supabase session:', e);
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                    } else {
+                        // No Supabase client - redirect for security
+                        console.log('No Supabase client, redirecting to home page');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                } else {
+                    // No way to verify - redirect for security
+                    console.log('Cannot verify auth, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
+            }
+            
+            if (!authStatus.isLoggedIn) {
+                console.log('User not logged in, redirecting to home page');
+                window.location.href = 'index.html';
+                return;
+            }
+            // User is logged in - continue loading page
+        });
+    </script>
+    
+    <script>
+        // Initialize progress tracker (but we'll use Supabase as source of truth)
+        let progressTracker = new ProgressTracker();
+        
+        // Store Supabase progress data globally so updateStats can use it
+        let globalSupabaseProgress = null;
+
+        // Tab switching functionality is handled in the earlier script block
+        // This duplicate function has been removed to avoid conflicts
+        
+        // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
+        let userData = {
+            name: "Loading...",
+            email: "", // Will be set from Supabase auth - no fallback to prevent showing guest@example.com
+            subscription: "free", // CRITICAL: Always start as 'free', updated ONLY from Supabase
+            gamesPlayed: 0,
+            trainingHours: 0,
+            currentStreak: 0
+        };
+        
+        // Clear any stale billing-related localStorage on page load
+        (function() {
+            localStorage.removeItem('cachedSubscriptionStatus');
+            localStorage.removeItem('cachedSubscriptionPlan');
+            localStorage.removeItem('subscriptionData');
+            localStorage.removeItem('userSubscription');
+            console.log('🧹 Cleared stale billing localStorage on page load');
+        })();
+
+        // Initialize profile page
+        async function initProfile() {
+            console.log('🚀🚀🚀 initProfile() STARTED - THIS SHOULD APPEAR IN CONSOLE 🚀🚀🚀');
+            try {
+            // First, check if user is actually logged in - MUST verify with Supabase
+            let authStatus;
+            if (typeof window.checkAuthStatus === 'function') {
+                try {
+                    authStatus = await window.checkAuthStatus();
+                } catch (error) {
+                    console.error('Error checking auth status:', error);
+                    // If checkAuthStatus fails, user is NOT logged in - redirect
+                    console.log('Auth check failed, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
+            } else {
+                // If checkAuthStatus not available, verify with Supabase directly
+                console.log('checkAuthStatus not available, checking Supabase directly...');
+                if (typeof getSupabase === 'function') {
+                    const supabase = getSupabase();
+                    if (supabase) {
+                        try {
+                            const { data: { session }, error } = await supabase.auth.getSession();
+                            if (error || !session || !session.user) {
+                                console.log('No Supabase session, redirecting to home page');
+                                window.location.href = 'index.html';
+                                return;
+                            }
+                            // Has valid session
+                            authStatus = {
+                                isLoggedIn: true,
+                                user: session.user,
+                                email: session.user.email,
+                                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
+                            };
+                        } catch (e) {
+                            console.error('Error checking Supabase session:', e);
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                    } else {
+                        // No Supabase client - redirect for security
+                        console.log('No Supabase client, redirecting to home page');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                } else {
+                    // No way to verify - redirect for security
+                    console.log('Cannot verify auth, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
+            }
+            
+            // If user is not logged in, redirect to home page immediately
+            if (!authStatus.isLoggedIn) {
+                console.log('User not logged in, redirecting to home page');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // User is logged in - proceed with loading profile data
+            // Update user info immediately from authStatus (instant display)
+            userData.name = authStatus.name || 'User';
+            userData.email = authStatus.email || '';
+            updateUserInfo();
+            
+            // SIMPLIFIED: Load Supabase data - Wait for Supabase to be ready first
+            // Step 1: Wait for Supabase scripts to load
+            console.log('⏳ Waiting for Supabase scripts to load...');
+            let attempts = 0;
+            while ((typeof window.getSupabase !== 'function' || typeof window.getUserProgress !== 'function') && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            // Step 2: Wait for Supabase client to be initialized
+            if (typeof window.getSupabase === 'function') {
+                console.log('⏳ Waiting for Supabase client to initialize...');
+                attempts = 0;
+                let supabaseReady = false;
+                while (attempts < 50) {
+                    const supabase = window.getSupabase();
+                    if (supabase) {
+                        supabaseReady = true;
+                        console.log('✅ Supabase client is ready');
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!supabaseReady) {
+                    console.error('❌ Supabase client not initialized after waiting');
+                    await updateStats(null);
+                    return;
+                }
+            } else {
+                console.error('❌ getSupabase is not available');
+                await updateStats(null);
+                return;
+            }
+            
+            // Step 3: Now try to get user progress
+            if (typeof window.getUserProgress === 'function') {
+                try {
+                    console.log('🔄 Loading Supabase data for profile...');
+                    const supabaseProgress = await window.getUserProgress();
+                    console.log('📊 getUserProgress() returned:', supabaseProgress);
+                    
+                    if (supabaseProgress) {
+                        console.log('✅ Got Supabase data:', supabaseProgress);
+                        globalSupabaseProgress = supabaseProgress;
+                        
+                        // Update stats
+                        await updateStats(supabaseProgress);
+                    } else {
+                        console.log('⚠️ No Supabase data - getUserProgress() returned null');
+                        await updateStats(null);
+                    }
+                } catch (e) {
+                    console.error('❌ Error loading Supabase data:', e);
+                    await updateStats(null);
+                }
+            } else {
+                console.warn('⚠️ window.getUserProgress is not a function');
+                updateStats(null);
+            }
+            
+            // Then get fresh data from Supabase (updates in background)
+            if (authStatus.user) {
+                // We already have user data from checkAuthStatus
+                userData.name = authStatus.name;
+                userData.email = authStatus.email;
+                updateUserInfo();
+            } else if (typeof getCurrentUser === 'function') {
+                try {
+                    const user = await getCurrentUser();
+                    if (user) {
+                        // Get name from Supabase user metadata or email
+                        const supabaseName = user.user_metadata?.name || 
+                                          user.user_metadata?.full_name || 
+                                          user.email?.split('@')[0] || 
+                                          'User';
+                        userData.name = supabaseName;
+                        userData.email = user.email || userData.email; // Get real email from Supabase
+                        localStorage.setItem('userName', supabaseName);
+                        localStorage.setItem('userEmail', user.email || '');
+                        
+                        // Update UI again with fresh Supabase data
+                        updateUserInfo();
+                    }
+                } catch (e) {
+                    console.log('Could not get user from Supabase:', e);
+                }
+            }
+            
+            console.log('✅ initProfile() COMPLETED');
+            } catch (error) {
+                console.error('❌ ERROR in initProfile():', error);
+                console.error('Error stack:', error.stack);
+                throw error; // Re-throw to see it in console
+            }
+            
+            // Force hide subscription UI initially to prevent flash
+            const statusElement = document.getElementById('subscriptionStatus');
+            const subtleElement = document.getElementById('subscriptionInfoSubtle');
+            if (statusElement) {
+                statusElement.style.setProperty('display', 'none', 'important');
+                statusElement.style.setProperty('visibility', 'hidden', 'important');
+            }
+            if (subtleElement) {
+                subtleElement.style.setProperty('display', 'none', 'important');
+                subtleElement.style.setProperty('visibility', 'hidden', 'important');
+            }
+            
+            // Use cached subscription status for instant display, then update from Supabase
+            const cachedStatus = localStorage.getItem('cachedSubscriptionStatus') === 'true';
+            const cachedPlan = localStorage.getItem('cachedSubscriptionPlan') || 'free';
+            
+            if (cachedStatus) {
+                userData.subscription = cachedPlan;
+                // Keep hidden for premium users
+                if (statusElement) {
+                    statusElement.style.setProperty('display', 'none', 'important');
+                }
+                if (subtleElement) {
+                    subtleElement.style.setProperty('display', 'none', 'important');
+                }
+            } else {
+                userData.subscription = 'free';
+                // Show free status only after confirming user is actually free
+                // For now, keep hidden until Supabase confirms
+            }
+            
+            // Then check Supabase and update if different (will update cache)
+            await updateSubscriptionStatus();
+            
+            // Update training time every second if timer is running
+            setInterval(function() {
+                if (progressTracker.trainingTimer.isRunning) {
+                    // Always pass globalSupabaseProgress to ensure latest data is used
+                    updateStats(globalSupabaseProgress);
+                }
+            }, 1000);
+        }
+
+        function updateUserInfo() {
+            // Extract first name from full name
+            let firstName = userData.name;
+            if (firstName && firstName.includes(' ')) {
+                firstName = firstName.split(' ')[0]; // Get first word
+            }
+            
+            // Show welcome message with first name
+            const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+            
+            // Update profile header title (replace "My Profile" with welcome message)
+            const profileTitleElement = document.querySelector('.profile-title');
+            if (profileTitleElement) {
+                profileTitleElement.textContent = welcomeMessage;
+            }
+            
+            // Update email (use real email from Supabase, not placeholder)
+            const userEmailElement = document.getElementById('userEmail');
+            if (userEmailElement) {
+                userEmailElement.textContent = userData.email || 'Not logged in';
+            }
+        }
+
+        async function updateSubscriptionStatus() {
+            const statusElement = document.getElementById('subscriptionStatus');
+            const subtleElement = document.getElementById('subscriptionInfoSubtle');
+            const planNameSubtle = document.getElementById('planNameSubtle');
+            const planFeaturesSubtle = document.getElementById('planFeaturesSubtle');
+
+            // CRITICAL: Only use Supabase - NO localStorage fallbacks
+            let hasActiveSubscription = false;
+            let subscription = null;
+            
+            // Wait for Supabase to be ready
+            if (typeof window.hasActiveSubscription === 'function' && typeof window.getSupabase === 'function' && window.getSupabase()) {
+                try {
+                    hasActiveSubscription = await window.hasActiveSubscription();
+                    
+                    if (hasActiveSubscription && typeof window.getUserSubscription === 'function') {
+                        subscription = await window.getUserSubscription();
+                    }
+                } catch (e) {
+                    console.error('Supabase subscription check failed:', e);
+                    // NO FALLBACK - set to false if Supabase fails
+                    hasActiveSubscription = false;
+                    subscription = null;
+                }
+            } else {
+                // Supabase not ready - don't use cached values, wait for it
+                console.log('Supabase not ready yet, skipping subscription status update');
+                return;
+            }
+
+            // Update userData.subscription ONLY from Supabase data
+            if (hasActiveSubscription && subscription) {
+                // User has active subscription from Supabase
+                userData.subscription = subscription.plan_type;
+                if (subscription.status === 'cancelled') {
+                    userData.subscription = subscription.plan_type + '_cancelled';
+                }
+            } else {
+                // No subscription from Supabase
+                userData.subscription = 'free';
+            }
+
+            // Check if subscription is cancelled - ONLY from Supabase, no localStorage fallback
+            const isCancelled = subscription?.status === 'cancelled';
+            const cancellationDate = subscription?.updated_at;
+            
+            if (isCancelled && cancellationDate) {
+                const cancelledDate = new Date(cancellationDate);
+                const now = new Date();
+                const originalPlan = userData.subscription.replace('_cancelled', '');
+                
+                // Calculate when the billing period ends
+                let billingEndDate;
+                if (originalPlan === 'monthly') {
+                    billingEndDate = new Date(cancelledDate.getFullYear(), cancelledDate.getMonth() + 1, cancelledDate.getDate());
+                } else if (originalPlan === 'quarterly') {
+                    billingEndDate = new Date(cancelledDate.getFullYear(), cancelledDate.getMonth() + 3, cancelledDate.getDate());
+                }
+                
+                // If billing period has ended, downgrade to free
+                // CRITICAL: Don't update localStorage - Supabase is source of truth
+                if (now >= billingEndDate) {
+                    userData.subscription = 'free';
+                    hasActiveSubscription = false;
+                }
+            }
+
+            // Update UI display - ensure elements are completely removed from layout for paid users
+            if (hasActiveSubscription) {
+                const statusEl = document.getElementById('subscriptionStatus');
+                const subtleEl = document.getElementById('subscriptionInfoSubtle');
+                if (statusEl) {
+                    statusEl.style.setProperty('display', 'none', 'important');
+                    statusEl.style.setProperty('height', '0', 'important');
+                    statusEl.style.setProperty('margin', '0', 'important');
+                    statusEl.style.setProperty('padding', '0', 'important');
+                }
+                if (subtleEl) {
+                    subtleEl.style.setProperty('display', 'none', 'important');
+                    subtleEl.style.setProperty('height', '0', 'important');
+                    subtleEl.style.setProperty('margin', '0', 'important');
+                    subtleEl.style.setProperty('padding', '0', 'important');
+                    subtleEl.classList.remove('show-subscription');
+                }
+            } else {
+                updateSubscriptionStatusDisplay(hasActiveSubscription);
+            }
+        }
+        
+        // Update subscription status display (separate function for instant updates)
+        function updateSubscriptionStatusDisplay(hasActive = null) {
+            const statusElement = document.getElementById('subscriptionStatus');
+            const subtleElement = document.getElementById('subscriptionInfoSubtle');
+            const planNameSubtle = document.getElementById('planNameSubtle');
+            const planFeaturesSubtle = document.getElementById('planFeaturesSubtle');
+            
+            // Use provided value or check userData
+            let isPremium = false;
+            if (hasActive !== null) {
+                // Use the provided value (from cache or Supabase)
+                isPremium = hasActive;
+            } else {
+                // Fallback to checking userData
+                isPremium = (userData.subscription === 'monthly' || userData.subscription === 'quarterly' || 
+                           userData.subscription === 'monthly_cancelled' || userData.subscription === 'quarterly_cancelled');
+            }
+            
+            if (isPremium) {
+                // Hide subscription info for premium users
+                if (statusElement) statusElement.style.display = 'none';
+                if (subtleElement) subtleElement.style.display = 'none';
+            } else {
+                // Show subtle subscription info for free users
+                if (statusElement) statusElement.style.display = 'none';
+                if (subtleElement) subtleElement.style.display = 'block';
+                
+                if (planNameSubtle) planNameSubtle.textContent = 'Free Plan';
+                if (planFeaturesSubtle) {
+                    planFeaturesSubtle.innerHTML = `
+                        <span class="feature-dot available"></span>
+                        <span class="feature-dot available"></span>
+                        <span class="feature-dot locked"></span>
+                        <span class="feature-dot locked"></span>
+                    `;
+                }
+            }
+        }
+
+
+        // Check if all games and puzzles are unlocked
+        async function checkIfAllContentUnlocked() {
+            try {
+                const response = await fetch('/games/games.json');
+                const data = await response.json();
+                
+                if (data && data.games) {
+                    // Check if any games or puzzles are locked
+                    const hasLockedContent = data.games.some(game => game.locked === true);
+                    return !hasLockedContent; // Return true if no locked content
+                }
+                return false; // Default to showing subscription if can't load data
+            } catch (error) {
+                console.error('Error checking content status:', error);
+                return false; // Default to showing subscription if error
+            }
+        }
+
+        // Function to simulate premium subscription (for testing)
+        function setPremiumSubscription(plan = 'monthly') {
+            localStorage.setItem('subscriptionPlan', plan);
+            userData.subscription = plan;
+            updateSubscriptionStatus();
+            console.log(`Premium subscription set to: ${plan}`);
+        }
+
+        // Function to reset to free account (for testing)
+        function setFreeAccount() {
+            localStorage.setItem('subscriptionPlan', 'free');
+            userData.subscription = 'free';
+            updateSubscriptionStatus();
+            console.log('Account reset to free');
+        }
+
+        // SIMPLIFIED: Simple function to update profile stats from Supabase data
+        window.updateStats = async function updateStats(supabaseData = null) {
+            // If no data provided, try to fetch from Supabase
+            let supabaseProgress = supabaseData || globalSupabaseProgress;
+            
+            // If still null, try fetching directly (with waitForSupabase fallback)
+            if (!supabaseProgress && typeof window.getUserProgress === 'function') {
+                try {
+                    supabaseProgress = await window.getUserProgress();
+                    if (supabaseProgress) {
+                        globalSupabaseProgress = supabaseProgress;
+                    }
+                } catch (e) {
+                    console.warn('Could not fetch Supabase data:', e);
+                }
+            }
+            
+            // Get data from Supabase or use empty defaults
+            const completedGamesArray = supabaseProgress?.completed_games || [];
+            const completedPuzzlesArray = supabaseProgress?.completed_puzzles || [];
+            const trainingHours = supabaseProgress?.training_hours ?? 0;
+            const currentStreak = supabaseProgress?.current_streak ?? 0;
+            
+            console.log('📊 updateStats called with:', {
+                hasData: !!supabaseProgress,
+                completed_games: completedGamesArray,
+                completed_puzzles: completedPuzzlesArray,
+                training_hours: trainingHours,
+                training_hours_raw: supabaseProgress?.training_hours,
+                current_streak: currentStreak
+            });
+            
+            // Debug: Log the training hours calculation (trainingEl will be defined later)
+            const trainingEl = document.getElementById('trainingHours');
+            if (trainingEl) {
+                console.log('🕐 Training time calculation:', {
+                    trainingHours: trainingHours,
+                    hours: Math.floor(trainingHours),
+                    minutes: Math.floor((trainingHours - Math.floor(trainingHours)) * 60),
+                    timeString: trainingHours > 0 ? `${Math.floor(trainingHours)}h ${Math.floor((trainingHours - Math.floor(trainingHours)) * 60)}m` : `${Math.floor((trainingHours - Math.floor(trainingHours)) * 60)}m`
+                });
+            }
+            
+            // Don't call updateSupabaseDataTable from updateStats - it's already called directly after getUserProgress()
+            // This prevents it from being called with null or wrong data
+            
+            // Load games and puzzles to validate counts
+            try {
+                const [gamesResponse, puzzlesResponse] = await Promise.all([
+                    fetch(`/games/games.json?t=${Date.now()}`),
+                    fetch(`/games/puzzles.json?t=${Date.now()}`)
+                ]);
+                
+                let allItems = [];
+                if (gamesResponse.ok) {
+                    const gamesData = await gamesResponse.json();
+                    if (gamesData?.games) allItems = allItems.concat(gamesData.games);
+                }
+                if (puzzlesResponse.ok) {
+                    const puzzlesData = await puzzlesResponse.json();
+                    if (puzzlesData?.puzzles) allItems = allItems.concat(puzzlesData.puzzles);
+                }
+                
+                // Count games from "By Moves" (not custom, has valid move count)
+                        const completedGames = completedGamesArray.filter(gameId => {
+                    const game = allItems.find(g => g.id === gameId);
+                    return game && game.type === 'game' && !gameId.startsWith('custom-game-') &&
+                           (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
+                        }).length;
+                        
+                // Count puzzles with valid difficulty
+                const validDifficulties = ['easy', 'intermediate', 'advanced', 'epic'];
+                const completedPuzzles = completedPuzzlesArray.filter(gameId => {
+                    const puzzle = allItems.find(g => g.id === gameId);
+                    return puzzle && puzzle.type === 'puzzle' && puzzle.difficulty &&
+                           validDifficulties.includes(puzzle.difficulty.toLowerCase());
+                            }).length;
+                        
+                // Update UI directly
+                const gamesEl = document.getElementById('gamesPlayed');
+                const puzzlesEl = document.getElementById('puzzlesCompleted');
+                
+                if (gamesEl) {
+                    gamesEl.textContent = completedGames;
+                    console.log('✅ Updated Games Completed:', completedGames);
+                }
+                if (puzzlesEl) {
+                    puzzlesEl.textContent = completedPuzzles;
+                    console.log('✅ Updated Puzzles Completed:', completedPuzzles);
+                }
+                
+                // Update training time in Progress section (always update, regardless of sidebar elements)
+                const totalMinutes = Math.round(trainingHours * 60);
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                
+                const trainingTimeProgressEl = document.getElementById('trainingTimeProgress');
+                if (trainingTimeProgressEl) {
+                    trainingTimeProgressEl.textContent = timeString;
+                    console.log('✅ Updated Training Time in Progress:', timeString, '(from', trainingHours, 'hours)');
+                }
+                
+                // Update current streak in Progress section (always update, regardless of sidebar elements)
+                const currentStreakProgressEl = document.getElementById('currentStreakProgress');
+                if (currentStreakProgressEl) {
+                    const streakText = currentStreak === 1 ? '1 day' : `${currentStreak} days`;
+                    currentStreakProgressEl.textContent = streakText;
+                    console.log('✅ Updated Current Streak in Progress:', streakText);
+                }
+                
+                // Update progress bars
+                updateProgressBars();
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+
+        // Update progress bars with current completion counts
+        async function updateProgressBars() {
+            try {
+                // Get total available games and puzzles - fetch both files
+                const [gamesResponse, puzzlesResponse] = await Promise.all([
+                    fetch(`/games/games.json?t=${Date.now()}`),
+                    fetch(`/games/puzzles.json?t=${Date.now()}`)
+                ]);
+                
+                let allItems = [];
+                
+                // Load games
+                if (gamesResponse.ok) {
+                    const gamesData = await gamesResponse.json();
+                    if (gamesData && gamesData.games) {
+                        allItems = allItems.concat(gamesData.games);
+                    }
+                }
+                
+                // Load puzzles
+                if (puzzlesResponse.ok) {
+                    const puzzlesData = await puzzlesResponse.json();
+                    if (puzzlesData && puzzlesData.puzzles) {
+                        allItems = allItems.concat(puzzlesData.puzzles);
+                    }
+                }
+                
+                if (allItems.length > 0) {
+                    // Total games from "By Moves" tab (organized by move count, not custom, not GM, not Openings)
+                    const totalGames = allItems.filter(game => 
+                        game.type === 'game' && 
+                        !game.id.startsWith('custom-game-') &&
+                        // Games from "By Moves" are organized by move count
+                        (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30)
+                    ).length;
+                    
+                    // Total puzzles with difficulty levels
+                    const validDifficulties = ['easy', 'intermediate', 'advanced', 'epic'];
+                    const totalPuzzles = allItems.filter(game => 
+                        game.type === 'puzzle' && 
+                        game.difficulty && 
+                        validDifficulties.includes(game.difficulty.toLowerCase())
+                    ).length;
+                    
+                    // Get completed games and puzzles from Supabase data (source of truth)
+                    // Use globalSupabaseProgress if available (already loaded), otherwise reload
+                    let completedGames = 0;
+                    let completedPuzzles = 0;
+                    
+                    // Try to use globalSupabaseProgress first (already loaded)
+                    let supabaseProgress = globalSupabaseProgress;
+                    
+                    // If not available, try to load from Supabase
+                    if (!supabaseProgress && typeof window.getUserProgress === 'function') {
+                        try {
+                            supabaseProgress = await window.getUserProgress();
+                            // Update global for future use
+                            if (supabaseProgress) {
+                                globalSupabaseProgress = supabaseProgress;
+                            }
+                        } catch (e) {
+                            console.error('Error loading progress for progress bars:', e);
+                        }
+                    }
+                    
+                    if (supabaseProgress) {
+                        // Use completed_games from Supabase (already filtered to "By Moves" games in test mode)
+                                const gamesArray = supabaseProgress.completed_games || [];
+                                const puzzlesArray = supabaseProgress.completed_puzzles || [];
+                                
+                        console.log('📊 Progress bars - Supabase data:', {
+                            completedGames: gamesArray,
+                            completedPuzzles: puzzlesArray
+                        });
+                        
+                        // Count games from "By Moves" tab completed in challenge/test mode
+                        // Use completed_games array (already filtered)
+                                completedGames = gamesArray.filter(gameId => {
+                            const game = allItems.find(g => g.id === gameId);
+                            const isValid = game && 
+                                           game.type === 'game' && 
+                                           !gameId.startsWith('custom-game-') &&
+                                           (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
+                            if (game) {
+                                console.log(`📊 Progress bar - Game ${gameId}: type=${game.type}, moves=${game.moves}, valid=${isValid}`);
+                            }
+                            return isValid;
+                                }).length;
+                        console.log('📊 Progress bars - Completed games count:', completedGames);
+                                
+                        // Count puzzles with difficulty levels only
+                                completedPuzzles = puzzlesArray.length > 0 
+                                    ? puzzlesArray.filter(gameId => {
+                                const puzzle = allItems.find(g => g.id === gameId);
+                                const isValid = puzzle && 
+                                               puzzle.type === 'puzzle' && 
+                                               puzzle.difficulty && 
+                                               validDifficulties.includes(puzzle.difficulty.toLowerCase());
+                                if (puzzle) {
+                                    console.log(`📊 Progress bar - Puzzle ${gameId}: type=${puzzle.type}, difficulty=${puzzle.difficulty}, valid=${isValid}`);
+                                }
+                                return isValid;
+                            }).length
+                            : 0;
+            } else {
+                        // Fallback to localStorage - only count games from "By Moves" completed in challenge mode
+                        const challengeModeArray = progressTracker.userProgress.challengeModeCompletions || [];
+                        completedGames = challengeModeArray.filter(gameId => {
+                            const game = allItems.find(g => g.id === gameId);
+                            return game && 
+                                   game.type === 'game' && 
+                                   !gameId.startsWith('custom-game-') &&
+                                   (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
+                        }).length;
+                        
+                        // Count puzzles with difficulty levels only
+                        completedPuzzles = progressTracker.userProgress.completedGames.filter(gameId => {
+                            const puzzle = allItems.find(g => g.id === gameId);
+                            return puzzle && 
+                                   puzzle.type === 'puzzle' && 
+                                   puzzle.difficulty && 
+                                   validDifficulties.includes(puzzle.difficulty.toLowerCase());
+                        }).length;
+                    }
+                    
+                    console.log('Progress bar debug:');
+                    console.log('All items:', allItems.map(g => ({ name: g.name, type: g.type })));
+                    console.log('Games (type=game):', allItems.filter(game => game.type === 'game').map(g => g.name));
+                    console.log('Total games:', totalGames);
+                    console.log('Total puzzles:', totalPuzzles);
+                    console.log('Completed games:', completedGames);
+                    console.log('Completed puzzles:', completedPuzzles);
+                    
+                    // Calculate progress percentage for games
+                    const gamesProgress = totalGames > 0 ? (completedGames / totalGames) * 100 : 0;
+                    
+                    // Calculate progress percentage for puzzles
+                    const puzzlesProgress = totalPuzzles > 0 ? (completedPuzzles / totalPuzzles) * 100 : 0;
+                    
+                    // Update games progress
+                    document.getElementById('gamesProgressCount').textContent = `${completedGames}/${totalGames}`;
+                    document.getElementById('gamesProgressBar').style.width = `${Math.min(gamesProgress, 100)}%`;
+                    document.getElementById('gamesProgressGoal').textContent = `Goal: Complete all ${totalGames} available games`;
+                    
+                    // Update puzzles progress
+                    document.getElementById('puzzlesProgressCount').textContent = `${completedPuzzles}/${totalPuzzles}`;
+                    document.getElementById('puzzlesProgressBar').style.width = `${Math.min(puzzlesProgress, 100)}%`;
+                    document.getElementById('puzzlesProgressGoal').textContent = `Goal: Complete all ${totalPuzzles} available puzzles`;
+                }
+            } catch (error) {
+                console.error('Error updating progress bars:', error);
+                // Fallback to basic display
+                document.getElementById('gamesProgressCount').textContent = '0';
+                document.getElementById('puzzlesProgressCount').textContent = '0';
+            }
+        }
+
+        function editProfile() {
+            // Profile editing functionality removed
+        }
+
+        // Logout function - shows confirmation modal
+        function logout() {
+            console.log('Logout function called');
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                console.log('Modal found, showing it');
+                modal.style.display = 'block';
+            } else {
+                console.error('Logout modal not found!');
+            }
+        }
+        
+        // Make logout function globally accessible
+        window.logout = logout;
+
+        // Confirm logout function - SIMPLIFIED AND FIXED
+        async function confirmLogout() {
+            console.log('🔴 LOGOUT: Starting logout process...');
+            
+            // Hide modal first
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            // STEP 1: Sign out from Supabase FIRST (with timeout to prevent hanging)
+            console.log('🔴 LOGOUT: Signing out from Supabase...');
+            try {
+                // Use Promise.race to timeout after 2 seconds
+                const signOutPromise = (async () => {
+                    if (typeof window.signOut === 'function') {
+                        await window.signOut();
+                        console.log('✅ Signed out via window.signOut()');
+                    } else if (typeof getSupabase === 'function') {
+                        const supabase = getSupabase();
+                        if (supabase) {
+                            const { error } = await supabase.auth.signOut();
+                            if (error) {
+                                console.error('Error signing out from Supabase:', error);
+                            } else {
+                                console.log('✅ Signed out from Supabase');
+                            }
+                        }
+                    }
+                })();
+                
+                const timeoutPromise = new Promise((resolve) => {
+                    setTimeout(() => {
+                        console.log('⚠️ SignOut timeout - continuing anyway');
+                        resolve();
+                    }, 2000);
+                });
+                
+                await Promise.race([signOutPromise, timeoutPromise]);
+            } catch (error) {
+                console.error('Error during sign out:', error);
+                // Continue anyway
+            }
+            
+            // STEP 2: Clear ALL localStorage items
+            console.log('🔴 LOGOUT: Clearing all localStorage...');
+            localStorage.clear(); // Clear EVERYTHING - simplest and most effective
+            
+            // STEP 3: Clear userData object
+            userData.name = '';
+            userData.email = '';
+            userData.subscription = 'free';
+            
+            // STEP 4: Force redirect immediately
+            console.log('🔴 LOGOUT: Redirecting to index.html...');
+            window.location.href = 'index.html'; // Use href instead of replace for more reliable redirect
+        }
+        
+        // Make confirmLogout globally accessible (for onclick handlers)
+        window.confirmLogout = confirmLogout;
+        console.log('confirmLogout function registered globally');
+
+        // Cancel logout function
+        function cancelLogout() {
+            console.log('Cancel logout called');
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Make cancelLogout globally accessible (for onclick handlers)
+        window.cancelLogout = cancelLogout;
+
+        // Cancel Subscription Modal Functions
+        function showCancelSubscriptionModal() {
+            console.log('🔵 showCancelSubscriptionModal() called');
+            const modal = document.getElementById('cancelSubscriptionModal');
+            console.log('🔵 Modal element:', modal);
+            if (modal) {
+                console.log('🔵 Setting modal display to block');
+                modal.style.display = 'block';
+                console.log('🔵 Modal display after setting:', modal.style.display);
+            } else {
+                console.error('🔵 Modal element not found!');
+            }
+        }
+        window.showCancelSubscriptionModal = showCancelSubscriptionModal;
+
+        function closeCancelSubscriptionModal() {
+            const modal = document.getElementById('cancelSubscriptionModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        window.closeCancelSubscriptionModal = closeCancelSubscriptionModal;
+
+        async function confirmCancelSubscription() {
+            console.log('🔴 confirmCancelSubscription function called!');
+            
+            // Hide modal first
+            const modal = document.getElementById('cancelSubscriptionModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            if (typeof window.cancelSubscription === 'function') {
+                try {
+                    console.log('🔴 Calling window.cancelSubscription()...');
+                    console.log('🔴 Function type:', typeof window.cancelSubscription);
+                    console.log('🔴 Function:', window.cancelSubscription.toString().substring(0, 200));
+                    const result = await window.cancelSubscription();
+                    console.log('🔴 Result:', result);
+                    console.log('🔴 Result type:', typeof result);
+                    
+                    if (result.success) {
+                        // Show success message
+                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                        // Reload billing info to show updated status
+                        loadBillingInfo();
+                    } else {
+                        console.error('🔴 Cancellation failed:', result.error);
+                        alert('Error cancelling subscription: ' + (result.error || 'Unknown error') + '. Please try again or contact support.');
+                    }
+                } catch (error) {
+                    console.error('🔴 Error cancelling subscription:', error);
+                    console.error('🔴 Error details:', error.message, error.stack);
+                    alert('Error cancelling subscription: ' + error.message + '. Please try again or contact support.');
+                }
+            } else {
+                console.error('🔴 window.cancelSubscription function not found!');
+                alert('Cancel subscription function not available. Please contact support.');
+            }
+        }
+        window.confirmCancelSubscription = confirmCancelSubscription;
+
+        // Helper function for fallback (if modal functions not available)
+        async function handleCancelSubscription() {
+            if (typeof window.cancelSubscription === 'function') {
+                try {
+                    const result = await window.cancelSubscription();
+                    if (result.success) {
+                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                        loadBillingInfo();
+                    } else {
+                        alert('Error cancelling subscription. Please try again or contact support.');
+                    }
+                } catch (error) {
+                    console.error('Error cancelling subscription:', error);
+                    alert('Error cancelling subscription. Please try again or contact support.');
+                }
+            } else {
+                alert('Cancel subscription function not available. Please contact support.');
+            }
+        }
+        window.handleCancelSubscription = handleCancelSubscription;
+
+        // Modal functions
+        function showSignInModal() {
+            document.getElementById('signInModal').style.display = 'block';
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        function showRegisterModal() {
+            document.getElementById('registerModal').style.display = 'block';
+            document.getElementById('signInModal').style.display = 'none';
+        }
+
+        function closeModal() {
+            // Close static modals
+            const signInModal = document.getElementById('signInModal');
+            const registerModal = document.getElementById('registerModal');
+            const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+            const cancelSubscriptionModal = document.getElementById('cancelSubscriptionModal');
+            if (signInModal) signInModal.style.display = 'none';
+            if (registerModal) registerModal.style.display = 'none';
+            if (logoutConfirmModal) logoutConfirmModal.style.display = 'none';
+            if (cancelSubscriptionModal) cancelSubscriptionModal.style.display = 'none';
+            
+            // Close dynamically created modals
+            const dynamicModals = document.querySelectorAll('.modal');
+            dynamicModals.forEach(modal => {
+                if (modal.id !== 'signInModal' && modal.id !== 'registerModal') {
+                    modal.remove();
+                }
+            });
+        }
+
+        // Sign in handler - redirects to home page where proper Supabase auth is handled
+        function handleSignIn(event) {
+            event.preventDefault();
+            console.log('Sign in attempted from profile page - redirecting to home for proper authentication');
+            window.location.href = 'index.html#signin';
+        }
+
+        // Register handler - redirects to home page where proper Supabase auth is handled
+        function handleRegister(event) {
+            event.preventDefault();
+            console.log('Register attempted from profile page - redirecting to home for proper authentication');
+            window.location.href = 'index.html#register';
+        }
+
+        // Google sign-in handler (works for both sign-in and registration)
+        async function signInWithGoogle() {
+            try {
+                if (typeof window.signInWithGoogle === 'function') {
+                    const result = await window.signInWithGoogle();
+                    
+                    if (result.success && result.url) {
+                        // Redirect to Google OAuth
+                        window.location.href = result.url;
+            } else {
+                        // Show error
+                        const signInForm = document.getElementById('signInForm');
+                        if (signInForm) {
+                            showError(signInForm, result.error || 'Google sign-in failed. Please try again.');
+                        } else {
+                            alert(result.error || 'Google sign-in failed. Please try again.');
+                        }
+                    }
+                } else {
+                    alert('Google sign-in is not available. Please use email/password.');
+                }
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+                alert('An error occurred with Google sign-in. Please try again.');
+            }
+        }
+
+        // Google registration handler (same as sign-in - Google OAuth handles both)
+        async function registerWithGoogle() {
+            // Google OAuth works for both sign-in and registration
+            // If user exists, they sign in; if not, account is created
+            await signInWithGoogle();
+        }
+        
+        // Handle OAuth callback from Google
+        async function handleOAuthCallback() {
+            // Supabase OAuth uses URL hash fragments (#access_token=...)
+            // Check if we have a hash with access_token
+            const hash = window.location.hash;
+            const hasOAuthHash = hash && (hash.includes('access_token') || hash.includes('error'));
+            
+            if (hasOAuthHash && typeof getSupabase === 'function') {
+                const supabase = getSupabase();
+                if (supabase) {
+                    try {
+                        // Supabase automatically handles the hash and creates session
+                        // Just get the session to verify
+                        const { data, error } = await supabase.auth.getSession();
+                        
+                        if (!error && data.session && data.session.user) {
+                            console.log('✅ Google OAuth successful!', data.session.user);
+                            
+                            // Store user data
+                            const user = data.session.user;
+            localStorage.setItem('isLoggedIn', 'true');
+                            localStorage.setItem('userEmail', user.email || '');
+                            const userName = user.user_metadata?.name || 
+                                          user.user_metadata?.full_name || 
+                                          user.email?.split('@')[0] || 
+                                          'User';
+                            localStorage.setItem('userName', userName);
+                            
+                            // Create initial user_progress if new user
+                            if (typeof window.saveUserProgress === 'function') {
+                                try {
+                                    await window.saveUserProgress({
+                                        completedGames: [],
+                                        completedPuzzles: [],
+                                        totalGamesPlayed: 0,
+                                        trainingHours: 0,
+                                        currentStreak: 0
+                                    });
+                                    console.log('✅ Initial user progress created');
+                                } catch (progressError) {
+                                    console.log('Note: Progress may already exist or will be created on first activity', progressError);
+                                }
+                            }
+                            
+                            // Clean up URL (remove hash)
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            
+                            // Update navigation and reload to show profile
+                            await updateNavigation();
+                            await initProfile();
+                            
+                            // Close modal if open
+            closeModal();
+                        } else if (error) {
+                            console.error('OAuth session error:', error);
+                        }
+                    } catch (error) {
+                        console.error('OAuth callback error:', error);
+                    }
+                }
+            }
+        }
+
+        // Check login status and update navigation
+        async function updateNavigation() {
+            const profileLink = document.getElementById('profileLink');
+            
+            // Check both localStorage and Supabase authentication
+            let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            // Also check Supabase session (more reliable for OAuth)
+            if (typeof getCurrentUser === 'function') {
+                try {
+                    const user = await getCurrentUser();
+                    if (user) {
+                        isLoggedIn = true;
+                        // Always update localStorage and userData with real Supabase data
+                        localStorage.setItem('isLoggedIn', 'true');
+                        localStorage.setItem('userEmail', user.email || '');
+                        const userName = user.user_metadata?.name || 
+                                      user.user_metadata?.full_name || 
+                                      user.email?.split('@')[0] || 
+                                      'User';
+                        localStorage.setItem('userName', userName);
+                        userData.name = userName;
+                        userData.email = user.email || ''; // Always use real email from Supabase
+            } else {
+                        // No Supabase user, clear localStorage if it says logged in
+                        if (isLoggedIn && !localStorage.getItem('userEmail')) {
+                            isLoggedIn = false;
+                            localStorage.setItem('isLoggedIn', 'false');
+                        }
+                    }
+                } catch (e) {
+                    console.log('Error checking Supabase auth in navigation:', e);
+                    // Fall back to localStorage check
+                }
+            }
+            
+            // Profile link is now just a simple link - no dropdown menu
+            // If user is logged out and clicks profile, they'll be redirected to sign in by initProfile()
+        }
+
+        async function showAccountInfoModal() {
+            const userName = localStorage.getItem('userName') || 'User';
+            const userEmail = localStorage.getItem('userEmail') || 'No email provided';
+            
+            // Get subscription from Supabase ONLY - no fallbacks
+            let subscription = null;
+            let hasActiveSubscription = false;
+            
+            if (typeof window.getUserSubscription === 'function') {
+                try {
+                    subscription = await window.getUserSubscription();
+                    if (subscription) {
+                        hasActiveSubscription = subscription.status === 'active';
+                    }
+                } catch (e) {
+                    console.log('Error fetching subscription from Supabase:', e);
+                    // No fallback - subscription remains null
+                }
+            }
+            
+            // Get subscription details
+            let subscriptionDetails = '';
+            let subscriptionActions = '';
+            
+            if (subscription && hasActiveSubscription) {
+                // User has active paid subscription from Supabase
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const price = subscription.amount_paid ? 
+                             `${subscription.currency || 'EUR'} ${subscription.amount_paid}` : 
+                             'N/A';
+                const startDate = subscription.start_date ? 
+                                new Date(subscription.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                                'N/A';
+                
+                subscriptionDetails = `
+                    <div class="info-item">
+                        <label>Plan:</label>
+                        <span>${planName}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status:</label>
+                        <span style="color: #27ae60; font-weight: normal;">Active</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Amount Paid:</label>
+                        <span>${price}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Start Date:</label>
+                        <span>${startDate}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Payment Method:</label>
+                        <span>${subscription.payment_method || 'N/A'}</span>
+                    </div>
+                `;
+                subscriptionActions = `
+                    <div class="subscription-actions" style="margin-top: 1rem; text-align: center;">
+                        <a href="#" onclick="cancelSubscription(); return false;" style="color: #6b7280; text-decoration: none; font-size: 0.9rem;">Cancel Subscription</a>
+                    </div>
+                `;
+            } else if (subscription && subscription.status === 'cancelled') {
+                // Cancelled subscription
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const endDate = subscription.end_date ? 
+                               new Date(subscription.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                               'N/A';
+                
+                subscriptionDetails = `
+                    <div class="info-item">
+                        <label>Plan:</label>
+                        <span>${planName} (Cancelled)</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Access until:</label>
+                        <span>${endDate}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status:</label>
+                        <span style="color: #e74c3c;">Cancelled - No renewal</span>
+                    </div>
+                `;
+                subscriptionActions = '';
+            } else {
+                subscriptionDetails = `
+                    <div class="info-item">
+                        <label>Plan:</label>
+                        <span>Free Account</span>
+                    </div>
+                `;
+                subscriptionActions = '';
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Account Information</h2>
+                        <span class="close" onclick="closeModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="account-info">
+                            <div class="info-item">
+                                <label>Name:</label>
+                                <span>${userName}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Email:</label>
+                                <span>${userEmail}</span>
+                            </div>
+                            ${subscriptionDetails}
+                        </div>
+                        ${subscriptionActions}
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        }
+
+        // This logout function is now handled by the confirmation modal above
+        // Keeping this for compatibility but it will show the confirmation modal
+
+        // Cancel subscription functionality - REMOVED
+        // This old function was overriding the one from supabase-helpers.js
+        // The real cancelSubscription() is now in supabase-helpers.js and calls the API
+
+        // Clear all data function (for testing)
+        function clearAllData() {
+            localStorage.clear();
+            window.location.reload();
+        }
+
+        // Initialize when page loads
+        console.log('📜 Profile page script loaded - version 2.0');
+        
+        async function initializeProfilePage() {
+            console.log('🚀 Starting profile page initialization...');
+            
+            // Wait for Supabase to initialize before checking auth
+            console.log('⏳ Waiting for Supabase to initialize...');
+            console.log('🔍 Checking getSupabase:', typeof getSupabase, typeof getSupabase === 'function' ? getSupabase() : 'not a function');
+            try {
+                const supabaseReady = await new Promise(resolve => {
+                    const checkSupabase = () => {
+                        if (typeof getSupabase === 'function') {
+                            const client = getSupabase();
+                            console.log('🔍 getSupabase() returned:', client);
+                            if (client) {
+                                console.log('✅ Supabase is ready (immediate)');
+                                resolve(true);
+                                return;
+                            }
+                        }
+                        console.log('⏳ Supabase not ready yet, waiting 500ms...');
+                        // Wait a bit for Supabase to load
+                        setTimeout(() => {
+                            console.log('⏰ setTimeout callback fired');
+                            const client = typeof getSupabase === 'function' ? getSupabase() : null;
+                            console.log('🔍 After 500ms, getSupabase() returned:', client);
+                            console.log('✅ Supabase wait complete (after 500ms)');
+                            resolve(true);
+                        }, 500);
+                    };
+                    checkSupabase();
+                });
+                
+                console.log('✅ Promise resolved, supabaseReady:', supabaseReady);
+                console.log('✅ Continuing after promise...');
+                
+                console.log('🔄 Handling OAuth callback...');
+            // Handle OAuth callback first (if user just signed in with Google)
+                if (typeof handleOAuthCallback === 'function') {
+            await handleOAuthCallback();
+                    console.log('✅ OAuth callback handled');
+                } else {
+                    console.warn('⚠️ handleOAuthCallback not available');
+                }
+            
+            console.log('🔄 Updating navigation...');
+            // Update navigation (checks Supabase auth)
+            if (typeof updateNavigation === 'function') {
+            await updateNavigation();
+                console.log('✅ Navigation updated');
+            } else {
+                console.warn('⚠️ updateNavigation not available');
+            }
+            
+                console.log('🔄 Calling initProfile()...');
+            // Then initialize profile
+            await initProfile();
+                console.log('✅ initProfile() completed');
+            } catch (error) {
+                console.error('❌ ERROR in initializeProfilePage:', error);
+                console.error('Error stack:', error.stack);
+            }
+            
+            // Set up modal event listeners
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', closeModal);
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                const signInModal = document.getElementById('signInModal');
+                const registerModal = document.getElementById('registerModal');
+                const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+                
+                // Don't close if clicking inside the modal content
+                if (logoutConfirmModal && logoutConfirmModal.contains(event.target) && event.target !== logoutConfirmModal) {
+                    return; // Click is inside modal content, don't close
+                }
+                
+                if (event.target === signInModal) {
+                    closeModal();
+                }
+                if (event.target === registerModal) {
+                    closeModal();
+                }
+                if (event.target === logoutConfirmModal) {
+                    closeModal();
+                }
+            });
+            
+            // Cancel button is handled in loadBillingInfo() - no need for separate listener here
+            
+            // Logout button already has onclick="window.logout()" in HTML, no need for event listener
+            // Confirm logout button uses onclick="confirmLogout()" directly in HTML
+        }
+        
+        // Run immediately if DOM is already loaded, otherwise wait for DOMContentLoaded
+        console.log('📜 Script execution reached - document.readyState:', document.readyState);
+        if (document.readyState === 'loading') {
+            console.log('⏳ DOM still loading, adding DOMContentLoaded listener...');
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('✅ DOMContentLoaded fired, calling initializeProfilePage()');
+                initializeProfilePage();
+            });
+        } else {
+            // DOM already loaded, run immediately
+            console.log('📄 DOM already loaded, calling initializeProfilePage() immediately...');
+            initializeProfilePage();
+        }
+    </script>
+
+    <!-- Sign In Modal -->
+    <div id="signInModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Sign In</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="signInForm" onsubmit="handleSignIn(event)">
+                <div class="form-group">
+                    <label class="form-label" for="signInEmail">Email</label>
+                    <input type="email" id="signInEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="signInPassword">Password</label>
+                    <input type="password" id="signInPassword" class="form-input" placeholder="Enter your password" required>
+                </div>
+            <div class="modal-buttons">
+                <button type="submit" class="btn-modal btn-primary">Sign In</button>
+                <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+        <div class="google-signup">
+            <button type="button" class="btn-modal btn-google" onclick="signInWithGoogle()">
+                <div class="google-icon"></div>
+                Sign in with Google
+            </button>
+        </div>
+        <div class="register-link">
+            <p>Don't have an account yet? <a href="#" onclick="showRegisterModal()">Register here</a></p>
+        </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Account</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label" for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" class="form-input" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerName">Full Name</label>
+                    <input type="text" id="registerName" class="form-input" placeholder="Enter your full name" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-modal btn-primary">Create Account</button>
+                    <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+            <div class="google-signup">
+                <button type="button" class="btn-modal btn-google" onclick="registerWithGoogle()">
+                    <div class="google-icon"></div>
+                    Register with Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="logout-confirm-modal">
+        <div class="logout-confirm-content">
+            <div class="logout-confirm-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="logout-confirm-message">
+                Are you sure you want to log out? You'll need to sign in again to access your account.
+            </div>
+            <div class="logout-confirm-buttons">
+                <button class="btn-logout-confirm btn-logout-yes" onclick="if(typeof window.confirmLogout === 'function') { window.confirmLogout(); } else { console.error('confirmLogout not found!'); }">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no" onclick="if(typeof window.cancelLogout === 'function') { window.cancelLogout(); } else { console.error('cancelLogout not found!'); }">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Subscription Confirmation Modal -->
+    <div id="cancelSubscriptionModal" class="cancel-subscription-modal">
+        <div class="cancel-subscription-content">
+            <div class="cancel-subscription-header">
+                <h2>Cancel Subscription</h2>
+            </div>
+            <div class="cancel-subscription-message">
+                Are you sure you want to cancel your subscription? You will continue to have access until the end of your current billing period.
+            </div>
+            <div class="cancel-subscription-buttons">
+                <button class="btn-cancel-subscription btn-cancel-subscription-yes" onclick="if(typeof window.confirmCancelSubscription === 'function') { window.confirmCancelSubscription(); } else { console.error('confirmCancelSubscription not found!'); }">Yes, Cancel</button>
+                <button class="btn-cancel-subscription btn-cancel-subscription-no" onclick="if(typeof window.closeCancelSubscriptionModal === 'function') { window.closeCancelSubscriptionModal(); } else { console.error('closeCancelSubscriptionModal not found!'); }">Keep Subscription</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initialize Supabase when page loads -->
+    <script>
+        // Initialize Supabase when page loads - consistent with games.html
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Supabase client
+            if (typeof initSupabase === 'function') {
+                initSupabase();
+            }
+            
+            // Load Supabase data for profile
+            if (typeof window.getUserProgress === 'function') {
+                try {
+                    const supabaseProgress = await window.getUserProgress();
+                    if (supabaseProgress) {
+                        console.log('✅ Got Supabase data:', supabaseProgress);
+                        globalSupabaseProgress = supabaseProgress;
+                        
+                        // Update stats
+                        await updateStats(supabaseProgress);
+                    } else {
+                        console.log('⚠️ getUserProgress() returned null');
+                        await updateStats(null);
+                    }
+                } catch (error) {
+                    console.error('Error loading progress from Supabase:', error);
+                }
+            }
+            
+            // Handle OAuth callback if present (must happen after Supabase is initialized)
+            if (typeof handleOAuthCallback === 'function') {
+                await handleOAuthCallback();
+            }
+            
+            // Update navigation after OAuth callback
+            if (typeof updateNavigation === 'function') {
+                await updateNavigation();
+            }
+            
+            // Set up auth state listener
+            if (typeof setupAuthListener === 'function') {
+                setupAuthListener();
+            }
+            
+            // Check if user is already signed in and subscription status
+            if (typeof getCurrentUser === 'function') {
+                getCurrentUser().then(async user => {
+                    if (user) {
+                        console.log('✅ User is already signed in:', user.email);
+                        
+                        // Check subscription status immediately and update cache
+                        if (typeof window.hasActiveSubscription === 'function') {
+                            try {
+                                const hasActive = await window.hasActiveSubscription();
+                                // Cache immediately for next page load
+                                localStorage.setItem('cachedSubscriptionStatus', hasActive ? 'true' : 'false');
+                                
+                                if (hasActive && typeof window.getUserSubscription === 'function') {
+                                    const sub = await window.getUserSubscription();
+                                    if (sub) {
+                                        localStorage.setItem('cachedSubscriptionPlan', sub.plan_type);
+                                        // Update userData immediately
+                                        userData.subscription = sub.plan_type;
+                                    }
+                                }
+                                
+                                // Update UI immediately with fresh Supabase data
+                                updateSubscriptionStatusDisplay(hasActive);
+                            } catch (e) {
+                                console.log('Subscription check error:', e);
+                            }
+                        }
+                        
+                        // Update navigation and subscription status with Supabase data
+                        updateNavigation();
+                        updateSubscriptionStatus();
+                    } else {
+                        console.log('ℹ️ No user signed in');
+                        // Clear cached subscription if not logged in
+                        localStorage.setItem('cachedSubscriptionStatus', 'false');
+                        updateNavigation();
+                    }
+                }).catch(err => {
+                    console.log('ℹ️ Not signed in or error:', err);
+                    updateNavigation();
+                });
+            }
+            
+            // Test database connection
+            if (typeof testDatabaseConnection === 'function') {
+                testDatabaseConnection();
+            }
+        });
+    </script>
+</body>
+</html>
+

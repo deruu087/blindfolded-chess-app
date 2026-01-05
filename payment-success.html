@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - Memo Chess</title>
+    <link rel="icon" type="image/png" href="images/chess-board.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .success-container {
+            background: white;
+            border-radius: 12px;
+            padding: 3rem;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            color: #27ae60;
+            margin-bottom: 1rem;
+        }
+
+        .success-title {
+            font-size: 2rem;
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+            font-weight: normal;
+        }
+
+        .success-message {
+            color: #4b5563;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .btn-primary {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: #1e40af;
+        }
+
+        .loading {
+            color: #4b5563;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✓</div>
+        <h1 class="success-title">Payment Successful!</h1>
+        <p class="success-message">
+            Thank you for your subscription. Your account is being activated...
+        </p>
+        <div class="loading" id="loadingMessage">Activating your subscription...</div>
+        <a href="profile.html" class="btn-primary" id="manualRedirectBtn" style="margin-top: 1rem; display: none;">
+            Go to Profile
+        </a>
+    </div>
+
+    <!-- Supabase JavaScript Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Supabase Configuration -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase Helper Functions -->
+    <script src="supabase-helpers.js"></script>
+    
+    <!-- Supabase Authentication Functions -->
+    <script src="supabase-auth.js"></script>
+
+    <script>
+        // Activate subscription after successful payment
+        async function activateSubscription() {
+            try {
+                // Get payment details from URL parameters
+                // Dodo Payments redirects with: payment_id and status
+                const urlParams = new URLSearchParams(window.location.search);
+                const paymentId = urlParams.get('payment_id') || urlParams.get('order_id') || urlParams.get('transaction_id');
+                const paymentStatus = urlParams.get('status'); // 'succeeded' or 'failed'
+                const email = urlParams.get('email');
+                
+                console.log('Payment success page loaded with params:', {
+                    paymentId,
+                    paymentStatus,
+                    email,
+                    allParams: Object.fromEntries(urlParams)
+                });
+                
+                // Get the pending plan from localStorage
+                const planType = localStorage.getItem('pendingSubscriptionPlan') || 'monthly';
+                
+                // Check if user is logged in
+                if (typeof getCurrentUser === 'function') {
+                    const user = await getCurrentUser();
+                    
+                    if (user) {
+                        // Create or update subscription in Supabase
+                        if (typeof window.createOrUpdateSubscription === 'function') {
+                            // Get amount from URL - NO DEFAULT VALUES
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const amount = urlParams.get('amount');
+                            const currency = urlParams.get('currency') || 'EUR';
+                            
+                            // If no amount in URL, don't create subscription (webhook will handle it)
+                            if (!amount) {
+                                console.log('No amount in URL - webhook will handle subscription creation');
+                                document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated shortly.';
+                                setTimeout(() => {
+                                    window.location.href = 'profile.html';
+                                }, 2000);
+                                return;
+                            }
+                            
+                            const subscriptionData = {
+                                plan_type: planType,
+                                status: 'active',
+                                start_date: new Date().toISOString().split('T')[0],
+                                end_date: null, // No end date for recurring subscriptions
+                                amount_paid: parseFloat(amount),
+                                currency: currency,
+                                payment_method: 'dodo_payments'
+                            };
+                            
+                            const result = await window.createOrUpdateSubscription(subscriptionData);
+                            
+                            if (result.success) {
+                                // Update cache
+                                localStorage.setItem('cachedSubscriptionStatus', 'true');
+                                localStorage.setItem('cachedSubscriptionPlan', planType);
+                                
+                                // Clear pending subscription
+                                localStorage.removeItem('pendingSubscriptionPlan');
+                                
+                                // Update loading message
+                                document.getElementById('loadingMessage').textContent = 'Subscription activated! Redirecting...';
+                                
+                                // Redirect to profile after 2 seconds
+                                setTimeout(() => {
+                                    window.location.href = 'profile.html';
+                                }, 2000);
+                            } else {
+                                document.getElementById('loadingMessage').textContent = 'Subscription will be activated shortly. The webhook is processing your payment.';
+                                document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+                                console.error('Subscription activation error:', result.error);
+                            }
+                        } else {
+                            document.getElementById('loadingMessage').textContent = 'Subscription will be activated shortly. The webhook is processing your payment.';
+                            document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+                        }
+                    } else {
+                        // User not logged in - redirect to sign in
+                        document.getElementById('loadingMessage').textContent = 'Please sign in to activate your subscription.';
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                    }
+                } else {
+                    document.getElementById('loadingMessage').textContent = 'Error: Supabase not initialized. Please refresh the page.';
+                }
+            } catch (error) {
+                console.error('Error activating subscription:', error);
+                document.getElementById('loadingMessage').textContent = 'Subscription will be activated shortly. The webhook is processing your payment.';
+                document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+            }
+        }
+
+        // Initialize Supabase and activate subscription
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Supabase
+            if (typeof initSupabase === 'function') {
+                initSupabase();
+            }
+            
+            // Wait a moment for Supabase to initialize, then activate subscription
+            setTimeout(activateSubscription, 500);
+        });
+    </script>
+</body>
+</html>
+
