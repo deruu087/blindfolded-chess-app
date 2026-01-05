@@ -129,15 +129,25 @@ async function isSignedIn() {
  */
 async function checkAuthStatus() {
     // Always check Supabase session first (source of truth)
-    const supabase = getSupabase();
+    // Wait for Supabase to initialize (important on production where it may load slower)
+    let supabase = getSupabase();
     if (!supabase) {
-        // Supabase not initialized - check localStorage as fallback
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        // Wait up to 2 seconds for Supabase to initialize
+        for (let i = 0; i < 20; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            supabase = getSupabase();
+            if (supabase) break;
+        }
+    }
+    
+    if (!supabase) {
+        // Supabase not initialized after waiting - return logged out (don't use localStorage fallback)
+        console.warn('Supabase not initialized - returning logged out status');
         return {
-            isLoggedIn: isLoggedIn,
+            isLoggedIn: false,
             user: null,
-            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
-            name: isLoggedIn ? localStorage.getItem('userName') : null
+            email: null,
+            name: null
         };
     }
 
@@ -180,13 +190,16 @@ async function checkAuthStatus() {
         };
     } catch (error) {
         console.error('Error checking auth status:', error);
-        // On error, check localStorage as fallback
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        // On error, return logged out (don't use localStorage fallback to prevent showing stale data)
+        // Clear any stale localStorage data
+        localStorage.setItem('isLoggedIn', 'false');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
         return {
-            isLoggedIn: isLoggedIn,
+            isLoggedIn: false,
             user: null,
-            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
-            name: isLoggedIn ? localStorage.getItem('userName') : null
+            email: null,
+            name: null
         };
     }
 }

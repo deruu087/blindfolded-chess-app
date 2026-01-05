@@ -1975,11 +1975,22 @@
         };
         
         // Clear any stale billing-related localStorage on page load
+        // Also clear any test/mock user data (like guest@example.com)
         (function() {
             localStorage.removeItem('cachedSubscriptionStatus');
             localStorage.removeItem('cachedSubscriptionPlan');
             localStorage.removeItem('subscriptionData');
             localStorage.removeItem('userSubscription');
+            
+            // Clear any test/mock user data
+            const userEmail = localStorage.getItem('userEmail');
+            if (userEmail && (userEmail.includes('guest@example.com') || userEmail.includes('test@') || userEmail.includes('mock@'))) {
+                console.log('🧹 Clearing test/mock user data:', userEmail);
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userName');
+            }
+            
             console.log('🧹 Cleared stale billing localStorage on page load');
         })();
 
