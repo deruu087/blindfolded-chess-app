@@ -99,37 +99,29 @@
             setTimeout(updateSubscriptionDisplay, 50);
         })();
         
-        // Immediately update profile title and email from localStorage (before Supabase loads)
+        // Don't update from localStorage immediately - wait for Supabase to prevent showing stale data
+        // This function is disabled to prevent showing "guest@example.com" or other stale data
         (function() {
             function updateProfileInstantly() {
-                // Get cached user data
-                const cachedName = localStorage.getItem('userName');
+                // DISABLED: Don't update from localStorage to prevent showing stale/test data
+                // Wait for Supabase checkAuthStatus() to provide real user data
+                // This prevents "guest@example.com" from appearing on production
+                
+                // Only update if we have a valid email (not test/mock data)
                 const cachedEmail = localStorage.getItem('userEmail');
-                
-                // Update profile title immediately
-                if (cachedName) {
-                    const firstName = cachedName.split(' ')[0];
-                    const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
-                    const profileTitle = document.querySelector('.profile-title');
-                    if (profileTitle) {
-                        profileTitle.textContent = welcomeMessage;
+                if (cachedEmail && !cachedEmail.includes('guest@example.com') && 
+                    !cachedEmail.includes('test@') && !cachedEmail.includes('mock@')) {
+                    // Only update if email looks valid (has @ and domain)
+                    if (cachedEmail.includes('@') && cachedEmail.split('@')[1] && cachedEmail.split('@')[1].includes('.')) {
+                        const emailElement = document.getElementById('userEmail');
+                        if (emailElement) {
+                            emailElement.textContent = cachedEmail;
+                        }
                     }
                 }
                 
-                // Update email immediately
-                if (cachedEmail) {
-                    const emailElement = document.getElementById('userEmail');
-                    if (emailElement) {
-                        emailElement.textContent = cachedEmail;
-                    }
-                }
-                
-                // Try to update stats immediately if progressTracker is available
-                // This will show cached progress data instantly
-                // NOTE: This runs BEFORE initProfile() loads Supabase data, so it will use localStorage fallback
-                // initProfile() will call updateStats() again with Supabase data
-                // Don't call updateStats() here - wait for initProfile() to load Supabase data first
-                // This prevents the table from showing "No data available" before data loads
+                // Don't update name or title from localStorage - wait for Supabase
+                // This prevents showing stale user data
             }
             
             // Run immediately if DOM is ready
@@ -1217,7 +1209,7 @@
                 <div class="profile-avatar">
                     ♟️
                 </div>
-                <p class="profile-email" id="userEmail">guest@example.com</p>
+                <p class="profile-email" id="userEmail">Loading...</p>
                 
                 <div class="profile-links">
                     <a href="#progress" class="profile-link active" data-tab="progress">Progress</a>
@@ -1966,8 +1958,8 @@
         
         // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
         let userData = {
-            name: localStorage.getItem('userName') || "Guest User",
-            email: localStorage.getItem('userEmail') || "guest@example.com",
+            name: "Loading...",
+            email: "", // Will be set from Supabase auth - no fallback to prevent showing guest@example.com
             subscription: "free", // CRITICAL: Always start as 'free', updated ONLY from Supabase
             gamesPlayed: 0,
             trainingHours: 0,
@@ -1975,11 +1967,22 @@
         };
         
         // Clear any stale billing-related localStorage on page load
+        // Also clear any test/mock user data (like guest@example.com)
         (function() {
             localStorage.removeItem('cachedSubscriptionStatus');
             localStorage.removeItem('cachedSubscriptionPlan');
             localStorage.removeItem('subscriptionData');
             localStorage.removeItem('userSubscription');
+            
+            // Clear any test/mock user data
+            const userEmail = localStorage.getItem('userEmail');
+            if (userEmail && (userEmail.includes('guest@example.com') || userEmail.includes('test@') || userEmail.includes('mock@'))) {
+                console.log('🧹 Clearing test/mock user data:', userEmail);
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userName');
+            }
+            
             console.log('🧹 Cleared stale billing localStorage on page load');
         })();
 
@@ -1998,6 +2001,12 @@
             let authStatus;
             try {
                 authStatus = await window.checkAuthStatus();
+                console.log('🔍 checkAuthStatus() returned:', {
+                    isLoggedIn: authStatus.isLoggedIn,
+                    email: authStatus.email,
+                    name: authStatus.name,
+                    hasUser: !!authStatus.user
+                });
             } catch (error) {
                 console.error('Error checking auth status:', error);
                 window.location.href = 'index.html';
@@ -2011,10 +2020,24 @@
                 return;
             }
             
+            // Validate email - reject test/mock emails
+            const userEmail = authStatus.email || '';
+            if (userEmail && (userEmail.includes('guest@example.com') || 
+                userEmail.includes('test@') || userEmail.includes('mock@'))) {
+                console.error('❌ Rejecting test/mock email:', userEmail);
+                // Clear localStorage and redirect
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userName');
+                window.location.href = 'index.html';
+                return;
+            }
+            
             // User is logged in - proceed with loading profile data
             // Update user info immediately from authStatus (instant display)
             userData.name = authStatus.name || 'User';
-            userData.email = authStatus.email || '';
+            userData.email = userEmail;
+            console.log('✅ Setting userData:', { name: userData.name, email: userData.email });
             updateUserInfo();
             
             // SIMPLIFIED: Load Supabase data - Wait for Supabase to be ready first
@@ -2176,7 +2199,7 @@
             // Update email (use real email from Supabase, not placeholder)
             const userEmailElement = document.getElementById('userEmail');
             if (userEmailElement) {
-                userEmailElement.textContent = userData.email || 'guest@example.com';
+                userEmailElement.textContent = userData.email || 'Not logged in';
             }
         }
 
@@ -2638,9 +2661,52 @@
         // Make logout function globally accessible
         window.logout = logout;
 
+        // DEBUG FUNCTION - Call from console: window.debugAuth()
+        window.debugAuth = async function() {
+            console.log('=== AUTH DEBUG INFO ===');
+            console.log('1. localStorage:', {
+                isLoggedIn: localStorage.getItem('isLoggedIn'),
+                userEmail: localStorage.getItem('userEmail'),
+                userName: localStorage.getItem('userName')
+            });
+            
+            console.log('2. All localStorage keys:', Object.keys(localStorage));
+            
+            const supabase = typeof getSupabase === 'function' ? getSupabase() : null;
+            console.log('3. Supabase client:', supabase ? 'found' : 'null');
+            
+            if (supabase) {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    console.log('4. Supabase session:', {
+                        hasSession: !!session,
+                        hasUser: !!session?.user,
+                        userEmail: session?.user?.email,
+                        userId: session?.user?.id,
+                        error: error?.message
+                    });
+                } catch (e) {
+                    console.error('4. Error getting session:', e);
+                }
+            }
+            
+            if (typeof checkAuthStatus === 'function') {
+                try {
+                    const authStatus = await checkAuthStatus();
+                    console.log('5. checkAuthStatus() result:', authStatus);
+                } catch (e) {
+                    console.error('5. Error in checkAuthStatus:', e);
+                }
+            }
+            
+            console.log('6. userData object:', userData);
+            console.log('7. Email element:', document.getElementById('userEmail')?.textContent);
+            console.log('=== END DEBUG ===');
+        };
+        
         // Confirm logout function - using the working version from puzzles.html
         async function confirmLogout() {
-            console.log('confirmLogout function called!');
+            console.log('🔴 [LOGOUT] confirmLogout function called!');
             
             // Hide modal first
             const modal = document.getElementById('logoutConfirmModal');
@@ -2649,7 +2715,7 @@
             }
             
             // Clear user data and localStorage FIRST
-            console.log('Clearing localStorage...');
+            console.log('🔴 [LOGOUT] Clearing localStorage...');
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userName');
             localStorage.removeItem('userEmail');
@@ -2662,7 +2728,7 @@
             console.log('✅ Cleared chessProgress from localStorage');
             
             // CRITICAL: Clear ALL Supabase localStorage keys
-            console.log('Clearing Supabase localStorage keys...');
+            console.log('🔴 [LOGOUT] Clearing Supabase localStorage keys...');
             const supabaseProjectId = 'yaaxydrmuslgzjletzbw';
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
@@ -2672,27 +2738,56 @@
                 }
             }
             keysToRemove.forEach(key => {
-                console.log('Removing Supabase key:', key);
+                console.log('🔴 [LOGOUT] Removing Supabase key:', key);
                 localStorage.removeItem(key);
             });
             
-            // Sign out from Supabase in background (non-blocking, don't wait for it)
-            if (typeof window.signOut === 'function') {
-                window.signOut().catch(() => {
-                    // Ignore errors, we've already cleared localStorage
-                });
-            } else if (typeof getSupabase === 'function') {
-                const supabase = getSupabase();
-                if (supabase) {
-                    supabase.auth.signOut().catch(() => {
-                        // Ignore errors, we've already cleared localStorage
-                    });
+            // Also clear ALL keys that might be related
+            const allKeys = Object.keys(localStorage);
+            allKeys.forEach(key => {
+                if (key.toLowerCase().includes('auth') || key.toLowerCase().includes('session') || key.toLowerCase().includes('token')) {
+                    console.log('🔴 [LOGOUT] Removing auth-related key:', key);
+                    localStorage.removeItem(key);
                 }
+            });
+            
+            // Sign out from Supabase - wait for it to complete before redirecting
+            console.log('🔴 [LOGOUT] Signing out from Supabase...');
+            try {
+                if (typeof window.signOut === 'function') {
+                    await window.signOut();
+                    console.log('✅ [LOGOUT] Signed out via window.signOut()');
+                } else if (typeof getSupabase === 'function') {
+                    const supabase = getSupabase();
+                    if (supabase) {
+                        const { error } = await supabase.auth.signOut();
+                        if (error) {
+                            console.error('❌ [LOGOUT] Error signing out from Supabase:', error);
+                        } else {
+                            console.log('✅ [LOGOUT] Signed out from Supabase');
+                        }
+                    } else {
+                        console.warn('⚠️ [LOGOUT] Supabase client not available');
+                    }
+                } else {
+                    console.warn('⚠️ [LOGOUT] signOut and getSupabase not available');
+                }
+            } catch (error) {
+                console.error('❌ [LOGOUT] Error during sign out:', error);
+                // Continue with redirect even if signOut fails
             }
             
-            // Redirect to home page immediately (use replace to avoid adding to history)
-            console.log('Redirecting to index.html...');
-            window.location.replace('index.html');
+            // Clear userData object
+            userData.name = '';
+            userData.email = '';
+            userData.subscription = 'free';
+            
+            // Small delay to ensure session is cleared before redirect
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Redirect to home page with loggedout parameter to clear any remaining state
+            console.log('🔴 [LOGOUT] Redirecting to index.html...');
+            window.location.replace('index.html?loggedout=true');
         }
         
         // Make confirmLogout globally accessible (for onclick handlers)
@@ -3421,4 +3516,5 @@
     </script>
 </body>
 </html>
+
 
