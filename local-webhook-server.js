@@ -4,11 +4,12 @@
 // Run: node local-webhook-server.js
 // Then use ngrok to expose: ngrok http 3002
 
-const http = require('http');
-const { createClient } = require('@supabase/supabase-js');
+import http from 'http';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
 // Load environment variables from .env file if it exists
-require('dotenv').config({ path: '.env.local' });
+dotenv.config({ path: '.env.local' });
 
 const PORT = 3002;
 
