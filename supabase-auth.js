@@ -149,34 +149,7 @@ async function checkAuthStatus() {
     }
     
     if (!supabase) {
-        // Supabase not initialized after waiting
-        console.warn('⚠️ [DEBUG] Supabase not initialized after waiting');
-        console.log('🔍 [DEBUG] localStorage check:', {
-            isLoggedIn: localStorage.getItem('isLoggedIn'),
-            userEmail: localStorage.getItem('userEmail'),
-            userName: localStorage.getItem('userName')
-        });
-        
-        // On localhost, if Supabase fails to initialize, check if we're in a login flow
-        // This helps with localhost where Supabase might load slower
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        if (isLocalhost) {
-            console.log('🔍 [DEBUG] Localhost detected - checking localStorage as temporary fallback');
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const userEmail = localStorage.getItem('userEmail');
-            // Only use localStorage fallback if email doesn't look like test data
-            if (isLoggedIn && userEmail && !userEmail.includes('guest@example.com') && !userEmail.includes('test@example.com')) {
-                console.log('⚠️ [DEBUG] Using localStorage fallback on localhost (temporary)');
-                return {
-                    isLoggedIn: true,
-                    user: null,
-                    email: userEmail,
-                    name: localStorage.getItem('userName') || 'User'
-                };
-            }
-        }
-        
-        // Return logged out if no valid fallback
+        // Supabase not initialized after waiting - return logged out
         return {
             isLoggedIn: false,
             user: null,
@@ -187,20 +160,10 @@ async function checkAuthStatus() {
 
     try {
         // Get current session from Supabase
-        console.log('🔍 [DEBUG] Calling supabase.auth.getSession()...');
         const { data: { session }, error } = await supabase.auth.getSession();
-        
-        console.log('🔍 [DEBUG] getSession() result:', {
-            hasSession: !!session,
-            hasUser: !!session?.user,
-            userEmail: session?.user?.email,
-            userId: session?.user?.id,
-            error: error?.message
-        });
         
         if (error || !session || !session.user) {
             // No valid session - user is logged out
-            console.log('🔍 [DEBUG] No valid session - clearing localStorage and returning logged out');
             localStorage.setItem('isLoggedIn', 'false');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
@@ -221,51 +184,10 @@ async function checkAuthStatus() {
                         email.split('@')[0] || 
                         'User';
         
-        console.log('🔍 [DEBUG] Valid session found:', {
-            email: email,
-            name: userName,
-            userId: user.id,
-            userMetadata: user.user_metadata
-        });
-        
-        // Validate email - reject only specific test/mock email patterns (not all example.com emails)
-        // Only reject known test patterns to avoid blocking legitimate users
-        const testEmailPatterns = [
-            'guest@example.com',
-            'test@example.com',
-            'mock@',
-            '@example.com' // Only reject if domain is exactly example.com (not subdomains)
-        ];
-        
-        const isTestEmail = testEmailPatterns.some(pattern => {
-            if (pattern.startsWith('@')) {
-                // Check if email ends with the pattern (exact domain match)
-                return email.toLowerCase().endsWith(pattern.toLowerCase());
-            }
-            return email.toLowerCase().includes(pattern.toLowerCase());
-        });
-        
-        if (email && isTestEmail) {
-            console.error('❌ [DEBUG] Rejecting test/mock email from Supabase session:', email);
-            // Sign out the test user
-            await supabase.auth.signOut();
-            localStorage.setItem('isLoggedIn', 'false');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('userName');
-            return {
-                isLoggedIn: false,
-                user: null,
-                email: null,
-                name: null
-            };
-        }
-        
         // Update localStorage to match Supabase session
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userEmail', email);
         localStorage.setItem('userName', userName);
-        
-        console.log('✅ [DEBUG] Returning logged in status:', { email, name: userName });
         
         return {
             isLoggedIn: true,
@@ -274,10 +196,8 @@ async function checkAuthStatus() {
             name: userName
         };
     } catch (error) {
-        console.error('❌ [DEBUG] Error checking auth status:', error);
-        console.error('❌ [DEBUG] Error stack:', error.stack);
-        // On error, return logged out (don't use localStorage fallback to prevent showing stale data)
-        // Clear any stale localStorage data
+        console.error('Error checking auth status:', error);
+        // On error, return logged out
         localStorage.setItem('isLoggedIn', 'false');
         localStorage.removeItem('userEmail');
         localStorage.removeItem('userName');

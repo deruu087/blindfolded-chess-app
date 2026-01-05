@@ -2020,22 +2020,8 @@
                 return;
             }
             
-            // Validate email - reject only specific test/mock email patterns
+            // REMOVED: Email validation - trust Supabase authentication
             const userEmail = authStatus.email || '';
-            const testEmailPatterns = ['guest@example.com', 'test@example.com', 'mock@'];
-            const isTestEmail = userEmail && testEmailPatterns.some(pattern => 
-                userEmail.toLowerCase().includes(pattern.toLowerCase())
-            );
-            
-            if (isTestEmail) {
-                console.error('❌ Rejecting test/mock email:', userEmail);
-                // Clear localStorage and redirect
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('userName');
-                window.location.href = 'index.html';
-                return;
-            }
             
             // User is logged in - proceed with loading profile data
             // Update user info immediately from authStatus (instant display)
