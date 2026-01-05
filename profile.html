@@ -2706,62 +2706,35 @@
         // Make logout function globally accessible
         window.logout = logout;
 
-        // Confirm logout function - SIMPLIFIED AND FIXED
-        async function confirmLogout() {
-            console.log('🔴 LOGOUT: Starting logout process...');
-            
-            // Hide modal first
+        // Confirm logout function - INSTANT VERSION
+        function confirmLogout() {
+            // Hide modal immediately
             const modal = document.getElementById('logoutConfirmModal');
             if (modal) {
                 modal.style.display = 'none';
             }
             
-            // STEP 1: Sign out from Supabase FIRST (with timeout to prevent hanging)
-            console.log('🔴 LOGOUT: Signing out from Supabase...');
-            try {
-                // Use Promise.race to timeout after 2 seconds
-                const signOutPromise = (async () => {
-                    if (typeof window.signOut === 'function') {
-                        await window.signOut();
-                        console.log('✅ Signed out via window.signOut()');
-                    } else if (typeof getSupabase === 'function') {
-                        const supabase = getSupabase();
-                        if (supabase) {
-                            const { error } = await supabase.auth.signOut();
-                            if (error) {
-                                console.error('Error signing out from Supabase:', error);
-                            } else {
-                                console.log('✅ Signed out from Supabase');
-                            }
-                        }
-                    }
-                })();
-                
-                const timeoutPromise = new Promise((resolve) => {
-                    setTimeout(() => {
-                        console.log('⚠️ SignOut timeout - continuing anyway');
-                        resolve();
-                    }, 2000);
-                });
-                
-                await Promise.race([signOutPromise, timeoutPromise]);
-            } catch (error) {
-                console.error('Error during sign out:', error);
-                // Continue anyway
-            }
+            // Clear localStorage FIRST (immediate, synchronous)
+            localStorage.clear();
             
-            // STEP 2: Clear ALL localStorage items
-            console.log('🔴 LOGOUT: Clearing all localStorage...');
-            localStorage.clear(); // Clear EVERYTHING - simplest and most effective
-            
-            // STEP 3: Clear userData object
+            // Clear userData object
             userData.name = '';
             userData.email = '';
             userData.subscription = 'free';
             
-            // STEP 4: Force redirect immediately
-            console.log('🔴 LOGOUT: Redirecting to index.html...');
-            window.location.href = 'index.html'; // Use href instead of replace for more reliable redirect
+            // Redirect IMMEDIATELY - don't wait for anything
+            window.location.href = 'index.html?logout=1';
+            
+            // Sign out from Supabase in background (non-blocking, don't wait)
+            // This happens after redirect is initiated, so it doesn't block
+            if (typeof window.signOut === 'function') {
+                window.signOut().catch(() => {});
+            } else if (typeof getSupabase === 'function') {
+                const supabase = getSupabase();
+                if (supabase) {
+                    supabase.auth.signOut().catch(() => {});
+                }
+            }
         }
         
         // Make confirmLogout globally accessible (for onclick handlers)
