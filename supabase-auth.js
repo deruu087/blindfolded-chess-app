@@ -207,11 +207,24 @@ async function checkAuthStatus() {
             userMetadata: user.user_metadata
         });
         
-        // Validate email - reject test/mock emails
-        if (email && (email.includes('guest@example.com') || 
-            email.includes('test@example') || 
-            email.includes('mock@') ||
-            email.includes('example.com'))) {
+        // Validate email - reject only specific test/mock email patterns (not all example.com emails)
+        // Only reject known test patterns to avoid blocking legitimate users
+        const testEmailPatterns = [
+            'guest@example.com',
+            'test@example.com',
+            'mock@',
+            '@example.com' // Only reject if domain is exactly example.com (not subdomains)
+        ];
+        
+        const isTestEmail = testEmailPatterns.some(pattern => {
+            if (pattern.startsWith('@')) {
+                // Check if email ends with the pattern (exact domain match)
+                return email.toLowerCase().endsWith(pattern.toLowerCase());
+            }
+            return email.toLowerCase().includes(pattern.toLowerCase());
+        });
+        
+        if (email && isTestEmail) {
             console.error('❌ [DEBUG] Rejecting test/mock email from Supabase session:', email);
             // Sign out the test user
             await supabase.auth.signOut();

@@ -2020,10 +2020,14 @@
                 return;
             }
             
-            // Validate email - reject test/mock emails
+            // Validate email - reject only specific test/mock email patterns
             const userEmail = authStatus.email || '';
-            if (userEmail && (userEmail.includes('guest@example.com') || 
-                userEmail.includes('test@') || userEmail.includes('mock@'))) {
+            const testEmailPatterns = ['guest@example.com', 'test@example.com', 'mock@'];
+            const isTestEmail = userEmail && testEmailPatterns.some(pattern => 
+                userEmail.toLowerCase().includes(pattern.toLowerCase())
+            );
+            
+            if (isTestEmail) {
                 console.error('❌ Rejecting test/mock email:', userEmail);
                 // Clear localStorage and redirect
                 localStorage.removeItem('isLoggedIn');
