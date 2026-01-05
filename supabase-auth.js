@@ -128,23 +128,16 @@ async function isSignedIn() {
  * @returns {Promise<{isLoggedIn: boolean, user: object|null, email: string|null, name: string|null}>}
  */
 async function checkAuthStatus() {
-    console.log('🔍 [DEBUG] checkAuthStatus() called');
-    
     // Always check Supabase session first (source of truth)
     // Wait for Supabase to initialize (important on production where it may load slower)
     let supabase = getSupabase();
-    console.log('🔍 [DEBUG] Initial getSupabase() result:', supabase ? 'found' : 'null');
     
     if (!supabase) {
         // Wait up to 2 seconds for Supabase to initialize
-        console.log('🔍 [DEBUG] Waiting for Supabase to initialize...');
         for (let i = 0; i < 20; i++) {
             await new Promise(resolve => setTimeout(resolve, 100));
             supabase = getSupabase();
-            if (supabase) {
-                console.log('🔍 [DEBUG] Supabase initialized after', (i + 1) * 100, 'ms');
-                break;
-            }
+            if (supabase) break;
         }
     }
     
