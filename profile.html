@@ -99,37 +99,29 @@
             setTimeout(updateSubscriptionDisplay, 50);
         })();
         
-        // Immediately update profile title and email from localStorage (before Supabase loads)
+        // Don't update from localStorage immediately - wait for Supabase to prevent showing stale data
+        // This function is disabled to prevent showing "guest@example.com" or other stale data
         (function() {
             function updateProfileInstantly() {
-                // Get cached user data
-                const cachedName = localStorage.getItem('userName');
+                // DISABLED: Don't update from localStorage to prevent showing stale/test data
+                // Wait for Supabase checkAuthStatus() to provide real user data
+                // This prevents "guest@example.com" from appearing on production
+                
+                // Only update if we have a valid email (not test/mock data)
                 const cachedEmail = localStorage.getItem('userEmail');
-                
-                // Update profile title immediately
-                if (cachedName) {
-                    const firstName = cachedName.split(' ')[0];
-                    const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
-                    const profileTitle = document.querySelector('.profile-title');
-                    if (profileTitle) {
-                        profileTitle.textContent = welcomeMessage;
+                if (cachedEmail && !cachedEmail.includes('guest@example.com') && 
+                    !cachedEmail.includes('test@') && !cachedEmail.includes('mock@')) {
+                    // Only update if email looks valid (has @ and domain)
+                    if (cachedEmail.includes('@') && cachedEmail.split('@')[1] && cachedEmail.split('@')[1].includes('.')) {
+                        const emailElement = document.getElementById('userEmail');
+                        if (emailElement) {
+                            emailElement.textContent = cachedEmail;
+                        }
                     }
                 }
                 
-                // Update email immediately
-                if (cachedEmail) {
-                    const emailElement = document.getElementById('userEmail');
-                    if (emailElement) {
-                        emailElement.textContent = cachedEmail;
-                    }
-                }
-                
-                // Try to update stats immediately if progressTracker is available
-                // This will show cached progress data instantly
-                // NOTE: This runs BEFORE initProfile() loads Supabase data, so it will use localStorage fallback
-                // initProfile() will call updateStats() again with Supabase data
-                // Don't call updateStats() here - wait for initProfile() to load Supabase data first
-                // This prevents the table from showing "No data available" before data loads
+                // Don't update name or title from localStorage - wait for Supabase
+                // This prevents showing stale user data
             }
             
             // Run immediately if DOM is ready
@@ -2009,6 +2001,12 @@
             let authStatus;
             try {
                 authStatus = await window.checkAuthStatus();
+                console.log('🔍 checkAuthStatus() returned:', {
+                    isLoggedIn: authStatus.isLoggedIn,
+                    email: authStatus.email,
+                    name: authStatus.name,
+                    hasUser: !!authStatus.user
+                });
             } catch (error) {
                 console.error('Error checking auth status:', error);
                 window.location.href = 'index.html';
@@ -2022,10 +2020,24 @@
                 return;
             }
             
+            // Validate email - reject test/mock emails
+            const userEmail = authStatus.email || '';
+            if (userEmail && (userEmail.includes('guest@example.com') || 
+                userEmail.includes('test@') || userEmail.includes('mock@'))) {
+                console.error('❌ Rejecting test/mock email:', userEmail);
+                // Clear localStorage and redirect
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userName');
+                window.location.href = 'index.html';
+                return;
+            }
+            
             // User is logged in - proceed with loading profile data
             // Update user info immediately from authStatus (instant display)
             userData.name = authStatus.name || 'User';
-            userData.email = authStatus.email || '';
+            userData.email = userEmail;
+            console.log('✅ Setting userData:', { name: userData.name, email: userData.email });
             updateUserInfo();
             
             // SIMPLIFIED: Load Supabase data - Wait for Supabase to be ready first
