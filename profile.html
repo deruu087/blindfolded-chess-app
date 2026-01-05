@@ -99,29 +99,37 @@
             setTimeout(updateSubscriptionDisplay, 50);
         })();
         
-        // Don't update from localStorage immediately - wait for Supabase to prevent showing stale data
-        // This function is disabled to prevent showing "guest@example.com" or other stale data
+        // Immediately update profile title and email from localStorage (before Supabase loads)
         (function() {
             function updateProfileInstantly() {
-                // DISABLED: Don't update from localStorage to prevent showing stale/test data
-                // Wait for Supabase checkAuthStatus() to provide real user data
-                // This prevents "guest@example.com" from appearing on production
-                
-                // Only update if we have a valid email (not test/mock data)
+                // Get cached user data
+                const cachedName = localStorage.getItem('userName');
                 const cachedEmail = localStorage.getItem('userEmail');
-                if (cachedEmail && !cachedEmail.includes('guest@example.com') && 
-                    !cachedEmail.includes('test@') && !cachedEmail.includes('mock@')) {
-                    // Only update if email looks valid (has @ and domain)
-                    if (cachedEmail.includes('@') && cachedEmail.split('@')[1] && cachedEmail.split('@')[1].includes('.')) {
-                        const emailElement = document.getElementById('userEmail');
-                        if (emailElement) {
-                            emailElement.textContent = cachedEmail;
-                        }
+                
+                // Update profile title immediately
+                if (cachedName) {
+                    const firstName = cachedName.split(' ')[0];
+                    const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+                    const profileTitle = document.querySelector('.profile-title');
+                    if (profileTitle) {
+                        profileTitle.textContent = welcomeMessage;
                     }
                 }
                 
-                // Don't update name or title from localStorage - wait for Supabase
-                // This prevents showing stale user data
+                // Update email immediately
+                if (cachedEmail) {
+                    const emailElement = document.getElementById('userEmail');
+                    if (emailElement) {
+                        emailElement.textContent = cachedEmail;
+                    }
+                }
+                
+                // Try to update stats immediately if progressTracker is available
+                // This will show cached progress data instantly
+                // NOTE: This runs BEFORE initProfile() loads Supabase data, so it will use localStorage fallback
+                // initProfile() will call updateStats() again with Supabase data
+                // Don't call updateStats() here - wait for initProfile() to load Supabase data first
+                // This prevents the table from showing "No data available" before data loads
             }
             
             // Run immediately if DOM is ready
@@ -1209,7 +1217,7 @@
                 <div class="profile-avatar">
                     ♟️
                 </div>
-                <p class="profile-email" id="userEmail">guest@example.com</p>
+                <p class="profile-email" id="userEmail">Loading...</p>
                 
                 <div class="profile-links">
                     <a href="#progress" class="profile-link active" data-tab="progress">Progress</a>
@@ -1920,29 +1928,38 @@
                 attempts++;
             }
             
-            // MUST use checkAuthStatus - no localStorage fallback for security
+            // Check auth status - use checkAuthStatus if available, otherwise fallback to localStorage
+            let authStatus;
             if (typeof window.checkAuthStatus === 'function') {
                 try {
-                    const authStatus = await window.checkAuthStatus();
-                    if (!authStatus.isLoggedIn) {
-                        console.log('User not logged in, redirecting to home page');
-                        window.location.href = 'index.html';
-                        return;
-                    }
-                    // User is logged in - continue loading page
+                    authStatus = await window.checkAuthStatus();
                 } catch (error) {
                     console.error('Error checking auth status:', error);
-                    // If auth check fails, redirect to home for security
-                    console.log('Auth check failed, redirecting to home page');
-                    window.location.href = 'index.html';
-                    return;
+                    // Fallback to localStorage if checkAuthStatus fails
+                    authStatus = {
+                        isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                        user: null,
+                        email: localStorage.getItem('userEmail'),
+                        name: localStorage.getItem('userName')
+                    };
                 }
             } else {
-                // If checkAuthStatus is not available after waiting, redirect for security
-                console.error('checkAuthStatus function not available - redirecting for security');
+                // Fallback to localStorage if checkAuthStatus not available (for localhost compatibility)
+                console.log('checkAuthStatus not available, using localStorage fallback');
+                authStatus = {
+                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                    user: null,
+                    email: localStorage.getItem('userEmail'),
+                    name: localStorage.getItem('userName')
+                };
+            }
+            
+            if (!authStatus.isLoggedIn) {
+                console.log('User not logged in, redirecting to home page');
                 window.location.href = 'index.html';
                 return;
             }
+            // User is logged in - continue loading page
         });
     </script>
     
@@ -1958,8 +1975,8 @@
         
         // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
         let userData = {
-            name: localStorage.getItem('userName') || "Guest User",
-            email: localStorage.getItem('userEmail') || "",
+            name: "Loading...",
+            email: "", // Will be set from Supabase auth - no fallback to prevent showing guest@example.com
             subscription: "free", // CRITICAL: Always start as 'free', updated ONLY from Supabase
             gamesPlayed: 0,
             trainingHours: 0,
@@ -1980,20 +1997,30 @@
             console.log('🚀🚀🚀 initProfile() STARTED - THIS SHOULD APPEAR IN CONSOLE 🚀🚀🚀');
             try {
             // First, check if user is actually logged in using centralized auth check
-            // MUST use checkAuthStatus - no localStorage fallback for security
-            if (typeof window.checkAuthStatus !== 'function') {
-                console.error('checkAuthStatus not available - redirecting for security');
-                window.location.href = 'index.html';
-                return;
-            }
-            
+            // Use checkAuthStatus if available, otherwise fallback to localStorage (for localhost compatibility)
             let authStatus;
-            try {
-                authStatus = await window.checkAuthStatus();
-            } catch (error) {
-                console.error('Error checking auth status:', error);
-                window.location.href = 'index.html';
-                return;
+            if (typeof window.checkAuthStatus === 'function') {
+                try {
+                    authStatus = await window.checkAuthStatus();
+                } catch (error) {
+                    console.error('Error checking auth status:', error);
+                    // Fallback to localStorage if checkAuthStatus fails
+                    authStatus = {
+                        isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                        user: null,
+                        email: localStorage.getItem('userEmail'),
+                        name: localStorage.getItem('userName')
+                    };
+                }
+            } else {
+                // Fallback to localStorage if checkAuthStatus not available (for localhost compatibility)
+                console.log('checkAuthStatus not available, using localStorage fallback');
+                authStatus = {
+                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+                    user: null,
+                    email: localStorage.getItem('userEmail'),
+                    name: localStorage.getItem('userName')
+                };
             }
             
             // If user is not logged in, redirect to home page immediately
@@ -2168,7 +2195,7 @@
             // Update email (use real email from Supabase, not placeholder)
             const userEmailElement = document.getElementById('userEmail');
             if (userEmailElement) {
-                userEmailElement.textContent = userData.email || 'guest@example.com';
+                userEmailElement.textContent = userData.email || 'Not logged in';
             }
         }
 
@@ -2630,52 +2657,9 @@
         // Make logout function globally accessible
         window.logout = logout;
 
-        // DEBUG FUNCTION - Call from console: window.debugAuth()
-        window.debugAuth = async function() {
-            console.log('=== AUTH DEBUG INFO ===');
-            console.log('1. localStorage:', {
-                isLoggedIn: localStorage.getItem('isLoggedIn'),
-                userEmail: localStorage.getItem('userEmail'),
-                userName: localStorage.getItem('userName')
-            });
-            
-            console.log('2. All localStorage keys:', Object.keys(localStorage));
-            
-            const supabase = typeof getSupabase === 'function' ? getSupabase() : null;
-            console.log('3. Supabase client:', supabase ? 'found' : 'null');
-            
-            if (supabase) {
-                try {
-                    const { data: { session }, error } = await supabase.auth.getSession();
-                    console.log('4. Supabase session:', {
-                        hasSession: !!session,
-                        hasUser: !!session?.user,
-                        userEmail: session?.user?.email,
-                        userId: session?.user?.id,
-                        error: error?.message
-                    });
-                } catch (e) {
-                    console.error('4. Error getting session:', e);
-                }
-            }
-            
-            if (typeof checkAuthStatus === 'function') {
-                try {
-                    const authStatus = await checkAuthStatus();
-                    console.log('5. checkAuthStatus() result:', authStatus);
-                } catch (e) {
-                    console.error('5. Error in checkAuthStatus:', e);
-                }
-            }
-            
-            console.log('6. userData object:', userData);
-            console.log('7. Email element:', document.getElementById('userEmail')?.textContent);
-            console.log('=== END DEBUG ===');
-        };
-        
-        // Confirm logout function - using the working version from puzzles.html
+        // Confirm logout function - SIMPLIFIED AND FIXED
         async function confirmLogout() {
-            console.log('🔴 [LOGOUT] confirmLogout function called!');
+            console.log('🔴 LOGOUT: Starting logout process...');
             
             // Hide modal first
             const modal = document.getElementById('logoutConfirmModal');
@@ -2683,80 +2667,39 @@
                 modal.style.display = 'none';
             }
             
-            // Clear user data and localStorage FIRST
-            console.log('🔴 [LOGOUT] Clearing localStorage...');
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userName');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('subscriptionPlan');
-            localStorage.removeItem('hasActiveSubscription');
-            localStorage.removeItem('cachedSubscriptionStatus');
-            localStorage.removeItem('cachedSubscriptionPlan');
-            // CRITICAL: Clear progress data to prevent data leakage between accounts
-            localStorage.removeItem('chessProgress');
-            console.log('✅ Cleared chessProgress from localStorage');
-            
-            // CRITICAL: Clear ALL Supabase localStorage keys
-            console.log('🔴 [LOGOUT] Clearing Supabase localStorage keys...');
-            const supabaseProjectId = 'yaaxydrmuslgzjletzbw';
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('supabase') || key.includes(supabaseProjectId) || key.startsWith('sb-'))) {
-                    keysToRemove.push(key);
-                }
-            }
-            keysToRemove.forEach(key => {
-                console.log('🔴 [LOGOUT] Removing Supabase key:', key);
-                localStorage.removeItem(key);
-            });
-            
-            // Also clear ALL keys that might be related
-            const allKeys = Object.keys(localStorage);
-            allKeys.forEach(key => {
-                if (key.toLowerCase().includes('auth') || key.toLowerCase().includes('session') || key.toLowerCase().includes('token')) {
-                    console.log('🔴 [LOGOUT] Removing auth-related key:', key);
-                    localStorage.removeItem(key);
-                }
-            });
-            
-            // Sign out from Supabase - wait for it to complete before redirecting
-            console.log('🔴 [LOGOUT] Signing out from Supabase...');
+            // STEP 1: Sign out from Supabase FIRST (before clearing localStorage)
+            console.log('🔴 LOGOUT: Signing out from Supabase...');
             try {
                 if (typeof window.signOut === 'function') {
                     await window.signOut();
-                    console.log('✅ [LOGOUT] Signed out via window.signOut()');
+                    console.log('✅ Signed out via window.signOut()');
                 } else if (typeof getSupabase === 'function') {
                     const supabase = getSupabase();
                     if (supabase) {
                         const { error } = await supabase.auth.signOut();
                         if (error) {
-                            console.error('❌ [LOGOUT] Error signing out from Supabase:', error);
+                            console.error('Error signing out from Supabase:', error);
                         } else {
-                            console.log('✅ [LOGOUT] Signed out from Supabase');
+                            console.log('✅ Signed out from Supabase');
                         }
-                    } else {
-                        console.warn('⚠️ [LOGOUT] Supabase client not available');
                     }
-                } else {
-                    console.warn('⚠️ [LOGOUT] signOut and getSupabase not available');
                 }
             } catch (error) {
-                console.error('❌ [LOGOUT] Error during sign out:', error);
-                // Continue with redirect even if signOut fails
+                console.error('Error during sign out:', error);
             }
             
-            // Clear userData object
+            // STEP 2: Clear ALL localStorage items
+            console.log('🔴 LOGOUT: Clearing all localStorage...');
+            localStorage.clear(); // Clear EVERYTHING - simplest and most effective
+            
+            // STEP 3: Clear userData object
             userData.name = '';
             userData.email = '';
             userData.subscription = 'free';
             
-            // Small delay to ensure session is cleared before redirect
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            // Redirect to home page with loggedout parameter to clear any remaining state
-            console.log('🔴 [LOGOUT] Redirecting to index.html...');
-            window.location.replace('index.html?loggedout=true');
+            // STEP 4: Force redirect immediately
+            console.log('🔴 LOGOUT: Redirecting to index.html...');
+            window.location.href = 'index.html'; // Use href instead of replace for more reliable redirect
         }
         
         // Make confirmLogout globally accessible (for onclick handlers)
@@ -3485,5 +3428,4 @@
     </script>
 </body>
 </html>
-
 
