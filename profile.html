@@ -1928,30 +1928,55 @@
                 attempts++;
             }
             
-            // Check auth status - use checkAuthStatus if available, otherwise fallback to localStorage
+            // Check auth status - MUST verify with Supabase, not just localStorage
             let authStatus;
             if (typeof window.checkAuthStatus === 'function') {
                 try {
                     authStatus = await window.checkAuthStatus();
                 } catch (error) {
                     console.error('Error checking auth status:', error);
-                    // Fallback to localStorage if checkAuthStatus fails
-                    authStatus = {
-                        isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                        user: null,
-                        email: localStorage.getItem('userEmail'),
-                        name: localStorage.getItem('userName')
-                    };
+                    // If checkAuthStatus fails, user is NOT logged in - redirect
+                    console.log('Auth check failed, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
                 }
             } else {
-                // Fallback to localStorage if checkAuthStatus not available (for localhost compatibility)
-                console.log('checkAuthStatus not available, using localStorage fallback');
-                authStatus = {
-                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                    user: null,
-                    email: localStorage.getItem('userEmail'),
-                    name: localStorage.getItem('userName')
-                };
+                // If checkAuthStatus not available, try to verify with Supabase directly
+                console.log('checkAuthStatus not available, checking Supabase directly...');
+                if (typeof getSupabase === 'function') {
+                    const supabase = getSupabase();
+                    if (supabase) {
+                        try {
+                            const { data: { session }, error } = await supabase.auth.getSession();
+                            if (error || !session || !session.user) {
+                                console.log('No Supabase session, redirecting to home page');
+                                window.location.href = 'index.html';
+                                return;
+                            }
+                            // Has valid session
+                            authStatus = {
+                                isLoggedIn: true,
+                                user: session.user,
+                                email: session.user.email,
+                                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
+                            };
+                        } catch (e) {
+                            console.error('Error checking Supabase session:', e);
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                    } else {
+                        // No Supabase client - redirect for security
+                        console.log('No Supabase client, redirecting to home page');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                } else {
+                    // No way to verify - redirect for security
+                    console.log('Cannot verify auth, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
             }
             
             if (!authStatus.isLoggedIn) {
@@ -1996,31 +2021,55 @@
         async function initProfile() {
             console.log('🚀🚀🚀 initProfile() STARTED - THIS SHOULD APPEAR IN CONSOLE 🚀🚀🚀');
             try {
-            // First, check if user is actually logged in using centralized auth check
-            // Use checkAuthStatus if available, otherwise fallback to localStorage (for localhost compatibility)
+            // First, check if user is actually logged in - MUST verify with Supabase
             let authStatus;
             if (typeof window.checkAuthStatus === 'function') {
                 try {
                     authStatus = await window.checkAuthStatus();
                 } catch (error) {
                     console.error('Error checking auth status:', error);
-                    // Fallback to localStorage if checkAuthStatus fails
-                    authStatus = {
-                        isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                        user: null,
-                        email: localStorage.getItem('userEmail'),
-                        name: localStorage.getItem('userName')
-                    };
+                    // If checkAuthStatus fails, user is NOT logged in - redirect
+                    console.log('Auth check failed, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
                 }
             } else {
-                // Fallback to localStorage if checkAuthStatus not available (for localhost compatibility)
-                console.log('checkAuthStatus not available, using localStorage fallback');
-                authStatus = {
-                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                    user: null,
-                    email: localStorage.getItem('userEmail'),
-                    name: localStorage.getItem('userName')
-                };
+                // If checkAuthStatus not available, verify with Supabase directly
+                console.log('checkAuthStatus not available, checking Supabase directly...');
+                if (typeof getSupabase === 'function') {
+                    const supabase = getSupabase();
+                    if (supabase) {
+                        try {
+                            const { data: { session }, error } = await supabase.auth.getSession();
+                            if (error || !session || !session.user) {
+                                console.log('No Supabase session, redirecting to home page');
+                                window.location.href = 'index.html';
+                                return;
+                            }
+                            // Has valid session
+                            authStatus = {
+                                isLoggedIn: true,
+                                user: session.user,
+                                email: session.user.email,
+                                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
+                            };
+                        } catch (e) {
+                            console.error('Error checking Supabase session:', e);
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                    } else {
+                        // No Supabase client - redirect for security
+                        console.log('No Supabase client, redirecting to home page');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                } else {
+                    // No way to verify - redirect for security
+                    console.log('Cannot verify auth, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
             }
             
             // If user is not logged in, redirect to home page immediately
