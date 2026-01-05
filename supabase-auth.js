@@ -149,13 +149,34 @@ async function checkAuthStatus() {
     }
     
     if (!supabase) {
-        // Supabase not initialized after waiting - return logged out (don't use localStorage fallback)
-        console.warn('⚠️ [DEBUG] Supabase not initialized after waiting - returning logged out status');
+        // Supabase not initialized after waiting
+        console.warn('⚠️ [DEBUG] Supabase not initialized after waiting');
         console.log('🔍 [DEBUG] localStorage check:', {
             isLoggedIn: localStorage.getItem('isLoggedIn'),
             userEmail: localStorage.getItem('userEmail'),
             userName: localStorage.getItem('userName')
         });
+        
+        // On localhost, if Supabase fails to initialize, check if we're in a login flow
+        // This helps with localhost where Supabase might load slower
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocalhost) {
+            console.log('🔍 [DEBUG] Localhost detected - checking localStorage as temporary fallback');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const userEmail = localStorage.getItem('userEmail');
+            // Only use localStorage fallback if email doesn't look like test data
+            if (isLoggedIn && userEmail && !userEmail.includes('guest@example.com') && !userEmail.includes('test@example.com')) {
+                console.log('⚠️ [DEBUG] Using localStorage fallback on localhost (temporary)');
+                return {
+                    isLoggedIn: true,
+                    user: null,
+                    email: userEmail,
+                    name: localStorage.getItem('userName') || 'User'
+                };
+            }
+        }
+        
+        // Return logged out if no valid fallback
         return {
             isLoggedIn: false,
             user: null,
