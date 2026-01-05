@@ -2661,9 +2661,52 @@
         // Make logout function globally accessible
         window.logout = logout;
 
+        // DEBUG FUNCTION - Call from console: window.debugAuth()
+        window.debugAuth = async function() {
+            console.log('=== AUTH DEBUG INFO ===');
+            console.log('1. localStorage:', {
+                isLoggedIn: localStorage.getItem('isLoggedIn'),
+                userEmail: localStorage.getItem('userEmail'),
+                userName: localStorage.getItem('userName')
+            });
+            
+            console.log('2. All localStorage keys:', Object.keys(localStorage));
+            
+            const supabase = typeof getSupabase === 'function' ? getSupabase() : null;
+            console.log('3. Supabase client:', supabase ? 'found' : 'null');
+            
+            if (supabase) {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    console.log('4. Supabase session:', {
+                        hasSession: !!session,
+                        hasUser: !!session?.user,
+                        userEmail: session?.user?.email,
+                        userId: session?.user?.id,
+                        error: error?.message
+                    });
+                } catch (e) {
+                    console.error('4. Error getting session:', e);
+                }
+            }
+            
+            if (typeof checkAuthStatus === 'function') {
+                try {
+                    const authStatus = await checkAuthStatus();
+                    console.log('5. checkAuthStatus() result:', authStatus);
+                } catch (e) {
+                    console.error('5. Error in checkAuthStatus:', e);
+                }
+            }
+            
+            console.log('6. userData object:', userData);
+            console.log('7. Email element:', document.getElementById('userEmail')?.textContent);
+            console.log('=== END DEBUG ===');
+        };
+        
         // Confirm logout function - using the working version from puzzles.html
         async function confirmLogout() {
-            console.log('confirmLogout function called!');
+            console.log('🔴 [LOGOUT] confirmLogout function called!');
             
             // Hide modal first
             const modal = document.getElementById('logoutConfirmModal');
@@ -2672,7 +2715,7 @@
             }
             
             // Clear user data and localStorage FIRST
-            console.log('Clearing localStorage...');
+            console.log('🔴 [LOGOUT] Clearing localStorage...');
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userName');
             localStorage.removeItem('userEmail');
@@ -2685,7 +2728,7 @@
             console.log('✅ Cleared chessProgress from localStorage');
             
             // CRITICAL: Clear ALL Supabase localStorage keys
-            console.log('Clearing Supabase localStorage keys...');
+            console.log('🔴 [LOGOUT] Clearing Supabase localStorage keys...');
             const supabaseProjectId = 'yaaxydrmuslgzjletzbw';
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
@@ -2695,37 +2738,55 @@
                 }
             }
             keysToRemove.forEach(key => {
-                console.log('Removing Supabase key:', key);
+                console.log('🔴 [LOGOUT] Removing Supabase key:', key);
                 localStorage.removeItem(key);
             });
             
+            // Also clear ALL keys that might be related
+            const allKeys = Object.keys(localStorage);
+            allKeys.forEach(key => {
+                if (key.toLowerCase().includes('auth') || key.toLowerCase().includes('session') || key.toLowerCase().includes('token')) {
+                    console.log('🔴 [LOGOUT] Removing auth-related key:', key);
+                    localStorage.removeItem(key);
+                }
+            });
+            
             // Sign out from Supabase - wait for it to complete before redirecting
-            console.log('Signing out from Supabase...');
+            console.log('🔴 [LOGOUT] Signing out from Supabase...');
             try {
                 if (typeof window.signOut === 'function') {
                     await window.signOut();
-                    console.log('✅ Signed out via window.signOut()');
+                    console.log('✅ [LOGOUT] Signed out via window.signOut()');
                 } else if (typeof getSupabase === 'function') {
                     const supabase = getSupabase();
                     if (supabase) {
                         const { error } = await supabase.auth.signOut();
                         if (error) {
-                            console.error('Error signing out from Supabase:', error);
+                            console.error('❌ [LOGOUT] Error signing out from Supabase:', error);
                         } else {
-                            console.log('✅ Signed out from Supabase');
+                            console.log('✅ [LOGOUT] Signed out from Supabase');
                         }
+                    } else {
+                        console.warn('⚠️ [LOGOUT] Supabase client not available');
                     }
+                } else {
+                    console.warn('⚠️ [LOGOUT] signOut and getSupabase not available');
                 }
             } catch (error) {
-                console.error('Error during sign out:', error);
+                console.error('❌ [LOGOUT] Error during sign out:', error);
                 // Continue with redirect even if signOut fails
             }
             
+            // Clear userData object
+            userData.name = '';
+            userData.email = '';
+            userData.subscription = 'free';
+            
             // Small delay to ensure session is cleared before redirect
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             // Redirect to home page with loggedout parameter to clear any remaining state
-            console.log('Redirecting to index.html...');
+            console.log('🔴 [LOGOUT] Redirecting to index.html...');
             window.location.replace('index.html?loggedout=true');
         }
         
@@ -3455,4 +3516,5 @@
     </script>
 </body>
 </html>
+
 

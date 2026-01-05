@@ -128,21 +128,34 @@ async function isSignedIn() {
  * @returns {Promise<{isLoggedIn: boolean, user: object|null, email: string|null, name: string|null}>}
  */
 async function checkAuthStatus() {
+    console.log('🔍 [DEBUG] checkAuthStatus() called');
+    
     // Always check Supabase session first (source of truth)
     // Wait for Supabase to initialize (important on production where it may load slower)
     let supabase = getSupabase();
+    console.log('🔍 [DEBUG] Initial getSupabase() result:', supabase ? 'found' : 'null');
+    
     if (!supabase) {
         // Wait up to 2 seconds for Supabase to initialize
+        console.log('🔍 [DEBUG] Waiting for Supabase to initialize...');
         for (let i = 0; i < 20; i++) {
             await new Promise(resolve => setTimeout(resolve, 100));
             supabase = getSupabase();
-            if (supabase) break;
+            if (supabase) {
+                console.log('🔍 [DEBUG] Supabase initialized after', (i + 1) * 100, 'ms');
+                break;
+            }
         }
     }
     
     if (!supabase) {
         // Supabase not initialized after waiting - return logged out (don't use localStorage fallback)
-        console.warn('Supabase not initialized - returning logged out status');
+        console.warn('⚠️ [DEBUG] Supabase not initialized after waiting - returning logged out status');
+        console.log('🔍 [DEBUG] localStorage check:', {
+            isLoggedIn: localStorage.getItem('isLoggedIn'),
+            userEmail: localStorage.getItem('userEmail'),
+            userName: localStorage.getItem('userName')
+        });
         return {
             isLoggedIn: false,
             user: null,
@@ -153,10 +166,20 @@ async function checkAuthStatus() {
 
     try {
         // Get current session from Supabase
+        console.log('🔍 [DEBUG] Calling supabase.auth.getSession()...');
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        console.log('🔍 [DEBUG] getSession() result:', {
+            hasSession: !!session,
+            hasUser: !!session?.user,
+            userEmail: session?.user?.email,
+            userId: session?.user?.id,
+            error: error?.message
+        });
         
         if (error || !session || !session.user) {
             // No valid session - user is logged out
+            console.log('🔍 [DEBUG] No valid session - clearing localStorage and returning logged out');
             localStorage.setItem('isLoggedIn', 'false');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
@@ -177,10 +200,38 @@ async function checkAuthStatus() {
                         email.split('@')[0] || 
                         'User';
         
+        console.log('🔍 [DEBUG] Valid session found:', {
+            email: email,
+            name: userName,
+            userId: user.id,
+            userMetadata: user.user_metadata
+        });
+        
+        // Validate email - reject test/mock emails
+        if (email && (email.includes('guest@example.com') || 
+            email.includes('test@example') || 
+            email.includes('mock@') ||
+            email.includes('example.com'))) {
+            console.error('❌ [DEBUG] Rejecting test/mock email from Supabase session:', email);
+            // Sign out the test user
+            await supabase.auth.signOut();
+            localStorage.setItem('isLoggedIn', 'false');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userName');
+            return {
+                isLoggedIn: false,
+                user: null,
+                email: null,
+                name: null
+            };
+        }
+        
         // Update localStorage to match Supabase session
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userEmail', email);
         localStorage.setItem('userName', userName);
+        
+        console.log('✅ [DEBUG] Returning logged in status:', { email, name: userName });
         
         return {
             isLoggedIn: true,
@@ -189,7 +240,8 @@ async function checkAuthStatus() {
             name: userName
         };
     } catch (error) {
-        console.error('Error checking auth status:', error);
+        console.error('❌ [DEBUG] Error checking auth status:', error);
+        console.error('❌ [DEBUG] Error stack:', error.stack);
         // On error, return logged out (don't use localStorage fallback to prevent showing stale data)
         // Clear any stale localStorage data
         localStorage.setItem('isLoggedIn', 'false');
