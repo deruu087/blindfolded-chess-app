@@ -1694,82 +1694,45 @@
             return session;
         }
 
-        // Setup Profile button click handler after session is known
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🔍 [Profile Setup] Starting Profile button setup...');
-            
-            // Select #profileLink
-            const profileLink = document.getElementById('profileLink');
+        // Setup Profile button click handler
+        document.addEventListener("DOMContentLoaded", () => {
+            const profileLink = document.getElementById("profileLink");
             if (!profileLink) {
-                console.warn('⚠️ [Profile Setup] Profile link element not found');
+                console.error("[Profile Setup] Profile link element not found");
                 return;
             }
-            
-            console.log('✅ [Profile Setup] Profile link element found');
-            
-            // Call waitForSession() and get session
-            const session = await waitForSession();
-            console.log('🔍 [Profile Setup] Initial session check:', session ? `Found (${session.user?.email})` : 'No session');
-            
-            // Check localStorage.isLoggedIn as a fallback
-            const localStorageLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            console.log('🔍 [Profile Setup] localStorage.isLoggedIn fallback:', localStorageLoggedIn);
-            
-            // Attach onclick handler
-            profileLink.addEventListener('click', async function(e) {
+
+            console.log("[Profile Setup] Profile link element found");
+
+            // Attach click handler
+            profileLink.onclick = async (e) => {
                 e.preventDefault();
-                console.log('🖱️ [Profile Click] Profile button clicked');
-                
-                // Re-check session on click (in case it changed)
-                const currentSession = await waitForSession();
-                const hasSession = currentSession && currentSession.user;
-                console.log('🔍 [Profile Click] Current session check:', hasSession ? `Found (${currentSession.user.email})` : 'No session');
-                
-                // Check localStorage.isLoggedIn as a fallback
-                const isLoggedInFallback = localStorage.getItem('isLoggedIn') === 'true';
-                console.log('🔍 [Profile Click] localStorage.isLoggedIn fallback:', isLoggedInFallback);
-                
-                // Decision: If session exists or fallback is true → navigate to profile.html
-                const shouldNavigate = hasSession || isLoggedInFallback;
-                console.log('🔍 [Profile Click] Decision:', shouldNavigate ? 'Navigate to profile.html' : 'Show login modal');
-                
-                if (shouldNavigate) {
-                    if (hasSession) {
-                        console.log('✅ [Profile Click] Session exists, navigating to profile.html');
-                        console.log('👤 [Profile Click] User:', currentSession.user.email);
-                    } else {
-                        console.log('✅ [Profile Click] Using localStorage fallback, navigating to profile.html');
-                    }
-                    window.location.href = 'profile.html';
-                } else {
-                    console.log('ℹ️ [Profile Click] No session and no fallback, showing sign-in modal');
+                console.log("[Profile Click] Button clicked");
+
+                // Get Supabase client
+                const supabase = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
+                if (!supabase) {
+                    console.error("[Profile Click] Supabase client not available");
                     if (typeof showSignInModal === 'function') {
                         showSignInModal();
-                        console.log('✅ [Profile Click] Sign-in modal shown');
-                    } else {
-                        console.error('❌ [Profile Click] showSignInModal function not available');
+                    }
+                    return;
+                }
+
+                // Check session
+                const { data: { session }, error } = await supabase.auth.getSession();
+                console.log("[Profile Click] Current session:", session, "Error:", error);
+
+                if (session && session.user) {
+                    console.log("[Profile Click] User logged in → navigating to profile.html");
+                    window.location.href = "profile.html";
+                } else {
+                    console.log("[Profile Click] User not logged in → showing login modal");
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
                     }
                 }
-            });
-            
-            console.log('✅ [Profile Setup] Profile button setup complete');
-            
-            // Add optional auth debug listener
-            if (typeof window.getSupabase === 'function') {
-                const supabase = window.getSupabase();
-                if (supabase && supabase.auth) {
-                    supabase.auth.onAuthStateChange((event, session) => {
-                        console.log('🔐 [Auth State] Auth state changed:', {
-                            event: event,
-                            hasSession: !!session,
-                            userEmail: session?.user?.email || null,
-                            userId: session?.user?.id || null,
-                            timestamp: new Date().toISOString()
-                        });
-                    });
-                    console.log('✅ [Profile Setup] Auth state listener attached');
-                }
-            }
+            };
         });
 
         // Show account information modal
