@@ -1942,6 +1942,35 @@
             }
         }
         
+        // Helper function to show login modal with retry logic (waits for modal element to exist)
+        function showLoginModalWithRetry(context = '') {
+            let attempts = 0;
+            const maxAttempts = 30; // 30 attempts * 100ms = 3 seconds max wait
+            
+            const tryShowModal = () => {
+                const signInModal = document.getElementById('signInModal');
+                if (signInModal) {
+                    console.log(`✅ [AUTH CHECK] Showing login modal${context ? ' (' + context + ')' : ''}`);
+                    signInModal.style.display = 'block';
+                    return true;
+                } else if (attempts < maxAttempts) {
+                    attempts++;
+                    if (attempts % 10 === 0) {
+                        console.log(`⏳ [AUTH CHECK] Waiting for sign-in modal element... (${attempts * 100}ms elapsed)`);
+                    }
+                    setTimeout(tryShowModal, 100);
+                    return false;
+                } else {
+                    console.warn(`⚠️ [AUTH CHECK] Sign-in modal not found after ${maxAttempts * 100}ms, redirecting to home page`);
+                    window.location.href = 'index.html';
+                    return false;
+                }
+            };
+            
+            // Start trying immediately
+            tryShowModal();
+        }
+        
         // Wait for DOM and scripts to load before checking auth
         document.addEventListener('DOMContentLoaded', async function() {
             // Detect environment for logging
@@ -1967,23 +1996,8 @@
             
             if (typeof window.getSupabase !== 'function') {
                 console.error('❌ [AUTH CHECK] getSupabase() function not available after 5 seconds');
-                // Show login modal instead of redirecting
-                const showModal = () => {
-                    const signInModal = document.getElementById('signInModal');
-                    if (signInModal) {
-                        console.log('✅ [AUTH CHECK] Showing login modal (getSupabase not available)');
-                        signInModal.style.display = 'block';
-                    } else {
-                        console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
-                        window.location.href = 'index.html';
-                    }
-                };
-                
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', showModal);
-                } else {
-                    setTimeout(showModal, 100);
-                }
+                // Show login modal instead of redirecting (with retry logic)
+                showLoginModalWithRetry('getSupabase not available');
                 return;
             }
             
@@ -2019,67 +2033,22 @@
                         const authStatus = await window.checkAuthStatus();
                         if (!authStatus.isLoggedIn) {
                             console.log('❌ [AUTH CHECK] User not logged in');
-                            // Show login modal instead of redirecting
-                            const showModal = () => {
-                                const signInModal = document.getElementById('signInModal');
-                                if (signInModal) {
-                                    console.log('✅ [AUTH CHECK] Showing login modal (checkAuthStatus: not logged in)');
-                                    signInModal.style.display = 'block';
-                                } else {
-                                    console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
-                                    window.location.href = 'index.html';
-                                }
-                            };
-                            
-                            if (document.readyState === 'loading') {
-                                document.addEventListener('DOMContentLoaded', showModal);
-                            } else {
-                                setTimeout(showModal, 100);
-                            }
+                            // Show login modal instead of redirecting (with retry logic)
+                            showLoginModalWithRetry('checkAuthStatus: not logged in');
                             return;
                         }
                         console.log('✅ [AUTH CHECK] User authenticated via checkAuthStatus()');
                         return;
                     } catch (error) {
                         console.error('❌ [AUTH CHECK] checkAuthStatus() failed:', error);
-                        // Show login modal instead of redirecting
-                        const showModal = () => {
-                            const signInModal = document.getElementById('signInModal');
-                            if (signInModal) {
-                                console.log('✅ [AUTH CHECK] Showing login modal (checkAuthStatus failed)');
-                                signInModal.style.display = 'block';
-                            } else {
-                                console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
-                                window.location.href = 'index.html';
-                            }
-                        };
-                        
-                        if (document.readyState === 'loading') {
-                            document.addEventListener('DOMContentLoaded', showModal);
-                        } else {
-                            setTimeout(showModal, 100);
-                        }
+                        // Show login modal instead of redirecting (with retry logic)
+                        showLoginModalWithRetry('checkAuthStatus failed');
                         return;
                     }
                 } else {
                     console.error('❌ [AUTH CHECK] No way to verify auth');
-                    // Show login modal instead of redirecting
-                    const showModal = () => {
-                        const signInModal = document.getElementById('signInModal');
-                        if (signInModal) {
-                            console.log('✅ [AUTH CHECK] Showing login modal (no auth verification)');
-                            signInModal.style.display = 'block';
-                        } else {
-                            console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
-                            window.location.href = 'index.html';
-                        }
-                    };
-                    
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', showModal);
-                    } else {
-                        setTimeout(showModal, 100);
-                    }
+                    // Show login modal instead of redirecting (with retry logic)
+                    showLoginModalWithRetry('no auth verification');
                     return;
                 }
             }
@@ -2109,23 +2078,8 @@
                 
                 if (error) {
                     console.error('❌ [AUTH CHECK] Session check error:', error);
-                    // Show login modal instead of redirecting
-                    const showModal = () => {
-                        const signInModal = document.getElementById('signInModal');
-                        if (signInModal) {
-                            console.log('✅ [AUTH CHECK] Showing login modal (session error)');
-                            signInModal.style.display = 'block';
-                        } else {
-                            console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
-                            window.location.href = 'index.html';
-                        }
-                    };
-                    
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', showModal);
-                    } else {
-                        setTimeout(showModal, 100);
-                    }
+                    // Show login modal instead of redirecting (with retry logic)
+                    showLoginModalWithRetry('session error');
                     return;
                 }
                 
@@ -2144,26 +2098,8 @@
                     });
                     console.log('🔍 [AUTH CHECK] Will show login modal instead of empty profile');
                     
-                    // Show login modal instead of redirecting
-                    // Wait for DOM to be ready, then show modal
-                    const showModal = () => {
-                        const signInModal = document.getElementById('signInModal');
-                        if (signInModal) {
-                            console.log('✅ [AUTH CHECK] Showing login modal');
-                            signInModal.style.display = 'block';
-                        } else {
-                            console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
-                            window.location.href = 'index.html';
-                        }
-                    };
-                    
-                    // Try to show modal immediately, or wait a bit if DOM not ready
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', showModal);
-                    } else {
-                        // DOM already loaded, show modal immediately
-                        setTimeout(showModal, 100); // Small delay to ensure modal element exists
-                    }
+                    // Show login modal instead of redirecting (with retry logic)
+                    showLoginModalWithRetry('no session');
                     return;
                 }
                 
@@ -2181,23 +2117,8 @@
             } catch (e) {
                 console.error('❌ [AUTH CHECK] Exception checking Supabase session:', e);
                 console.error('❌ [AUTH CHECK] Exception stack:', e.stack);
-                // Show login modal instead of redirecting
-                const showModal = () => {
-                    const signInModal = document.getElementById('signInModal');
-                    if (signInModal) {
-                        console.log('✅ [AUTH CHECK] Showing login modal (exception)');
-                        signInModal.style.display = 'block';
-                    } else {
-                        console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
-                        window.location.href = 'index.html';
-                    }
-                };
-                
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', showModal);
-                } else {
-                    setTimeout(showModal, 100);
-                }
+                // Show login modal instead of redirecting (with retry logic)
+                showLoginModalWithRetry('exception');
                 return;
             }
         });
@@ -2232,16 +2153,34 @@
             console.log('🧹 Cleared stale billing localStorage on page load');
         })();
 
-        // Helper function to show login modal
+        // Helper function to show login modal (used by initProfile)
         function showLoginModal() {
-            const signInModal = document.getElementById('signInModal');
-            if (signInModal) {
-                console.log('✅ [INIT PROFILE] Showing login modal');
-                signInModal.style.display = 'block';
-            } else {
-                console.warn('⚠️ [INIT PROFILE] Sign-in modal not found, redirecting to home page');
-                window.location.href = 'index.html';
-            }
+            // Use the retry logic function
+            let attempts = 0;
+            const maxAttempts = 30; // 30 attempts * 100ms = 3 seconds max wait
+            
+            const tryShowModal = () => {
+                const signInModal = document.getElementById('signInModal');
+                if (signInModal) {
+                    console.log('✅ [INIT PROFILE] Showing login modal');
+                    signInModal.style.display = 'block';
+                    return true;
+                } else if (attempts < maxAttempts) {
+                    attempts++;
+                    if (attempts % 10 === 0) {
+                        console.log(`⏳ [INIT PROFILE] Waiting for sign-in modal element... (${attempts * 100}ms elapsed)`);
+                    }
+                    setTimeout(tryShowModal, 100);
+                    return false;
+                } else {
+                    console.warn(`⚠️ [INIT PROFILE] Sign-in modal not found after ${maxAttempts * 100}ms, redirecting to home page`);
+                    window.location.href = 'index.html';
+                    return false;
+                }
+            };
+            
+            // Start trying immediately
+            tryShowModal();
         }
         
         // Initialize profile page
