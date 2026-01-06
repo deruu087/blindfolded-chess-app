@@ -1916,6 +1916,32 @@
     
     <!-- Early auth check - runs after scripts load to prevent redirecting logged-in users -->
     <script>
+        // Hide main content by default - only show after session validation
+        (function() {
+            const style = document.createElement('style');
+            style.id = 'profile-content-hide';
+            style.textContent = `
+                .main-content { 
+                    display: none !important; 
+                }
+            `;
+            document.head.appendChild(style);
+        })();
+        
+        // Function to show profile content after successful authentication
+        function showProfileContent() {
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.style.display = '';
+                // Remove the hiding style
+                const hideStyle = document.getElementById('profile-content-hide');
+                if (hideStyle) {
+                    hideStyle.remove();
+                }
+                console.log('✅ [AUTH CHECK] Profile content is now visible');
+            }
+        }
+        
         // Wait for DOM and scripts to load before checking auth
         document.addEventListener('DOMContentLoaded', async function() {
             // Detect environment for logging
@@ -2147,6 +2173,10 @@
                 console.log(`✅ [AUTH CHECK] Environment: ${environment}`);
                 console.log('✅ [AUTH CHECK] Session check complete, continuing with profile page load');
                 console.log('✅ [AUTH CHECK] Profile page will now load for authenticated user');
+                
+                // Show profile content now that session is validated
+                showProfileContent();
+                
                 // Continue loading page
             } catch (e) {
                 console.error('❌ [AUTH CHECK] Exception checking Supabase session:', e);
@@ -2313,6 +2343,9 @@
             }
             
             console.log('✅ [INIT PROFILE] User is authenticated, proceeding to load profile content');
+            
+            // Ensure profile content is visible (in case early auth check didn't show it)
+            showProfileContent();
             
             // User is logged in - proceed with loading profile data
             // Update user info immediately from authStatus (instant display)
