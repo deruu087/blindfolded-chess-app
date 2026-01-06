@@ -1554,104 +1554,80 @@
             }
         }
 
-        // Check login status and update navigation
+        // Helper function to wait for Supabase client
+        async function getSupabase() {
+            let attempts = 0;
+            const maxAttempts = 10; // Wait up to 1 second
+            while (attempts < maxAttempts) {
+                if (typeof window.getSupabase === 'function') {
+                    const client = window.getSupabase();
+                    if (client && client.auth) {
+                        return client;
+                    }
+                }
+                if (attempts < maxAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                attempts++;
+            }
+            return null;
+        }
+
+        // Update navigation and handle Profile button click safely
         async function updateNavigation() {
+            // Select the single Profile button
             const profileLink = document.getElementById('profileLink');
-            
-            // CRITICAL: Wait for Supabase to be ready before checking auth
-            // This prevents false negatives in production where Supabase takes longer to initialize
-            if (typeof window.waitForSupabaseReady === 'function') {
-                const supabaseReady = await window.waitForSupabaseReady();
-                if (!supabaseReady) {
-                    console.warn('⚠️ Supabase not ready, using localStorage for navigation');
-                }
-            }
-            
-            // Use centralized auth check function (which also waits for Supabase internally)
-            let authStatus;
-            if (typeof window.checkAuthStatus === 'function') {
-                authStatus = await window.checkAuthStatus();
-            } else {
-                // Fallback if function not available
-                authStatus = {
-                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                    user: null,
-                    email: localStorage.getItem('userEmail'),
-                    name: localStorage.getItem('userName')
-                };
-            }
-            
-            const isLoggedIn = authStatus.isLoggedIn;
-            
-            // Check subscription status from Supabase (if available) or localStorage as fallback
-            let hasActiveSubscription = false;
-            if (typeof window.hasActiveSubscription === 'function') {
-                try {
-                    hasActiveSubscription = await window.hasActiveSubscription();
-                } catch (e) {
-                    console.log('Supabase subscription check failed, using localStorage fallback');
-                    // Fallback to localStorage if Supabase not ready
-                    hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-                }
-            } else {
-                // Fallback to localStorage if Supabase function not available
-                hasActiveSubscription = localStorage.getItem('hasActiveSubscription') === 'true';
-            }
-            
-            // Set up profile link behavior
-            if (profileLink) {
-                profileLink.href = 'profile.html';
-                profileLink.onclick = async function(e) {
-                    e.preventDefault();
-                    
-                    // Wait for Supabase client to be available
-                    let supabase = null;
-                    let waitAttempts = 0;
-                    const maxWaitAttempts = 10; // Wait up to 1 second for getSupabase to be available
-                    
-                    while (waitAttempts < maxWaitAttempts) {
-                        if (typeof window.getSupabase === 'function') {
-                            supabase = window.getSupabase();
-                            if (supabase && supabase.auth) {
-                                break;
-                            }
-                        }
-                        if (waitAttempts < maxWaitAttempts - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                        }
-                        waitAttempts++;
-                    }
-                    
-                    // Retry getSession up to 5 times with 200ms delay if session is undefined
-                    let session = null;
-                    let attempts = 0;
-                    const maxAttempts = 5;
-                    
-                    if (supabase && supabase.auth) {
-                        while (attempts < maxAttempts) {
-                            const { data: { session: sessionData } } = await supabase.auth.getSession();
-                            if (sessionData !== undefined) {
-                                session = sessionData;
-                                break;
-                            }
-                            if (attempts < maxAttempts - 1) {
-                                await new Promise(resolve => setTimeout(resolve, 200));
-                            }
-                            attempts++;
-                        }
-                    }
-                    
-                    // If session exists (user is logged in) → navigate to profile.html
-                    if (session && session.user) {
-                        window.location.href = 'profile.html';
-                    } else {
-                        // If session does not exist → show login modal
-                        if (typeof showSignInModal === 'function') {
-                            showSignInModal();
-                        }
+            if (!profileLink) return;
+
+            // Wait for Supabase client to be ready
+            const supabase = await getSupabase();
+            if (!supabase) {
+                console.warn("Supabase client not ready, showing login modal as fallback");
+                profileLink.onclick = (e) => { 
+                    e.preventDefault(); 
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
                     }
                 };
+                return;
             }
+
+            // Remove any old click handlers
+            profileLink.onclick = null;
+
+            // Attach a new click handler
+            profileLink.addEventListener("click", async (e) => {
+                e.preventDefault();
+
+                let session = null;
+                let attempts = 0;
+
+                // Retry loop to wait for session (production timing issue)
+                while (attempts < 5 && !session) {
+                    try {
+                        const { data, error } = await supabase.auth.getSession();
+                        if (error) console.warn("Supabase session fetch error:", error);
+                        session = data?.session ?? null;
+                    } catch (err) {
+                        console.error("Error fetching session:", err);
+                    }
+
+                    if (session) break;
+                    await new Promise(r => setTimeout(r, 200)); // wait 200ms
+                    attempts++;
+                }
+
+                // Decide what to do based on session
+                if (session && session.user) {
+                    // User logged in → navigate to profile page
+                    window.location.href = "profile.html";
+                } else {
+                    // User not logged in → show modal
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    }
+                }
+            });
         }
 
         // Show account information modal
