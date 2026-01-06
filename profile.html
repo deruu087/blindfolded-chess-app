@@ -1936,7 +1936,23 @@
             
             if (typeof window.getSupabase !== 'function') {
                 console.error('❌ [AUTH CHECK] getSupabase() function not available after 5 seconds');
-                window.location.href = 'index.html';
+                // Show login modal instead of redirecting
+                const showModal = () => {
+                    const signInModal = document.getElementById('signInModal');
+                    if (signInModal) {
+                        console.log('✅ [AUTH CHECK] Showing login modal (getSupabase not available)');
+                        signInModal.style.display = 'block';
+                    } else {
+                        console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
+                        window.location.href = 'index.html';
+                    }
+                };
+                
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', showModal);
+                } else {
+                    setTimeout(showModal, 100);
+                }
                 return;
             }
             
@@ -1965,20 +1981,68 @@
                     try {
                         const authStatus = await window.checkAuthStatus();
                         if (!authStatus.isLoggedIn) {
-                            console.log('❌ [AUTH CHECK] User not logged in, redirecting to home page');
-                            window.location.href = 'index.html';
+                            console.log('❌ [AUTH CHECK] User not logged in');
+                            // Show login modal instead of redirecting
+                            const showModal = () => {
+                                const signInModal = document.getElementById('signInModal');
+                                if (signInModal) {
+                                    console.log('✅ [AUTH CHECK] Showing login modal (checkAuthStatus: not logged in)');
+                                    signInModal.style.display = 'block';
+                                } else {
+                                    console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
+                                    window.location.href = 'index.html';
+                                }
+                            };
+                            
+                            if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', showModal);
+                            } else {
+                                setTimeout(showModal, 100);
+                            }
                             return;
                         }
                         console.log('✅ [AUTH CHECK] User authenticated via checkAuthStatus()');
                         return;
                     } catch (error) {
                         console.error('❌ [AUTH CHECK] checkAuthStatus() failed:', error);
-                        window.location.href = 'index.html';
+                        // Show login modal instead of redirecting
+                        const showModal = () => {
+                            const signInModal = document.getElementById('signInModal');
+                            if (signInModal) {
+                                console.log('✅ [AUTH CHECK] Showing login modal (checkAuthStatus failed)');
+                                signInModal.style.display = 'block';
+                            } else {
+                                console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
+                                window.location.href = 'index.html';
+                            }
+                        };
+                        
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', showModal);
+                        } else {
+                            setTimeout(showModal, 100);
+                        }
                         return;
                     }
                 } else {
-                    console.error('❌ [AUTH CHECK] No way to verify auth, redirecting to home page');
-                    window.location.href = 'index.html';
+                    console.error('❌ [AUTH CHECK] No way to verify auth');
+                    // Show login modal instead of redirecting
+                    const showModal = () => {
+                        const signInModal = document.getElementById('signInModal');
+                        if (signInModal) {
+                            console.log('✅ [AUTH CHECK] Showing login modal (no auth verification)');
+                            signInModal.style.display = 'block';
+                        } else {
+                            console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
+                            window.location.href = 'index.html';
+                        }
+                    };
+                    
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showModal);
+                    } else {
+                        setTimeout(showModal, 100);
+                    }
                     return;
                 }
             }
@@ -1999,19 +2063,55 @@
                 
                 if (error) {
                     console.error('❌ [AUTH CHECK] Session check error:', error);
-                    window.location.href = 'index.html';
+                    // Show login modal instead of redirecting
+                    const showModal = () => {
+                        const signInModal = document.getElementById('signInModal');
+                        if (signInModal) {
+                            console.log('✅ [AUTH CHECK] Showing login modal (session error)');
+                            signInModal.style.display = 'block';
+                        } else {
+                            console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
+                            window.location.href = 'index.html';
+                        }
+                    };
+                    
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showModal);
+                    } else {
+                        setTimeout(showModal, 100);
+                    }
                     return;
                 }
                 
                 if (!session || !session.user) {
-                    console.log('❌ [AUTH CHECK] No Supabase session found, redirecting to home page');
+                    console.log('❌ [AUTH CHECK] No Supabase session found');
                     console.log('🔍 [AUTH CHECK] Session details:', { 
                         session: session, 
                         user: session?.user,
                         sessionType: typeof session,
                         userType: typeof session?.user
                     });
-                    window.location.href = 'index.html';
+                    
+                    // Show login modal instead of redirecting
+                    // Wait for DOM to be ready, then show modal
+                    const showModal = () => {
+                        const signInModal = document.getElementById('signInModal');
+                        if (signInModal) {
+                            console.log('✅ [AUTH CHECK] Showing login modal');
+                            signInModal.style.display = 'block';
+                        } else {
+                            console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
+                            window.location.href = 'index.html';
+                        }
+                    };
+                    
+                    // Try to show modal immediately, or wait a bit if DOM not ready
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showModal);
+                    } else {
+                        // DOM already loaded, show modal immediately
+                        setTimeout(showModal, 100); // Small delay to ensure modal element exists
+                    }
                     return;
                 }
                 
@@ -2022,7 +2122,23 @@
             } catch (e) {
                 console.error('❌ [AUTH CHECK] Exception checking Supabase session:', e);
                 console.error('❌ [AUTH CHECK] Exception stack:', e.stack);
-                window.location.href = 'index.html';
+                // Show login modal instead of redirecting
+                const showModal = () => {
+                    const signInModal = document.getElementById('signInModal');
+                    if (signInModal) {
+                        console.log('✅ [AUTH CHECK] Showing login modal (exception)');
+                        signInModal.style.display = 'block';
+                    } else {
+                        console.warn('⚠️ [AUTH CHECK] Sign-in modal not found, redirecting to home page');
+                        window.location.href = 'index.html';
+                    }
+                };
+                
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', showModal);
+                } else {
+                    setTimeout(showModal, 100);
+                }
                 return;
             }
         });
