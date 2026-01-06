@@ -2446,38 +2446,31 @@
     
     <!-- Initialize Supabase when page loads -->
     <script>
-        // CRITICAL: Add early safeguard for profile link clicks
-        // This ensures profile link waits for Supabase even if clicked before initialization
+        // CRITICAL: Always intercept profile link clicks to check auth before navigation
         (function() {
             const profileLink = document.getElementById('profileLink');
             if (profileLink) {
                 profileLink.addEventListener('click', async function(e) {
-                    // Only intercept if href is 'profile.html' (not yet set by updateNavigation)
-                    if (this.href && this.href.includes('profile.html') && !this.href.includes('#')) {
-                        // Check if Supabase is ready
-                        if (typeof window.waitForSupabaseReady === 'function') {
-                            const supabaseReady = await window.waitForSupabaseReady(5000); // Wait up to 5 seconds
-                            if (!supabaseReady) {
-                                console.warn('⚠️ Supabase not ready, checking auth before navigating...');
+                    // Always prevent default navigation first
+                    e.preventDefault();
+                    
+                    // Check auth status before deciding what to do
+                    if (typeof window.checkAuthStatus === 'function') {
+                        const authStatus = await window.checkAuthStatus();
+                        if (authStatus.isLoggedIn) {
+                            // User is logged in - allow navigation
+                            window.location.href = 'profile.html';
+                        } else {
+                            // User not logged in - show sign-in modal
+                            if (typeof showSignInModal === 'function') {
+                                showSignInModal();
                             }
                         }
-                        
-                        // Now check auth status before allowing navigation
-                        if (typeof window.checkAuthStatus === 'function') {
-                            const authStatus = await window.checkAuthStatus();
-                            if (!authStatus.isLoggedIn) {
-                                // User not logged in - prevent navigation and show sign-in modal
-                                e.preventDefault();
-                                if (typeof showSignInModal === 'function') {
-                                    showSignInModal();
-                                } else {
-                                    // Fallback: redirect to home
-                                    window.location.href = 'index.html';
-                                }
-                                return false;
-                            }
+                    } else {
+                        // Fallback: if checkAuthStatus not available, show modal
+                        if (typeof showSignInModal === 'function') {
+                            showSignInModal();
                         }
-                        // If logged in, allow normal navigation
                     }
                 });
             }
