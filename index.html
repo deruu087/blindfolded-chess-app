@@ -1697,10 +1697,7 @@
         // Setup Profile button click handler
         document.addEventListener("DOMContentLoaded", () => {
             const profileLink = document.getElementById("profileLink");
-            if (!profileLink) {
-                console.error("[Profile Setup] Profile link element not found");
-                return;
-            }
+            if (!profileLink) return console.error("[Profile Setup] Profile link not found");
 
             console.log("[Profile Setup] Profile link element found");
 
@@ -1708,53 +1705,51 @@
                 e.preventDefault();
                 console.log("[Profile Click] Button clicked");
 
-                // Try to get Supabase client
+                // Wait for Supabase client to be ready
                 let supabase = null;
                 try {
-                    supabase = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
-                } catch (err) {
-                    console.error("[Profile Click] Failed to get Supabase client:", err);
-                }
-
-                // Attempt to get session
-                let session = null;
-                if (supabase) {
-                    try {
-                        const { data, error } = await supabase.auth.getSession();
-                        session = data?.session ?? null;
-                        console.log("[Profile Click] Supabase session:", session, "Error:", error);
-                    } catch (err) {
-                        console.error("[Profile Click] Session check failed:", err);
+                    while (!supabase) {
+                        if (typeof window.getSupabase === 'function') {
+                            supabase = window.getSupabase();
+                            if (supabase && supabase.auth) {
+                                break;
+                            }
+                        }
+                        if (!supabase) await new Promise(res => setTimeout(res, 200)); // retry every 200ms
                     }
+                } catch (err) {
+                    console.error("[Profile Click] Supabase client error:", err);
                 }
 
-                // Fallback: check localStorage if present
-                const isLoggedInFallback = localStorage.getItem("isLoggedIn") === "true";
+                console.log("[Profile Click] Supabase client ready:", supabase);
 
-                // Decide: navigate or show modal
+                // Get session
+                let session = null;
+                try {
+                    const { data, error } = await supabase.auth.getSession();
+                    session = data?.session ?? null;
+                    console.log("[Profile Click] Supabase session:", session, "Error:", error);
+                } catch (err) {
+                    console.error("[Profile Click] Session check failed:", err);
+                }
+
+                // Fallback: localStorage
+                const isLoggedInFallback = localStorage.getItem("isLoggedIn") === "true";
+                console.log("[Profile Click] Fallback isLoggedIn:", isLoggedInFallback);
+
+                // Decide action
                 if ((session && session.user) || isLoggedInFallback) {
-                    console.log("[Profile Click] User logged in → navigating to profile.html");
+                    console.log("[Profile Click] Navigating to profile.html");
                     window.location.href = "profile.html";
                 } else {
-                    console.log("[Profile Click] No session → showing login modal immediately");
+                    console.log("[Profile Click] No session → showing login modal");
                     if (typeof showSignInModal === 'function') {
-                        showSignInModal(); // guaranteed fallback
+                        showSignInModal();
                     }
                 }
             };
 
             console.log("[Profile Setup] Click handler attached");
-
-            // Optional: auth state debug
-            if (typeof window.getSupabase === 'function') {
-                const supabase = window.getSupabase();
-                if (supabase && supabase.auth) {
-                    supabase.auth.onAuthStateChange((event, session) => {
-                        console.log("[Auth Event] Event:", event, "Session:", session);
-                    });
-                    console.log("[Auth Event] Listener attached");
-                }
-            }
         });
 
         // Show account information modal
