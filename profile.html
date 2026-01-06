@@ -1918,9 +1918,14 @@
     <script>
         // Wait for DOM and scripts to load before checking auth
         document.addEventListener('DOMContentLoaded', async function() {
+            // Detect environment for logging
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const environment = isLocalhost ? 'localhost' : 'production';
+            console.log(`🌍 [AUTH CHECK] Environment: ${environment} (${window.location.hostname})`);
+            console.log('⏳ [AUTH CHECK] Starting retry loop for getSupabase()...');
+            
             // CRITICAL: Retry loop to wait for getSupabase() to be available
             // This is especially important in production where Supabase initialization takes longer
-            console.log('⏳ [AUTH CHECK] Starting retry loop for getSupabase()...');
             let attempts = 0;
             const maxAttempts = 50; // 50 attempts * 100ms = 5 seconds max wait
             let supabase = null;
@@ -2048,17 +2053,26 @@
             }
             
             // Now we have a valid Supabase client - check session
-            console.log('🔍 [AUTH CHECK] Checking Supabase session...');
+            console.log('🔍 [AUTH CHECK] Supabase client is ready, checking session...');
+            console.log(`🔍 [AUTH CHECK] Client details: ${supabase ? 'valid' : 'null'}, auth: ${supabase?.auth ? 'available' : 'missing'}`);
+            
             try {
+                const sessionStartTime = Date.now();
                 const { data: { session }, error } = await supabase.auth.getSession();
+                const sessionCheckDuration = Date.now() - sessionStartTime;
                 
+                console.log(`🔍 [AUTH CHECK] Session check completed in ${sessionCheckDuration}ms`);
                 console.log('🔍 [AUTH CHECK] Session check result:', { 
+                    environment: environment,
                     hasError: !!error, 
                     hasSession: !!session, 
                     hasUser: !!session?.user,
-                    error: error?.message,
+                    error: error?.message || null,
                     sessionExists: session !== null,
-                    userExists: session?.user !== null
+                    userExists: session?.user !== null,
+                    userId: session?.user?.id || null,
+                    userEmail: session?.user?.email || null,
+                    sessionExpiresAt: session?.expires_at || null
                 });
                 
                 if (error) {
@@ -2085,12 +2099,18 @@
                 
                 if (!session || !session.user) {
                     console.log('❌ [AUTH CHECK] No Supabase session found');
+                    console.log(`❌ [AUTH CHECK] Environment: ${environment}`);
                     console.log('🔍 [AUTH CHECK] Session details:', { 
                         session: session, 
                         user: session?.user,
                         sessionType: typeof session,
-                        userType: typeof session?.user
+                        userType: typeof session?.user,
+                        sessionIsNull: session === null,
+                        sessionIsUndefined: session === undefined,
+                        userIsNull: session?.user === null,
+                        userIsUndefined: session?.user === undefined
                     });
+                    console.log('🔍 [AUTH CHECK] Will show login modal instead of empty profile');
                     
                     // Show login modal instead of redirecting
                     // Wait for DOM to be ready, then show modal
@@ -2116,8 +2136,11 @@
                 }
                 
                 // Has valid session - user is logged in
-                console.log('✅ [AUTH CHECK] User is authenticated:', session.user.email);
+                console.log('✅ [AUTH CHECK] User is authenticated');
+                console.log(`✅ [AUTH CHECK] User details: email=${session.user.email}, id=${session.user.id}`);
+                console.log(`✅ [AUTH CHECK] Environment: ${environment}`);
                 console.log('✅ [AUTH CHECK] Session check complete, continuing with profile page load');
+                console.log('✅ [AUTH CHECK] Profile page will now load for authenticated user');
                 // Continue loading page
             } catch (e) {
                 console.error('❌ [AUTH CHECK] Exception checking Supabase session:', e);
