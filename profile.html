@@ -1988,6 +1988,15 @@
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
+                console.log('🔍 [AUTH CHECK] Session check result:', { 
+                    hasError: !!error, 
+                    hasSession: !!session, 
+                    hasUser: !!session?.user,
+                    error: error?.message,
+                    sessionExists: session !== null,
+                    userExists: session?.user !== null
+                });
+                
                 if (error) {
                     console.error('❌ [AUTH CHECK] Session check error:', error);
                     window.location.href = 'index.html';
@@ -1996,6 +2005,12 @@
                 
                 if (!session || !session.user) {
                     console.log('❌ [AUTH CHECK] No Supabase session found, redirecting to home page');
+                    console.log('🔍 [AUTH CHECK] Session details:', { 
+                        session: session, 
+                        user: session?.user,
+                        sessionType: typeof session,
+                        userType: typeof session?.user
+                    });
                     window.location.href = 'index.html';
                     return;
                 }
@@ -2006,6 +2021,7 @@
                 // Continue loading page
             } catch (e) {
                 console.error('❌ [AUTH CHECK] Exception checking Supabase session:', e);
+                console.error('❌ [AUTH CHECK] Exception stack:', e.stack);
                 window.location.href = 'index.html';
                 return;
             }
