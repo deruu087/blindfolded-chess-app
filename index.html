@@ -2256,15 +2256,45 @@
             const hash = window.location.hash;
             const hasOAuthHash = hash && (hash.includes('access_token') || hash.includes('error') || hash.includes('type=recovery'));
             
-            if (hasOAuthHash && typeof getSupabase === 'function') {
-                const supabase = getSupabase();
-                if (supabase) {
-                    try {
-                        // Wait a bit for Supabase to process the hash
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        
-                        // Get the session - Supabase should have processed the hash by now
-                        const { data, error } = await supabase.auth.getSession();
+            if (hasOAuthHash) {
+                // CRITICAL: Wait for getSupabase() to be defined and return a valid client
+                // Retry every 100ms, up to 5 seconds (50 attempts)
+                console.log('⏳ Waiting for getSupabase() to be available for OAuth callback...');
+                let attempts = 0;
+                const maxAttempts = 50; // 50 attempts * 100ms = 5 seconds max wait
+                
+                // Wait for getSupabase to be defined as a function
+                while (typeof window.getSupabase !== 'function' && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                // Now wait for getSupabase() to return a valid client (not null)
+                let supabase = null;
+                attempts = 0;
+                while (attempts < maxAttempts) {
+                    if (typeof window.getSupabase === 'function') {
+                        supabase = window.getSupabase();
+                        if (supabase && supabase.auth) {
+                            console.log('✅ getSupabase() is ready with valid client for OAuth');
+                            break;
+                        }
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!supabase || !supabase.auth) {
+                    console.error('❌ getSupabase() not ready after waiting for OAuth callback');
+                    return false;
+                }
+                
+                try {
+                    // Wait a bit for Supabase to process the hash
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Get the session - Supabase should have processed the hash by now
+                    const { data, error } = await supabase.auth.getSession();
                         
                         if (!error && data.session && data.session.user) {
                             console.log('✅ Google OAuth successful!', data.session.user);
