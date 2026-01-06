@@ -1604,10 +1604,22 @@
                 profileLink.onclick = async function(e) {
                     e.preventDefault();
                     
-                    // Wait for Supabase client
+                    // Wait for Supabase client to be available
                     let supabase = null;
-                    if (typeof window.getSupabase === 'function') {
-                        supabase = window.getSupabase();
+                    let waitAttempts = 0;
+                    const maxWaitAttempts = 10; // Wait up to 1 second for getSupabase to be available
+                    
+                    while (waitAttempts < maxWaitAttempts) {
+                        if (typeof window.getSupabase === 'function') {
+                            supabase = window.getSupabase();
+                            if (supabase && supabase.auth) {
+                                break;
+                            }
+                        }
+                        if (waitAttempts < maxWaitAttempts - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        waitAttempts++;
                     }
                     
                     // Retry getSession up to 5 times with 200ms delay if session is undefined
@@ -1615,16 +1627,18 @@
                     let attempts = 0;
                     const maxAttempts = 5;
                     
-                    while (attempts < maxAttempts && supabase && supabase.auth) {
-                        const { data: { session: sessionData } } = await supabase.auth.getSession();
-                        if (sessionData !== undefined) {
-                            session = sessionData;
-                            break;
+                    if (supabase && supabase.auth) {
+                        while (attempts < maxAttempts) {
+                            const { data: { session: sessionData } } = await supabase.auth.getSession();
+                            if (sessionData !== undefined) {
+                                session = sessionData;
+                                break;
+                            }
+                            if (attempts < maxAttempts - 1) {
+                                await new Promise(resolve => setTimeout(resolve, 200));
+                            }
+                            attempts++;
                         }
-                        if (attempts < maxAttempts - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 200));
-                        }
-                        attempts++;
                     }
                     
                     // If session exists (user is logged in) → navigate to profile.html
