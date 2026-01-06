@@ -1704,35 +1704,57 @@
 
             console.log("[Profile Setup] Profile link element found");
 
-            // Attach click handler
             profileLink.onclick = async (e) => {
                 e.preventDefault();
                 console.log("[Profile Click] Button clicked");
 
-                // Get Supabase client
-                const supabase = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
-                if (!supabase) {
-                    console.error("[Profile Click] Supabase client not available");
-                    if (typeof showSignInModal === 'function') {
-                        showSignInModal();
-                    }
-                    return;
+                // Try to get Supabase client
+                let supabase = null;
+                try {
+                    supabase = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
+                } catch (err) {
+                    console.error("[Profile Click] Failed to get Supabase client:", err);
                 }
 
-                // Check session
-                const { data: { session }, error } = await supabase.auth.getSession();
-                console.log("[Profile Click] Current session:", session, "Error:", error);
+                // Attempt to get session
+                let session = null;
+                if (supabase) {
+                    try {
+                        const { data, error } = await supabase.auth.getSession();
+                        session = data?.session ?? null;
+                        console.log("[Profile Click] Supabase session:", session, "Error:", error);
+                    } catch (err) {
+                        console.error("[Profile Click] Session check failed:", err);
+                    }
+                }
 
-                if (session && session.user) {
+                // Fallback: check localStorage if present
+                const isLoggedInFallback = localStorage.getItem("isLoggedIn") === "true";
+
+                // Decide: navigate or show modal
+                if ((session && session.user) || isLoggedInFallback) {
                     console.log("[Profile Click] User logged in → navigating to profile.html");
                     window.location.href = "profile.html";
                 } else {
-                    console.log("[Profile Click] User not logged in → showing login modal");
+                    console.log("[Profile Click] No session → showing login modal immediately");
                     if (typeof showSignInModal === 'function') {
-                        showSignInModal();
+                        showSignInModal(); // guaranteed fallback
                     }
                 }
             };
+
+            console.log("[Profile Setup] Click handler attached");
+
+            // Optional: auth state debug
+            if (typeof window.getSupabase === 'function') {
+                const supabase = window.getSupabase();
+                if (supabase && supabase.auth) {
+                    supabase.auth.onAuthStateChange((event, session) => {
+                        console.log("[Auth Event] Event:", event, "Session:", session);
+                    });
+                    console.log("[Auth Event] Listener attached");
+                }
+            }
         });
 
         // Show account information modal
