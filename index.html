@@ -1695,51 +1695,51 @@
         }
 
         // Setup Profile button click handler
-        document.addEventListener("DOMContentLoaded", () => {
+        (async () => {
             const profileLink = document.getElementById("profileLink");
-            if (!profileLink) return console.error("[Profile Setup] Profile link not found");
+            if (!profileLink) return console.error("[Profile Setup] No profile link found");
 
-            console.log("[Profile Setup] Profile link element found");
-
-            profileLink.onclick = async (e) => {
+            profileLink.addEventListener("click", async (e) => {
                 e.preventDefault();
                 console.log("[Profile Click] Button clicked");
 
-                // Wait for Supabase client to be ready
+                // Wait for Supabase client
                 let supabase = null;
-                try {
-                    while (!supabase) {
-                        if (typeof window.getSupabase === 'function') {
-                            supabase = window.getSupabase();
-                            if (supabase && supabase.auth) {
-                                break;
-                            }
-                        }
-                        if (!supabase) await new Promise(res => setTimeout(res, 200)); // retry every 200ms
-                    }
-                } catch (err) {
-                    console.error("[Profile Click] Supabase client error:", err);
+                if (typeof window.getSupabase === 'function') {
+                    supabase = window.getSupabase();
                 }
-
+                if (!supabase || !supabase.auth) {
+                    console.error("[Profile Click] Supabase client not available, showing modal");
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    }
+                    return;
+                }
                 console.log("[Profile Click] Supabase client ready:", supabase);
 
-                // Get session
+                // Try to get session with timeout fallback
                 let session = null;
                 try {
-                    const { data, error } = await supabase.auth.getSession();
+                    const timeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Session check timeout")), 300)
+                    );
+                    const { data } = await Promise.race([
+                        supabase.auth.getSession(),
+                        timeout
+                    ]);
                     session = data?.session ?? null;
-                    console.log("[Profile Click] Supabase session:", session, "Error:", error);
+                    console.log("[Profile Click] Supabase session:", session);
                 } catch (err) {
-                    console.error("[Profile Click] Session check failed:", err);
+                    console.warn("[Profile Click] Supabase session unavailable:", err);
                 }
 
-                // Fallback: localStorage
-                const isLoggedInFallback = localStorage.getItem("isLoggedIn") === "true";
-                console.log("[Profile Click] Fallback isLoggedIn:", isLoggedInFallback);
+                // Fallback to localStorage
+                const fallbackLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+                console.log("[Profile Click] Fallback localStorage isLoggedIn:", fallbackLoggedIn);
 
                 // Decide action
-                if ((session && session.user) || isLoggedInFallback) {
-                    console.log("[Profile Click] Navigating to profile.html");
+                if (session || fallbackLoggedIn) {
+                    console.log("[Profile Click] User logged in → navigating to profile.html");
                     window.location.href = "profile.html";
                 } else {
                     console.log("[Profile Click] No session → showing login modal");
@@ -1747,10 +1747,10 @@
                         showSignInModal();
                     }
                 }
-            };
+            });
 
             console.log("[Profile Setup] Click handler attached");
-        });
+        })();
 
         // Show account information modal
         async function showAccountInfoModal() {
