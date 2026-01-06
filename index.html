@@ -1698,7 +1698,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔍 [Profile Setup] Starting Profile button setup...');
             
-            // Get #profileLink element
+            // Select #profileLink
             const profileLink = document.getElementById('profileLink');
             if (!profileLink) {
                 console.warn('⚠️ [Profile Setup] Profile link element not found');
@@ -1707,8 +1707,13 @@
             
             console.log('✅ [Profile Setup] Profile link element found');
             
-            // Wait for waitForSession() to finish
+            // Call waitForSession() and get session
             const session = await waitForSession();
+            console.log('🔍 [Profile Setup] Initial session check:', session ? `Found (${session.user?.email})` : 'No session');
+            
+            // Check localStorage.isLoggedIn as a fallback
+            const localStorageLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            console.log('🔍 [Profile Setup] localStorage.isLoggedIn fallback:', localStorageLoggedIn);
             
             // Attach onclick handler
             profileLink.addEventListener('click', async function(e) {
@@ -1717,13 +1722,27 @@
                 
                 // Re-check session on click (in case it changed)
                 const currentSession = await waitForSession();
+                const hasSession = currentSession && currentSession.user;
+                console.log('🔍 [Profile Click] Current session check:', hasSession ? `Found (${currentSession.user.email})` : 'No session');
                 
-                if (currentSession && currentSession.user) {
-                    console.log('✅ [Profile Click] Session exists, navigating to profile.html');
-                    console.log('👤 [Profile Click] User:', currentSession.user.email);
+                // Check localStorage.isLoggedIn as a fallback
+                const isLoggedInFallback = localStorage.getItem('isLoggedIn') === 'true';
+                console.log('🔍 [Profile Click] localStorage.isLoggedIn fallback:', isLoggedInFallback);
+                
+                // Decision: If session exists or fallback is true → navigate to profile.html
+                const shouldNavigate = hasSession || isLoggedInFallback;
+                console.log('🔍 [Profile Click] Decision:', shouldNavigate ? 'Navigate to profile.html' : 'Show login modal');
+                
+                if (shouldNavigate) {
+                    if (hasSession) {
+                        console.log('✅ [Profile Click] Session exists, navigating to profile.html');
+                        console.log('👤 [Profile Click] User:', currentSession.user.email);
+                    } else {
+                        console.log('✅ [Profile Click] Using localStorage fallback, navigating to profile.html');
+                    }
                     window.location.href = 'profile.html';
                 } else {
-                    console.log('ℹ️ [Profile Click] No session, showing sign-in modal');
+                    console.log('ℹ️ [Profile Click] No session and no fallback, showing sign-in modal');
                     if (typeof showSignInModal === 'function') {
                         showSignInModal();
                         console.log('✅ [Profile Click] Sign-in modal shown');
@@ -1735,7 +1754,7 @@
             
             console.log('✅ [Profile Setup] Profile button setup complete');
             
-            // Add optional auth state listener
+            // Add optional auth debug listener
             if (typeof window.getSupabase === 'function') {
                 const supabase = window.getSupabase();
                 if (supabase && supabase.auth) {
@@ -1744,7 +1763,8 @@
                             event: event,
                             hasSession: !!session,
                             userEmail: session?.user?.email || null,
-                            userId: session?.user?.id || null
+                            userId: session?.user?.id || null,
+                            timestamp: new Date().toISOString()
                         });
                     });
                     console.log('✅ [Profile Setup] Auth state listener attached');
