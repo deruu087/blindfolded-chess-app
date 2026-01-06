@@ -19,8 +19,9 @@ export default async function handler(req, res) {
     
     try {
         // Only return public keys (safe for browser)
-        const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        // Prioritize NEXT_PUBLIC_ variables (Vercel convention for browser-accessible vars)
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
         
         if (!supabaseUrl || !supabaseAnonKey) {
             console.error('❌ Supabase environment variables not configured');

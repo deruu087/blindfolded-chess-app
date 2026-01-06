@@ -30,12 +30,22 @@ async function initSupabase() {
             console.log('✅ Supabase config loaded from API');
         } catch (error) {
             console.error('❌ Error fetching Supabase config:', error);
-            console.error('⚠️ Falling back to hardcoded values (this should not happen in production)');
-            // Fallback only for development - should not happen in production
-            configCache = {
-                url: 'https://yaaxydrmuslgzjletzbw.supabase.co',
-                anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhYXh5ZHJtdXNsZ3pqbGV0emJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQ3NjksImV4cCI6MjA3Nzg3MDc2OX0.uv4fqCgRxq7HCT5TWvFxq5xHOUNFT3PI4nmvhhPS2Qk'
-            };
+            
+            // Only use hardcoded fallback on localhost (development)
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            if (isLocalhost) {
+                console.error('⚠️ Falling back to hardcoded values (localhost only)');
+                // Fallback only for localhost development
+                configCache = {
+                    url: 'https://yaaxydrmuslgzjletzbw.supabase.co',
+                    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhYXh5ZHJtdXNsZ3pqbGV0emJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQ3NjksImV4cCI6MjA3Nzg3MDc2OX0.uv4fqCgRxq7HCT5TWvFxq5xHOUNFT3PI4nmvhhPS2Qk'
+                };
+            } else {
+                // Production: Don't use fallback - fail gracefully
+                console.error('❌ Production: Cannot initialize Supabase without config from API');
+                return null;
+            }
         }
     }
     
