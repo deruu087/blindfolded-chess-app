@@ -3238,15 +3238,15 @@
                                 return;
                             }
                         }
-                        console.log('⏳ Supabase not ready yet, waiting 500ms...');
+                        console.log('⏳ Supabase not ready yet, waiting 2 seconds...');
                         // Wait a bit for Supabase to load
                         setTimeout(() => {
                             console.log('⏰ setTimeout callback fired');
                             const client = typeof getSupabase === 'function' ? getSupabase() : null;
-                            console.log('🔍 After 500ms, getSupabase() returned:', client);
-                            console.log('✅ Supabase wait complete (after 500ms)');
+                            console.log('🔍 After 2 seconds, getSupabase() returned:', client);
+                            console.log('✅ Supabase wait complete (after 2 seconds)');
                             resolve(true);
-                        }, 500);
+                        }, 2000);
                     };
                     checkSupabase();
                 });
