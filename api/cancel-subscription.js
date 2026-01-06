@@ -29,8 +29,17 @@ export default async function handler(req, res) {
         const token = authHeader.replace('Bearer ', '');
         
         // Initialize Supabase
-        const supabaseUrl = process.env.SUPABASE_URL || 'https://yaaxydrmuslgzjletzbw.supabase.co';
-        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhYXh5ZHJtdXNsZ3pqbGV0emJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQ3NjksImV4cCI6MjA3Nzg3MDc2OX0.uv4fqCgRxq7HCT5TWvFxq5xHOUNFT3PI4nmvhhPS2Qk';
+        const supabaseUrl = process.env.SUPABASE_URL;
+        if (!supabaseUrl) {
+            console.error('❌ SUPABASE_URL not configured');
+            return res.status(500).json({ error: 'Server configuration error: SUPABASE_URL missing' });
+        }
+        
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+        if (!supabaseAnonKey) {
+            console.error('❌ SUPABASE_ANON_KEY not configured');
+            return res.status(500).json({ error: 'Server configuration error: SUPABASE_ANON_KEY missing' });
+        }
         
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
         

@@ -55,13 +55,18 @@ export default async function handler(req, res) {
             
             // Initialize Supabase with service role key (needed to query auth.users)
             
-            const supabaseUrl = process.env.SUPABASE_URL || 'https://yaaxydrmuslgzjletzbw.supabase.co';
+            const supabaseUrl = process.env.SUPABASE_URL;
+            if (!supabaseUrl) {
+                console.error('❌ SUPABASE_URL not configured');
+                return res.status(500).json({ error: 'Server configuration error: SUPABASE_URL missing' });
+            }
+            
             // Use service role key for admin operations (finding users by email)
             const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
             
             if (!supabaseServiceKey) {
                 console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured');
-                return res.status(500).json({ error: 'Server configuration error' });
+                return res.status(500).json({ error: 'Server configuration error: SUPABASE_SERVICE_ROLE_KEY missing' });
             }
             
             const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -260,8 +265,17 @@ export default async function handler(req, res) {
                    eventType === 'payment.cancelled' || eventType === 'subscription.cancelled') {
             
             // Handle subscription cancellation
-            const supabaseUrl = process.env.SUPABASE_URL || 'https://yaaxydrmuslgzjletzbw.supabase.co';
+            const supabaseUrl = process.env.SUPABASE_URL;
+            if (!supabaseUrl) {
+                console.error('❌ SUPABASE_URL not configured');
+                return res.status(500).json({ error: 'Server configuration error: SUPABASE_URL missing' });
+            }
+            
             const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+            if (!supabaseServiceKey) {
+                console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured');
+                return res.status(500).json({ error: 'Server configuration error: SUPABASE_SERVICE_ROLE_KEY missing' });
+            }
             
             if (supabaseServiceKey && customerEmail) {
                 const supabase = createClient(supabaseUrl, supabaseServiceKey, {

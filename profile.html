@@ -3374,7 +3374,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
             // Initialize Supabase client
             if (typeof initSupabase === 'function') {
-                initSupabase();
+                await initSupabase();
             }
             
             // Load Supabase data for profile

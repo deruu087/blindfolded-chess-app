@@ -7435,7 +7435,7 @@
             try {
                 // Initialize Supabase client
                 if (typeof initSupabase === 'function') {
-                    initSupabase();
+                    await initSupabase();
                 } else {
                     console.warn('⚠️ initSupabase function not available - Supabase scripts may not be loaded');
                 }
