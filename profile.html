@@ -1918,10 +1918,10 @@
     <script>
         // Wait for DOM and scripts to load before checking auth
         document.addEventListener('DOMContentLoaded', async function() {
-            // CRITICAL: Wait 1 second to give Supabase client time to initialize
+            // CRITICAL: Wait 2 seconds to give Supabase client time to initialize
             // This is especially important in production where Supabase initialization takes longer
-            console.log('⏳ Waiting 1 second for Supabase client to initialize...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('⏳ Waiting 2 seconds for Supabase client to initialize...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             // Check auth status - MUST verify with Supabase, not just localStorage
             let authStatus;
