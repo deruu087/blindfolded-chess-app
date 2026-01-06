@@ -1630,6 +1630,128 @@
             });
         }
 
+        // Helper function to wait for session
+        async function waitForSession() {
+            console.log('🔍 [waitForSession] Starting session check...');
+            
+            // Wait for window.getSupabase() to return a valid client
+            let supabase = null;
+            let waitAttempts = 0;
+            const maxWaitAttempts = 10; // Wait up to 1 second for getSupabase
+            
+            while (waitAttempts < maxWaitAttempts) {
+                if (typeof window.getSupabase === 'function') {
+                    supabase = window.getSupabase();
+                    if (supabase && supabase.auth) {
+                        console.log('✅ [waitForSession] Supabase client ready');
+                        break;
+                    }
+                }
+                if (waitAttempts < maxWaitAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                waitAttempts++;
+            }
+            
+            if (!supabase || !supabase.auth) {
+                console.warn('⚠️ [waitForSession] Supabase client not available');
+                return null;
+            }
+            
+            // Retry up to 5 times (200ms delay) to get supabase.auth.getSession()
+            let session = null;
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            while (attempts < maxAttempts) {
+                console.log(`🔍 [waitForSession] Attempt ${attempts + 1}/${maxAttempts} to get session...`);
+                try {
+                    const { data, error } = await supabase.auth.getSession();
+                    if (error) {
+                        console.warn(`⚠️ [waitForSession] Session fetch error on attempt ${attempts + 1}:`, error);
+                    }
+                    session = data?.session ?? null;
+                    if (session) {
+                        console.log('✅ [waitForSession] Session found:', session.user?.email || 'unknown');
+                        break;
+                    } else {
+                        console.log(`ℹ️ [waitForSession] No session on attempt ${attempts + 1}`);
+                    }
+                } catch (err) {
+                    console.error(`❌ [waitForSession] Error on attempt ${attempts + 1}:`, err);
+                }
+                
+                if (attempts < maxAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 200)); // wait 200ms
+                }
+                attempts++;
+            }
+            
+            if (!session) {
+                console.log('ℹ️ [waitForSession] No session found after all attempts');
+            }
+            
+            return session;
+        }
+
+        // Setup Profile button click handler after session is known
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔍 [Profile Setup] Starting Profile button setup...');
+            
+            // Get #profileLink element
+            const profileLink = document.getElementById('profileLink');
+            if (!profileLink) {
+                console.warn('⚠️ [Profile Setup] Profile link element not found');
+                return;
+            }
+            
+            console.log('✅ [Profile Setup] Profile link element found');
+            
+            // Wait for waitForSession() to finish
+            const session = await waitForSession();
+            
+            // Attach onclick handler
+            profileLink.addEventListener('click', async function(e) {
+                e.preventDefault();
+                console.log('🖱️ [Profile Click] Profile button clicked');
+                
+                // Re-check session on click (in case it changed)
+                const currentSession = await waitForSession();
+                
+                if (currentSession && currentSession.user) {
+                    console.log('✅ [Profile Click] Session exists, navigating to profile.html');
+                    console.log('👤 [Profile Click] User:', currentSession.user.email);
+                    window.location.href = 'profile.html';
+                } else {
+                    console.log('ℹ️ [Profile Click] No session, showing sign-in modal');
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                        console.log('✅ [Profile Click] Sign-in modal shown');
+                    } else {
+                        console.error('❌ [Profile Click] showSignInModal function not available');
+                    }
+                }
+            });
+            
+            console.log('✅ [Profile Setup] Profile button setup complete');
+            
+            // Add optional auth state listener
+            if (typeof window.getSupabase === 'function') {
+                const supabase = window.getSupabase();
+                if (supabase && supabase.auth) {
+                    supabase.auth.onAuthStateChange((event, session) => {
+                        console.log('🔐 [Auth State] Auth state changed:', {
+                            event: event,
+                            hasSession: !!session,
+                            userEmail: session?.user?.email || null,
+                            userId: session?.user?.id || null
+                        });
+                    });
+                    console.log('✅ [Profile Setup] Auth state listener attached');
+                }
+            }
+        });
+
         // Show account information modal
         async function showAccountInfoModal() {
             const userName = localStorage.getItem('userName') || 'User';
