@@ -2446,28 +2446,35 @@
     
     <!-- Initialize Supabase when page loads -->
     <script>
-        // CRITICAL: Always intercept profile link clicks to check auth before navigation
+        // Profile link click handler - checks auth before navigation
         (function() {
             const profileLink = document.getElementById('profileLink');
             if (profileLink) {
                 profileLink.addEventListener('click', async function(e) {
-                    // Always prevent default navigation first
                     e.preventDefault();
                     
-                    // Check auth status before deciding what to do
-                    if (typeof window.checkAuthStatus === 'function') {
-                        const authStatus = await window.checkAuthStatus();
-                        if (authStatus.isLoggedIn) {
-                            // User is logged in - allow navigation
-                            window.location.href = 'profile.html';
+                    // Check auth state using getSupabase() and getSession()
+                    if (typeof window.getSupabase === 'function') {
+                        const supabase = window.getSupabase();
+                        if (supabase && supabase.auth) {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            if (session && session.user) {
+                                // User is authenticated - navigate to profile
+                                window.location.href = 'profile.html';
+                            } else {
+                                // User is NOT authenticated - show login modal
+                                if (typeof showSignInModal === 'function') {
+                                    showSignInModal();
+                                }
+                            }
                         } else {
-                            // User not logged in - show sign-in modal
+                            // Supabase not ready - show login modal
                             if (typeof showSignInModal === 'function') {
                                 showSignInModal();
                             }
                         }
                     } else {
-                        // Fallback: if checkAuthStatus not available, show modal
+                        // getSupabase not available - show login modal
                         if (typeof showSignInModal === 'function') {
                             showSignInModal();
                         }
