@@ -2202,28 +2202,48 @@
             console.log('🧹 Cleared stale billing localStorage on page load');
         })();
 
+        // Helper function to show login modal
+        function showLoginModal() {
+            const signInModal = document.getElementById('signInModal');
+            if (signInModal) {
+                console.log('✅ [INIT PROFILE] Showing login modal');
+                signInModal.style.display = 'block';
+            } else {
+                console.warn('⚠️ [INIT PROFILE] Sign-in modal not found, redirecting to home page');
+                window.location.href = 'index.html';
+            }
+        }
+        
         // Initialize profile page
         async function initProfile() {
             console.log('🚀🚀🚀 initProfile() STARTED - THIS SHOULD APPEAR IN CONSOLE 🚀🚀🚀');
             try {
-            // First, check if user is actually logged in - MUST verify with Supabase
+            // CRITICAL: Verify user has a valid Supabase session before loading profile content
+            // This prevents showing empty profile when user is not logged in
+            console.log('🔍 [INIT PROFILE] Verifying user session before loading profile...');
+            
             let authStatus;
             if (typeof window.checkAuthStatus === 'function') {
                 try {
                     authStatus = await window.checkAuthStatus();
+                    console.log('🔍 [INIT PROFILE] checkAuthStatus result:', {
+                        isLoggedIn: authStatus.isLoggedIn,
+                        hasUser: !!authStatus.user,
+                        email: authStatus.email
+                    });
                 } catch (error) {
-                    console.error('Error checking auth status:', error);
-                    // If checkAuthStatus fails, user is NOT logged in - redirect
-                    console.log('Auth check failed, redirecting to home page');
-                    window.location.href = 'index.html';
+                    console.error('❌ [INIT PROFILE] Error checking auth status:', error);
+                    // If checkAuthStatus fails, show login modal
+                    console.log('❌ [INIT PROFILE] Auth check failed, showing login modal');
+                    showLoginModal();
                     return;
                 }
             } else {
                 // If checkAuthStatus not available, verify with Supabase directly
-                console.log('checkAuthStatus not available, checking Supabase directly...');
+                console.log('⚠️ [INIT PROFILE] checkAuthStatus not available, checking Supabase directly...');
                 
                 // CRITICAL: Wait for getSupabase() to be defined and return a valid client
-                console.log('⏳ Waiting for getSupabase() to be available...');
+                console.log('⏳ [INIT PROFILE] Waiting for getSupabase() to be available...');
                 let attempts = 0;
                 const maxAttempts = 50; // 50 attempts * 100ms = 5 seconds max wait
                 
@@ -2240,7 +2260,7 @@
                     if (typeof window.getSupabase === 'function') {
                         supabase = window.getSupabase();
                         if (supabase && supabase.auth) {
-                            console.log('✅ getSupabase() is ready with valid client');
+                            console.log('✅ [INIT PROFILE] getSupabase() is ready with valid client');
                             break;
                         }
                     }
@@ -2249,18 +2269,25 @@
                 }
                 
                 if (!supabase || !supabase.auth) {
-                    // No Supabase client - redirect for security
-                    console.log('No Supabase client available after waiting, redirecting to home page');
-                    window.location.href = 'index.html';
+                    // No Supabase client - show login modal
+                    console.log('❌ [INIT PROFILE] No Supabase client available after waiting, showing login modal');
+                    showLoginModal();
                     return;
                 }
                 
                 // Now check session with the valid client
                 try {
                     const { data: { session }, error } = await supabase.auth.getSession();
+                    console.log('🔍 [INIT PROFILE] Session check result:', {
+                        hasError: !!error,
+                        hasSession: !!session,
+                        hasUser: !!session?.user,
+                        error: error?.message
+                    });
+                    
                     if (error || !session || !session.user) {
-                        console.log('No Supabase session, redirecting to home page');
-                        window.location.href = 'index.html';
+                        console.log('❌ [INIT PROFILE] No Supabase session found, showing login modal');
+                        showLoginModal();
                         return;
                     }
                     // Has valid session
@@ -2270,19 +2297,22 @@
                         email: session.user.email,
                         name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
                     };
+                    console.log('✅ [INIT PROFILE] Valid session found:', session.user.email);
                 } catch (e) {
-                    console.error('Error checking Supabase session:', e);
-                    window.location.href = 'index.html';
+                    console.error('❌ [INIT PROFILE] Error checking Supabase session:', e);
+                    showLoginModal();
                     return;
                 }
             }
             
-            // If user is not logged in, redirect to home page immediately
+            // If user is not logged in, show login modal instead of loading empty profile
             if (!authStatus.isLoggedIn) {
-                console.log('User not logged in, redirecting to home page');
-                window.location.href = 'index.html';
+                console.log('❌ [INIT PROFILE] User not logged in, showing login modal');
+                showLoginModal();
                 return;
             }
+            
+            console.log('✅ [INIT PROFILE] User is authenticated, proceeding to load profile content');
             
             // User is logged in - proceed with loading profile data
             // Update user info immediately from authStatus (instant display)
