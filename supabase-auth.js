@@ -122,16 +122,73 @@ async function isSignedIn() {
 }
 
 /**
+ * Wait for Supabase to be fully initialized and ready
+ * This ensures we don't check auth before Supabase is ready (especially important in production)
+ * 
+ * @param {number} maxWaitMs - Maximum time to wait in milliseconds (default: 10000 = 10 seconds)
+ * @returns {Promise<boolean>} - True if Supabase is ready, false if timeout
+ */
+async function waitForSupabaseReady(maxWaitMs = 10000) {
+    const startTime = Date.now();
+    
+    // First, wait for initSupabase to be available
+    while (typeof window.initSupabase !== 'function' && (Date.now() - startTime) < maxWaitMs) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    // If initSupabase is available but not called yet, wait a bit more
+    if (typeof window.initSupabase === 'function') {
+        // Give it a moment to initialize if it's in progress
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Now wait for getSupabase to return a valid client
+    while ((Date.now() - startTime) < maxWaitMs) {
+        if (typeof window.getSupabase === 'function') {
+            const supabase = window.getSupabase();
+            if (supabase) {
+                // Verify the client is actually ready by checking if it has the auth property
+                if (supabase.auth) {
+                    console.log('✅ Supabase is ready');
+                    return true;
+                }
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.warn('⚠️ waitForSupabaseReady: Timeout waiting for Supabase to be ready');
+    return false;
+}
+
+/**
  * Centralized function to check authentication status
  * This is the SINGLE SOURCE OF TRUTH for checking if a user is logged in
  * 
  * @returns {Promise<{isLoggedIn: boolean, user: object|null, email: string|null, name: string|null}>}
  */
 async function checkAuthStatus() {
+    // CRITICAL: Wait for Supabase to be fully initialized before checking auth
+    // This prevents false negatives in production where Supabase takes longer to initialize
+    const supabaseReady = await waitForSupabaseReady();
+    
+    if (!supabaseReady) {
+        // Supabase not ready after waiting - use localStorage as fallback
+        // This is safer than returning false, as it prevents redirecting logged-in users
+        console.warn('⚠️ Supabase not ready, using localStorage fallback for auth check');
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        return {
+            isLoggedIn: isLoggedIn,
+            user: null,
+            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
+            name: isLoggedIn ? localStorage.getItem('userName') : null
+        };
+    }
+    
     // Always check Supabase session first (source of truth)
     const supabase = getSupabase();
     if (!supabase) {
-        // Supabase not initialized - check localStorage as fallback
+        // This shouldn't happen if waitForSupabaseReady returned true, but handle it anyway
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         return {
             isLoggedIn: isLoggedIn,
@@ -283,5 +340,6 @@ window.isSignedIn = isSignedIn;
 window.setupAuthListener = setupAuthListener;
 window.signInWithGoogle = signInWithGoogle;
 window.checkAuthStatus = checkAuthStatus;
+window.waitForSupabaseReady = waitForSupabaseReady;
 
 
