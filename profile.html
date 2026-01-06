@@ -1986,13 +1986,14 @@
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
                 if (error || !session || !session.user) {
-                    console.log('No Supabase session, redirecting to home page');
+                    console.log('❌ No Supabase session found, redirecting to home page');
                     window.location.href = 'index.html';
                     return;
                 }
                 
                 // Has valid session - user is logged in
                 console.log('✅ User is authenticated:', session.user.email);
+                console.log('✅ Early auth check passed - continuing to load profile page');
                 // Continue loading page
             } catch (e) {
                 console.error('Error checking Supabase session:', e);
