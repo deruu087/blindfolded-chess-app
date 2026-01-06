@@ -1918,73 +1918,87 @@
     <script>
         // Wait for DOM and scripts to load before checking auth
         document.addEventListener('DOMContentLoaded', async function() {
-            // Give Supabase time to initialize (especially important in production)
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Wait for checkAuthStatus to be available (up to 5 seconds)
+            // CRITICAL: Wait for getSupabase() to be defined and return a valid client
+            // This is especially important in production where Supabase initialization takes longer
+            console.log('⏳ Waiting for getSupabase() to be available...');
             let attempts = 0;
-            while (typeof window.checkAuthStatus !== 'function' && attempts < 50) {
+            const maxAttempts = 50; // 50 attempts * 100ms = 5 seconds max wait
+            
+            // Wait for getSupabase to be defined as a function
+            while (typeof window.getSupabase !== 'function' && attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
             }
             
-            // Check auth status - MUST verify with Supabase, not just localStorage
-            let authStatus;
-            if (typeof window.checkAuthStatus === 'function') {
-                try {
-                    authStatus = await window.checkAuthStatus();
-                } catch (error) {
-                    console.error('Error checking auth status:', error);
-                    // If checkAuthStatus fails, user is NOT logged in - redirect
-                    console.log('Auth check failed, redirecting to home page');
-                    window.location.href = 'index.html';
-                    return;
+            // Now wait for getSupabase() to return a valid client (not null)
+            let supabase = null;
+            attempts = 0;
+            while (attempts < maxAttempts) {
+                if (typeof window.getSupabase === 'function') {
+                    supabase = window.getSupabase();
+                    if (supabase && supabase.auth) {
+                        console.log('✅ getSupabase() is ready with valid client');
+                        break;
+                    }
                 }
-            } else {
-                // If checkAuthStatus not available, try to verify with Supabase directly
-                console.log('checkAuthStatus not available, checking Supabase directly...');
-                if (typeof getSupabase === 'function') {
-                    const supabase = getSupabase();
-                    if (supabase) {
-                        try {
-                            const { data: { session }, error } = await supabase.auth.getSession();
-                            if (error || !session || !session.user) {
-                                console.log('No Supabase session, redirecting to home page');
-                                window.location.href = 'index.html';
-                                return;
-                            }
-                            // Has valid session
-                            authStatus = {
-                                isLoggedIn: true,
-                                user: session.user,
-                                email: session.user.email,
-                                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
-                            };
-                        } catch (e) {
-                            console.error('Error checking Supabase session:', e);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            // If Supabase still not ready after waiting, try checkAuthStatus as fallback
+            if (!supabase || !supabase.auth) {
+                console.warn('⚠️ getSupabase() not ready after waiting, trying checkAuthStatus...');
+                
+                // Wait for checkAuthStatus to be available (up to 2 more seconds)
+                attempts = 0;
+                while (typeof window.checkAuthStatus !== 'function' && attempts < 20) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (typeof window.checkAuthStatus === 'function') {
+                    try {
+                        const authStatus = await window.checkAuthStatus();
+                        if (!authStatus.isLoggedIn) {
+                            console.log('User not logged in, redirecting to home page');
                             window.location.href = 'index.html';
                             return;
                         }
-                    } else {
-                        // No Supabase client - redirect for security
-                        console.log('No Supabase client, redirecting to home page');
+                        // User is logged in - continue loading page
+                        return;
+                    } catch (error) {
+                        console.error('Error checking auth status:', error);
+                        console.log('Auth check failed, redirecting to home page');
                         window.location.href = 'index.html';
                         return;
                     }
                 } else {
                     // No way to verify - redirect for security
-                    console.log('Cannot verify auth, redirecting to home page');
+                    console.log('Cannot verify auth (getSupabase and checkAuthStatus both unavailable), redirecting to home page');
                     window.location.href = 'index.html';
                     return;
                 }
             }
             
-            if (!authStatus.isLoggedIn) {
-                console.log('User not logged in, redirecting to home page');
+            // Now we have a valid Supabase client - check session
+            try {
+                console.log('🔍 Checking Supabase session...');
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error || !session || !session.user) {
+                    console.log('No Supabase session, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Has valid session - user is logged in
+                console.log('✅ User is authenticated:', session.user.email);
+                // Continue loading page
+            } catch (e) {
+                console.error('Error checking Supabase session:', e);
                 window.location.href = 'index.html';
                 return;
             }
-            // User is logged in - continue loading page
         });
     </script>
     
@@ -2036,37 +2050,57 @@
             } else {
                 // If checkAuthStatus not available, verify with Supabase directly
                 console.log('checkAuthStatus not available, checking Supabase directly...');
-                if (typeof getSupabase === 'function') {
-                    const supabase = getSupabase();
-                    if (supabase) {
-                        try {
-                            const { data: { session }, error } = await supabase.auth.getSession();
-                            if (error || !session || !session.user) {
-                                console.log('No Supabase session, redirecting to home page');
-                                window.location.href = 'index.html';
-                                return;
-                            }
-                            // Has valid session
-                            authStatus = {
-                                isLoggedIn: true,
-                                user: session.user,
-                                email: session.user.email,
-                                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
-                            };
-                        } catch (e) {
-                            console.error('Error checking Supabase session:', e);
-                            window.location.href = 'index.html';
-                            return;
+                
+                // CRITICAL: Wait for getSupabase() to be defined and return a valid client
+                console.log('⏳ Waiting for getSupabase() to be available...');
+                let attempts = 0;
+                const maxAttempts = 50; // 50 attempts * 100ms = 5 seconds max wait
+                
+                // Wait for getSupabase to be defined as a function
+                while (typeof window.getSupabase !== 'function' && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                // Now wait for getSupabase() to return a valid client (not null)
+                let supabase = null;
+                attempts = 0;
+                while (attempts < maxAttempts) {
+                    if (typeof window.getSupabase === 'function') {
+                        supabase = window.getSupabase();
+                        if (supabase && supabase.auth) {
+                            console.log('✅ getSupabase() is ready with valid client');
+                            break;
                         }
-                    } else {
-                        // No Supabase client - redirect for security
-                        console.log('No Supabase client, redirecting to home page');
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!supabase || !supabase.auth) {
+                    // No Supabase client - redirect for security
+                    console.log('No Supabase client available after waiting, redirecting to home page');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Now check session with the valid client
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    if (error || !session || !session.user) {
+                        console.log('No Supabase session, redirecting to home page');
                         window.location.href = 'index.html';
                         return;
                     }
-                } else {
-                    // No way to verify - redirect for security
-                    console.log('Cannot verify auth, redirecting to home page');
+                    // Has valid session
+                    authStatus = {
+                        isLoggedIn: true,
+                        user: session.user,
+                        email: session.user.email,
+                        name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User'
+                    };
+                } catch (e) {
+                    console.error('Error checking Supabase session:', e);
                     window.location.href = 'index.html';
                     return;
                 }
