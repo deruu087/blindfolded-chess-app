@@ -2059,8 +2059,26 @@
             
             try {
                 const sessionStartTime = Date.now();
-                const { data: { session }, error } = await supabase.auth.getSession();
+                console.log('🔍 [AUTH CHECK] Calling supabase.auth.getSession()...');
+                
+                // Add timeout to session check (5 seconds max)
+                const sessionPromise = supabase.auth.getSession();
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Session check timeout after 5 seconds')), 5000)
+                );
+                
+                let sessionResult;
+                try {
+                    sessionResult = await Promise.race([sessionPromise, timeoutPromise]);
+                } catch (timeoutError) {
+                    console.error('❌ [AUTH CHECK] Session check timed out:', timeoutError);
+                    showLoginModalWithRetry('session check timeout');
+                    return;
+                }
+                
+                const { data: { session }, error } = sessionResult;
                 const sessionCheckDuration = Date.now() - sessionStartTime;
+                console.log(`🔍 [AUTH CHECK] Session check returned after ${sessionCheckDuration}ms`);
                 
                 console.log(`🔍 [AUTH CHECK] Session check completed in ${sessionCheckDuration}ms`);
                 console.log('🔍 [AUTH CHECK] Session check result:', { 
