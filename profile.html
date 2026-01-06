@@ -1962,19 +1962,25 @@
             }
             
             console.log('✅ [AUTH CHECK] getSupabase() function is available');
+            console.log(`✅ [AUTH CHECK] Function found after ${attempts * 100}ms (${environment})`);
             
             // Now wait for getSupabase() to return a valid client (not null)
+            console.log('⏳ [AUTH CHECK] Waiting for getSupabase() to return valid client...');
             attempts = 0;
+            const clientWaitStartTime = Date.now();
             while (attempts < maxAttempts) {
                 supabase = window.getSupabase();
                 if (supabase && supabase.auth) {
-                    console.log(`✅ [AUTH CHECK] getSupabase() returned valid client after ${attempts * 100}ms`);
+                    const clientWaitDuration = Date.now() - clientWaitStartTime;
+                    console.log(`✅ [AUTH CHECK] getSupabase() returned valid client after ${clientWaitDuration}ms`);
+                    console.log(`✅ [AUTH CHECK] Client ready in ${environment} environment`);
+                    console.log(`✅ [AUTH CHECK] Total wait time: ${(attempts * 100)}ms`);
                     break;
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
                 if (attempts % 10 === 0) {
-                    console.log(`⏳ [AUTH CHECK] Waiting for getSupabase() to return valid client... (${attempts * 100}ms elapsed)`);
+                    console.log(`⏳ [AUTH CHECK] Waiting for getSupabase() to return valid client... (${attempts * 100}ms elapsed, ${environment})`);
                 }
             }
             
