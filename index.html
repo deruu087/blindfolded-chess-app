@@ -2709,10 +2709,29 @@
                         let session = null;
                         try {
                             console.log(`🔍 [OAuth] Calling supabase.auth.getSession()...`);
+                            console.log(`🔍 [OAuth DEBUG] getSession() function type:`, typeof supabase.auth.getSession);
+                            
                             const sessionStartTime = Date.now();
+                            console.log(`⏰ [OAuth DEBUG] getSession() called at:`, new Date().toISOString());
                             
                             // Add timeout to prevent hanging
-                            const getSessionPromise = supabase.auth.getSession();
+                            let getSessionPromise;
+                            try {
+                                console.log(`🔍 [OAuth DEBUG] About to call supabase.auth.getSession()...`);
+                                getSessionPromise = supabase.auth.getSession();
+                                console.log(`🔍 [OAuth DEBUG] getSession() promise created:`, {
+                                    isPromise: getSessionPromise instanceof Promise,
+                                    promiseType: getSessionPromise?.constructor?.name || 'unknown'
+                                });
+                            } catch (syncErr) {
+                                console.error(`❌ [OAuth DEBUG] getSession() threw synchronously:`, {
+                                    name: syncErr.name,
+                                    message: syncErr.message,
+                                    stack: syncErr.stack?.substring(0, 300)
+                                });
+                                throw syncErr;
+                            }
+                            
                             const timeoutPromise = new Promise((_, reject) => 
                                 setTimeout(() => reject(new Error('getSession timeout after 5 seconds')), 5000)
                             );
@@ -2720,12 +2739,25 @@
                             let sessionResult;
                             try {
                                 console.log(`⏳ [OAuth] Waiting for getSession() to complete (max 5 seconds)...`);
+                                console.log(`🔍 [OAuth DEBUG] Racing getSession() promise with timeout...`);
                                 sessionResult = await Promise.race([getSessionPromise, timeoutPromise]);
                                 const sessionDuration = Date.now() - sessionStartTime;
                                 console.log(`✅ [OAuth] getSession() completed in ${sessionDuration}ms`);
+                                console.log(`🔍 [OAuth DEBUG] getSession() result:`, {
+                                    hasData: !!sessionResult?.data,
+                                    hasSession: !!sessionResult?.data?.session,
+                                    hasError: !!sessionResult?.error,
+                                    resultKeys: Object.keys(sessionResult || {})
+                                });
                             } catch (timeoutErr) {
                                 const sessionDuration = Date.now() - sessionStartTime;
                                 console.error(`❌ [OAuth] getSession() timed out after ${sessionDuration}ms:`, timeoutErr.message);
+                                console.error(`❌ [OAuth DEBUG] Timeout error details:`, {
+                                    name: timeoutErr.name,
+                                    message: timeoutErr.message,
+                                    isAbortError: timeoutErr.name === 'AbortError',
+                                    stack: timeoutErr.stack?.substring(0, 300)
+                                });
                                 console.error(`❌ [OAuth] This means Supabase did not auto-process the hash in production`);
                                 console.error(`❌ [OAuth] Will proceed with manual session setup`);
                                 // Don't throw - continue to manual setup
@@ -2813,21 +2845,61 @@
                                     console.log('🔐 [OAuth] Supabase client state:', {
                                         hasSupabase: !!supabase,
                                         hasAuth: !!supabase?.auth,
-                                        hasSetSession: typeof supabase?.auth?.setSession === 'function'
+                                        hasSetSession: typeof supabase?.auth?.setSession === 'function',
+                                        clientType: supabase?.constructor?.name || 'unknown',
+                                        authType: supabase?.auth?.constructor?.name || 'unknown'
                                     });
                                     
+                                    // DEBUG: Check if there's a global AbortController or signal being used
+                                    console.log('🔍 [OAuth DEBUG] Checking for AbortController issues...');
+                                    console.log('🔍 [OAuth DEBUG] window.AbortController:', typeof window.AbortController);
+                                    console.log('🔍 [OAuth DEBUG] supabase.auth:', supabase.auth);
+                                    console.log('🔍 [OAuth DEBUG] supabase.auth object keys:', Object.keys(supabase.auth || {}));
+                                    
                                     const setSessionStartTime = Date.now();
+                                    console.log('⏰ [OAuth DEBUG] setSession() called at:', new Date().toISOString());
                                     
                                     // Use a more aggressive timeout approach - fire and forget if it hangs
                                     let setSessionCompleted = false;
-                                    const setSessionPromise = supabase.auth.setSession({
-                                        access_token: accessToken,
-                                        refresh_token: refreshToken
-                                    }).then(result => {
+                                    let setSessionPromise;
+                                    
+                                    try {
+                                        console.log('🔍 [OAuth DEBUG] About to call supabase.auth.setSession()...');
+                                        setSessionPromise = supabase.auth.setSession({
+                                            access_token: accessToken,
+                                            refresh_token: refreshToken
+                                        });
+                                        console.log('🔍 [OAuth DEBUG] setSession() promise created:', {
+                                            isPromise: setSessionPromise instanceof Promise,
+                                            promiseType: setSessionPromise?.constructor?.name || 'unknown'
+                                        });
+                                    } catch (syncErr) {
+                                        console.error('❌ [OAuth DEBUG] setSession() threw synchronously:', {
+                                            name: syncErr.name,
+                                            message: syncErr.message,
+                                            stack: syncErr.stack?.substring(0, 300)
+                                        });
+                                        throw syncErr;
+                                    }
+                                    
+                                    setSessionPromise = setSessionPromise.then(result => {
                                         setSessionCompleted = true;
+                                        console.log('✅ [OAuth DEBUG] setSession() promise resolved:', {
+                                            hasData: !!result?.data,
+                                            hasSession: !!result?.data?.session,
+                                            hasError: !!result?.error,
+                                            resultKeys: Object.keys(result || {})
+                                        });
                                         return result;
                                     }).catch(err => {
                                         setSessionCompleted = true;
+                                        console.error('❌ [OAuth DEBUG] setSession() promise rejected:', {
+                                            name: err.name,
+                                            message: err.message,
+                                            stack: err.stack?.substring(0, 500),
+                                            cause: err.cause,
+                                            errKeys: Object.keys(err || {})
+                                        });
                                         throw err;
                                     });
                                     
