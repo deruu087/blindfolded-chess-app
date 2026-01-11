@@ -2633,8 +2633,9 @@
             if (client) {
                 console.log('✅ Supabase is ready to use!');
                 
-                // CRITICAL: Handle OAuth callback FIRST - manually process hash for production
-                // Supabase doesn't auto-process OAuth tokens in production, so we need to manually parse and set session
+                // CRITICAL: Handle OAuth callback FIRST
+                // In localhost, Supabase auto-processes with detectSessionInUrl: true
+                // In production, we may need to wait longer or manually process
                 const hash = window.location.hash;
                 const isOAuthCallback = hash && hash.includes('access_token');
                 let oauthProcessed = false;
@@ -2645,107 +2646,120 @@
                         console.log('🔐 [OAuth] Processing OAuth callback from URL hash...');
                         console.log('🔐 [OAuth] Hash:', hash.substring(0, 100) + '...');
                         
-                        // Parse hash parameters manually
-                        const hashParams = new URLSearchParams(hash.substring(1));
-                        const accessToken = hashParams.get('access_token');
-                        const refreshToken = hashParams.get('refresh_token');
-                        const expiresAt = hashParams.get('expires_at');
-                        const tokenType = hashParams.get('token_type') || 'bearer';
+                        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                        console.log('🔐 [OAuth] Environment:', isLocalhost ? 'localhost' : 'production');
                         
-                        console.log('🔐 [OAuth] Parsed tokens:', {
-                            hasAccessToken: !!accessToken,
-                            hasRefreshToken: !!refreshToken,
-                            expiresAt: expiresAt
-                        });
+                        // First, wait for Supabase to auto-process (detectSessionInUrl: true)
+                        // Give it more time in production
+                        const waitTime = isLocalhost ? 500 : 2000; // 2 seconds in production
+                        console.log(`⏳ [OAuth] Waiting ${waitTime}ms for Supabase to auto-process hash...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
                         
-                        if (accessToken && refreshToken) {
-                            try {
-                                // Decode the access token to get user info (JWT)
-                                const tokenParts = accessToken.split('.');
-                                if (tokenParts.length === 3) {
-                                    const payload = JSON.parse(atob(tokenParts[1]));
-                                    console.log('🔐 [OAuth] Token payload:', {
-                                        email: payload.email,
-                                        sub: payload.sub,
-                                        exp: payload.exp
-                                    });
-                                    
-                                    // Set the session using setSession - wrap in try/catch for abort errors
-                                    console.log('🔐 [OAuth] Setting session manually...');
-                                    try {
-                                        const sessionPromise = supabase.auth.setSession({
+                        // Check if session was auto-processed
+                        let session = null;
+                        try {
+                            const { data, error } = await supabase.auth.getSession();
+                            if (!error && data.session && data.session.user) {
+                                session = data.session;
+                                console.log('✅ [OAuth] Session auto-processed by Supabase:', session.user.email);
+                            } else {
+                                console.log('ℹ️ [OAuth] Session not auto-processed, will try manual setup');
+                            }
+                        } catch (err) {
+                            console.warn('⚠️ [OAuth] Error checking auto-processed session:', err.name || err.message);
+                        }
+                        
+                        // If session wasn't auto-processed, manually parse and set
+                        if (!session) {
+                            console.log('🔐 [OAuth] Manually processing OAuth tokens...');
+                            
+                            // Parse hash parameters
+                            const hashParams = new URLSearchParams(hash.substring(1));
+                            const accessToken = hashParams.get('access_token');
+                            const refreshToken = hashParams.get('refresh_token');
+                            const expiresAt = hashParams.get('expires_at');
+                            
+                            if (accessToken && refreshToken) {
+                                try {
+                                    // Decode token to get user info
+                                    const tokenParts = accessToken.split('.');
+                                    if (tokenParts.length === 3) {
+                                        const payload = JSON.parse(atob(tokenParts[1]));
+                                        console.log('🔐 [OAuth] Token payload:', {
+                                            email: payload.email,
+                                            sub: payload.sub
+                                        });
+                                        
+                                        // Store user info in localStorage (fallback)
+                                        localStorage.setItem('isLoggedIn', 'true');
+                                        localStorage.setItem('userEmail', payload.email || '');
+                                        const userName = payload.user_metadata?.name || 
+                                                       payload.user_metadata?.full_name || 
+                                                       payload.email?.split('@')[0] || 
+                                                       'User';
+                                        localStorage.setItem('userName', userName);
+                                        
+                                        // Try to set session (non-blocking - don't wait if it hangs)
+                                        console.log('🔐 [OAuth] Attempting to set session...');
+                                        const setSessionPromise = supabase.auth.setSession({
                                             access_token: accessToken,
                                             refresh_token: refreshToken
                                         });
                                         
-                                        // Add timeout to prevent hanging
-                                        const timeoutPromise = new Promise((_, reject) => 
-                                            setTimeout(() => reject(new Error('setSession timeout')), 5000)
+                                        // Don't wait more than 1 second - if it hangs, continue anyway
+                                        const quickTimeout = new Promise((resolve) => 
+                                            setTimeout(() => resolve({ timeout: true }), 1000)
                                         );
                                         
-                                        const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
-                                        
-                                        // Check if session was set (even if request was aborted)
-                                        const { data: sessionCheck } = await supabase.auth.getSession();
-                                        
-                                        if (sessionCheck.session && sessionCheck.session.user) {
-                                            console.log('✅ [OAuth] Session established from URL:', sessionCheck.session.user.email);
-                                            
-                                            // Store fallback flag in localStorage
-                                            localStorage.setItem('isLoggedIn', 'true');
-                                            localStorage.setItem('userEmail', sessionCheck.session.user.email || '');
-                                            const userName = sessionCheck.session.user.user_metadata?.name || 
-                                                           sessionCheck.session.user.user_metadata?.full_name || 
-                                                           sessionCheck.session.user.email?.split('@')[0] || 
-                                                           'User';
-                                            localStorage.setItem('userName', userName);
-                                            
-                                            // Clean URL hash
-                                            window.history.replaceState(null, '', window.location.pathname);
-                                            
-                                            // Wait a moment to ensure session is fully stored
-                                            await new Promise(resolve => setTimeout(resolve, 100));
-                                            
-                                            // Redirect to profile
-                                            console.log('✅ [OAuth] Redirecting to profile.html');
-                                            oauthProcessed = true;
-                                            window.location.replace('profile.html');
-                                            return; // Exit early - redirect is happening
-                                        } else if (error && error.name !== 'AbortError') {
-                                            console.error('❌ [OAuth] Failed to set session:', error);
-                                        } else {
-                                            console.warn('⚠️ [OAuth] setSession may have been aborted, but checking session...');
+                                        try {
+                                            const result = await Promise.race([setSessionPromise, quickTimeout]);
+                                            if (!result.timeout && result.data && result.data.session) {
+                                                session = result.data.session;
+                                                console.log('✅ [OAuth] Session set manually:', session.user.email);
+                                            } else if (result.timeout) {
+                                                console.warn('⚠️ [OAuth] setSession timed out, but user info stored - profile page will handle');
+                                            }
+                                        } catch (setErr) {
+                                            console.warn('⚠️ [OAuth] setSession error (non-critical):', setErr.name || setErr.message);
                                         }
-                                    } catch (setSessionErr) {
-                                        // AbortError is okay if session was still set
-                                        if (setSessionErr.name === 'AbortError') {
-                                            console.warn('⚠️ [OAuth] setSession was aborted, checking if session exists...');
-                                            // Check if session was set despite abort
-                                            const { data: sessionCheck } = await supabase.auth.getSession();
-                                            if (sessionCheck.session && sessionCheck.session.user) {
-                                                console.log('✅ [OAuth] Session exists despite abort:', sessionCheck.session.user.email);
-                                                localStorage.setItem('isLoggedIn', 'true');
-                                                localStorage.setItem('userEmail', sessionCheck.session.user.email || '');
-                                                const userName = sessionCheck.session.user.user_metadata?.name || 
-                                                               sessionCheck.session.user.user_metadata?.full_name || 
-                                                               sessionCheck.session.user.email?.split('@')[0] || 
-                                                               'User';
-                                                localStorage.setItem('userName', userName);
-                                                window.history.replaceState(null, '', window.location.pathname);
-                                                await new Promise(resolve => setTimeout(resolve, 100));
-                                                oauthProcessed = true;
-                                                window.location.replace('profile.html');
-                                                return;
+                                        
+                                        // Verify session one more time
+                                        if (!session) {
+                                            try {
+                                                const { data: sessionCheck } = await supabase.auth.getSession();
+                                                if (sessionCheck.session && sessionCheck.session.user) {
+                                                    session = sessionCheck.session;
+                                                    console.log('✅ [OAuth] Session verified after manual setup:', session.user.email);
+                                                }
+                                            } catch (verifyErr) {
+                                                console.warn('⚠️ [OAuth] Could not verify session:', verifyErr.name || verifyErr.message);
                                             }
                                         }
-                                        console.error('❌ [OAuth] Error setting session:', setSessionErr);
                                     }
-                                } else {
-                                    console.error('❌ [OAuth] Invalid token format');
+                                } catch (err) {
+                                    console.error('❌ [OAuth] Error parsing tokens:', err);
                                 }
-                            } catch (err) {
-                                console.error('❌ [OAuth] Error parsing/setting session:', err);
                             }
+                        }
+                        
+                        // If we have a session (auto or manual), redirect
+                        if (session && session.user) {
+                            // Clean URL hash
+                            window.history.replaceState(null, '', window.location.pathname);
+                            
+                            // Redirect to profile
+                            console.log('✅ [OAuth] Redirecting to profile.html');
+                            oauthProcessed = true;
+                            window.location.replace('profile.html');
+                            return; // Exit early - redirect is happening
+                        } else {
+                            // No session, but user info is in localStorage - redirect anyway
+                            // Profile page can handle session setup from localStorage
+                            console.log('⚠️ [OAuth] No session, but user info stored - redirecting to profile');
+                            window.history.replaceState(null, '', window.location.pathname);
+                            oauthProcessed = true;
+                            window.location.replace('profile.html');
+                            return;
                         }
                     }
                 }
