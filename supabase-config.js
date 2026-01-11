@@ -66,6 +66,20 @@ async function initSupabase() {
             throw new Error('Supabase client created but auth is not available');
         }
         
+        // CRITICAL: Wait for client to be fully ready before returning
+        // The AbortError in _acquireLock/initialize suggests the client is being used 
+        // before internal initialization completes. Wait for internal locks to be released.
+        // In production, this takes longer because the client is created after async API fetch.
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const initWaitTime = isLocalhost ? 100 : 500; // Longer wait in production
+        console.log(`⏳ Waiting ${initWaitTime}ms for Supabase client internal initialization...`);
+        await new Promise(resolve => setTimeout(resolve, initWaitTime));
+        
+        // Verify client structure (lightweight check)
+        if (typeof supabaseClient.auth.getSession !== 'function') {
+            throw new Error('getSession is not a function - client not properly initialized');
+        }
+        
         console.log('✅ Supabase client initialized successfully');
         console.log('🔍 Supabase client verification:', {
             url: configCache.url,

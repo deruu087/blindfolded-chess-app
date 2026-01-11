@@ -2673,6 +2673,7 @@
                         
                         // CRITICAL: Verify Supabase client is fully ready before making API calls
                         // The AbortError suggests the client might not be fully initialized
+                        // The stack trace shows _acquireLock and initialize are where it fails
                         console.log('🔍 [OAuth] Verifying Supabase client is ready for API calls...');
                         console.log('🔍 [OAuth] Client state:', {
                             hasClient: !!supabase,
@@ -2682,11 +2683,14 @@
                             supabaseUrl: supabase?.supabaseUrl || 'unknown'
                         });
                         
-                        // Wait a moment to ensure client is fully initialized (especially in production)
-                        if (!isLocalhost) {
-                            console.log('⏳ [OAuth] Production: Waiting 500ms to ensure client is fully initialized...');
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                        }
+                        // CRITICAL: Wait longer in production to ensure client is fully initialized
+                        // The AbortError happens in _acquireLock/initialize, suggesting race condition
+                        // On localhost, client initializes synchronously, so it works
+                        // In production, we need to wait for internal initialization to complete
+                        const initWaitTime = isLocalhost ? 200 : 1000; // 1 second in production
+                        console.log(`⏳ [OAuth] Waiting ${initWaitTime}ms for Supabase client internal initialization to complete...`);
+                        await new Promise(resolve => setTimeout(resolve, initWaitTime));
+                        console.log('✅ [OAuth] Wait complete - client should be ready for API calls');
                         
                         // First, wait for Supabase to auto-process (detectSessionInUrl: true)
                         // Give it more time in production
