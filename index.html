@@ -2634,7 +2634,7 @@
                 console.log('✅ Supabase is ready to use!');
                 
                 // CRITICAL: Handle OAuth callback FIRST - manually process hash for production
-                // Supabase doesn't auto-process OAuth tokens in production, so we need to wait and retry
+                // Supabase doesn't auto-process OAuth tokens in production, so we need to manually parse and set session
                 const hash = window.location.hash;
                 const isOAuthCallback = hash && hash.includes('access_token');
                 
@@ -2642,23 +2642,100 @@
                     const supabase = window.getSupabase();
                     if (supabase && supabase.auth) {
                         console.log('🔐 [OAuth] Processing OAuth callback from URL hash...');
+                        console.log('🔐 [OAuth] Hash:', hash.substring(0, 100) + '...');
                         
-                        // Wait for Supabase to process the hash, retry up to 10 times (2 seconds)
+                        // Parse hash parameters manually
+                        const hashParams = new URLSearchParams(hash.substring(1));
+                        const accessToken = hashParams.get('access_token');
+                        const refreshToken = hashParams.get('refresh_token');
+                        const expiresAt = hashParams.get('expires_at');
+                        const tokenType = hashParams.get('token_type') || 'bearer';
+                        
+                        console.log('🔐 [OAuth] Parsed tokens:', {
+                            hasAccessToken: !!accessToken,
+                            hasRefreshToken: !!refreshToken,
+                            expiresAt: expiresAt
+                        });
+                        
+                        if (accessToken) {
+                            try {
+                                // Decode the access token to get user info (JWT)
+                                const tokenParts = accessToken.split('.');
+                                if (tokenParts.length === 3) {
+                                    const payload = JSON.parse(atob(tokenParts[1]));
+                                    console.log('🔐 [OAuth] Token payload:', {
+                                        email: payload.email,
+                                        sub: payload.sub,
+                                        exp: payload.exp
+                                    });
+                                    
+                                    // Create session object manually
+                                    const sessionData = {
+                                        access_token: accessToken,
+                                        refresh_token: refreshToken,
+                                        expires_at: expiresAt ? parseInt(expiresAt) : Math.floor(Date.now() / 1000) + 3600,
+                                        expires_in: expiresAt ? parseInt(expiresAt) - Math.floor(Date.now() / 1000) : 3600,
+                                        token_type: tokenType,
+                                        user: {
+                                            id: payload.sub,
+                                            email: payload.email,
+                                            user_metadata: payload.user_metadata || {},
+                                            app_metadata: payload.app_metadata || {}
+                                        }
+                                    };
+                                    
+                                    // Set the session using setSession
+                                    console.log('🔐 [OAuth] Setting session manually...');
+                                    const { data, error } = await supabase.auth.setSession({
+                                        access_token: accessToken,
+                                        refresh_token: refreshToken
+                                    });
+                                    
+                                    if (!error && data.session && data.session.user) {
+                                        console.log('✅ [OAuth] Session established from URL:', data.session.user.email);
+                                        
+                                        // Store fallback flag in localStorage
+                                        localStorage.setItem('isLoggedIn', 'true');
+                                        localStorage.setItem('userEmail', data.session.user.email || '');
+                                        const userName = data.session.user.user_metadata?.name || 
+                                                       data.session.user.user_metadata?.full_name || 
+                                                       data.session.user.email?.split('@')[0] || 
+                                                       'User';
+                                        localStorage.setItem('userName', userName);
+                                        
+                                        // Clean URL hash
+                                        window.history.replaceState(null, '', window.location.pathname);
+                                        
+                                        // Redirect to profile
+                                        console.log('✅ [OAuth] Redirecting to profile.html');
+                                        window.location.replace('profile.html');
+                                        return; // Exit early - redirect is happening
+                                    } else {
+                                        console.error('❌ [OAuth] Failed to set session:', error);
+                                    }
+                                } else {
+                                    console.error('❌ [OAuth] Invalid token format');
+                                }
+                            } catch (err) {
+                                console.error('❌ [OAuth] Error parsing/setting session:', err);
+                            }
+                        }
+                        
+                        // Fallback: Try waiting for Supabase to auto-process (retry up to 10 times)
+                        console.log('⏳ [OAuth] Fallback: Waiting for Supabase to auto-process hash...');
                         let session = null;
                         let attempts = 0;
                         const maxAttempts = 10;
                         
                         while (attempts < maxAttempts && !session) {
                             try {
-                                // Wait a bit for Supabase to process the hash
                                 await new Promise(resolve => setTimeout(resolve, 200));
                                 
-                                // Try to get the session - Supabase should have processed the hash
                                 const { data, error } = await supabase.auth.getSession();
                                 
                                 if (!error && data.session && data.session.user) {
                                     session = data.session;
-                                    console.log('✅ [OAuth] Session established from URL:', session.user.email);
+                                    console.log('✅ [OAuth] Session found via fallback:', session.user.email);
                                     break;
                                 }
                                 
