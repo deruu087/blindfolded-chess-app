@@ -2649,6 +2649,39 @@
                         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                         console.log('🔐 [OAuth] Environment:', isLocalhost ? 'localhost' : 'production');
                         
+                        // Diagnostic: Check if Supabase client can make requests
+                        console.log('🔍 [OAuth] Supabase client diagnostics:', {
+                            hasSupabase: !!supabase,
+                            hasAuth: !!supabase.auth,
+                            supabaseUrl: supabase.supabaseUrl || 'unknown',
+                            hasSetSession: typeof supabase.auth.setSession === 'function',
+                            hasGetSession: typeof supabase.auth.getSession === 'function',
+                            storageType: supabase.auth.storage?.constructor?.name || 'unknown'
+                        });
+                        
+                        // Test if we can make a simple request (check current session)
+                        console.log('🔍 [OAuth] Testing Supabase client connectivity...');
+                        try {
+                            const testStartTime = Date.now();
+                            const testPromise = supabase.auth.getSession();
+                            const testTimeout = new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('test timeout')), 1000)
+                            );
+                            const testResult = await Promise.race([testPromise, testTimeout]);
+                            const testDuration = Date.now() - testStartTime;
+                            console.log(`✅ [OAuth] Supabase client connectivity test passed in ${testDuration}ms`);
+                        } catch (testErr) {
+                            console.error('❌ [OAuth] Supabase client connectivity test FAILED:', {
+                                name: testErr.name,
+                                message: testErr.message
+                            });
+                            if (testErr.name === 'AbortError') {
+                                console.error('❌ [OAuth] CRITICAL: Supabase client cannot make ANY requests');
+                                console.error('❌ [OAuth] This means setSession() will also fail');
+                                console.error('❌ [OAuth] Possible causes: CORS, network, or client configuration');
+                            }
+                        }
+                        
                         // First, wait for Supabase to auto-process (detectSessionInUrl: true)
                         // Give it more time in production
                         const waitTime = isLocalhost ? 500 : 2000; // 2 seconds in production
@@ -2742,108 +2775,148 @@
                             const refreshToken = hashParams.get('refresh_token');
                             const expiresAt = hashParams.get('expires_at');
                             
-                            if (accessToken && refreshToken) {
-                                try {
-                                    // Decode token to get user info
-                                    const tokenParts = accessToken.split('.');
-                                    if (tokenParts.length === 3) {
-                                        const payload = JSON.parse(atob(tokenParts[1]));
-                                        console.log('🔐 [OAuth] Token payload:', {
-                                            email: payload.email,
-                                            sub: payload.sub
-                                        });
-                                        
-                                        // CRITICAL: Do NOT store in localStorage - profile must load from Supabase only
-                                        // Only store after Supabase session is confirmed
-                                        
-                                        // Try to set session (non-blocking - don't wait if it hangs)
-                                        console.log('🔐 [OAuth] Attempting to set session with setSession()...');
-                                        console.log('🔐 [OAuth] Tokens:', {
-                                            hasAccessToken: !!accessToken,
-                                            hasRefreshToken: !!refreshToken,
-                                            accessTokenLength: accessToken?.length || 0
-                                        });
-                                        
-                                        const setSessionStartTime = Date.now();
-                                        const setSessionPromise = supabase.auth.setSession({
-                                            access_token: accessToken,
-                                            refresh_token: refreshToken
-                                        });
-                                        
-                                        // Don't wait more than 3 seconds - if it hangs, continue anyway
-                                        const quickTimeout = new Promise((resolve) => 
-                                            setTimeout(() => resolve({ timeout: true }), 3000)
-                                        );
-                                        
-                                        try {
-                                            console.log('⏳ [OAuth] Waiting for setSession() to complete (max 3 seconds)...');
-                                            const result = await Promise.race([setSessionPromise, quickTimeout]);
-                                            const setSessionDuration = Date.now() - setSessionStartTime;
-                                            
-                                            if (!result.timeout && result.data && result.data.session) {
-                                                session = result.data.session;
-                                                console.log(`✅ [OAuth] Session set manually in ${setSessionDuration}ms:`, session.user.email);
-                                            } else if (result.timeout) {
-                                                console.warn(`⚠️ [OAuth] setSession timed out after ${setSessionDuration}ms`);
-                                                console.warn('⚠️ [OAuth] User info stored in localStorage, but Supabase session not established');
-                                                console.warn('⚠️ [OAuth] Profile page will need to establish session from tokens');
-                                            } else {
-                                                console.warn('⚠️ [OAuth] setSession returned but no session in result:', result);
+                        if (accessToken && refreshToken) {
+                            try {
+                                // Decode token to get user info
+                                const tokenParts = accessToken.split('.');
+                                if (tokenParts.length === 3) {
+                                    const payload = JSON.parse(atob(tokenParts[1]));
+                                    console.log('🔐 [OAuth] Token payload:', {
+                                        email: payload.email,
+                                        sub: payload.sub
+                                    });
+                                    
+                                    // CRITICAL: Do NOT store in localStorage - profile must load from Supabase only
+                                    // Only store after Supabase session is confirmed
+                                    
+                                    // Wait a moment to ensure Supabase client is fully ready
+                                    console.log('⏳ [OAuth] Waiting 500ms for Supabase client to be fully ready...');
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                    
+                                    // Try to set session (non-blocking - don't wait if it hangs)
+                                    console.log('🔐 [OAuth] Attempting to set session with setSession()...');
+                                    console.log('🔐 [OAuth] Tokens:', {
+                                        hasAccessToken: !!accessToken,
+                                        hasRefreshToken: !!refreshToken,
+                                        accessTokenLength: accessToken?.length || 0
+                                    });
+                                    console.log('🔐 [OAuth] Supabase client state:', {
+                                        hasSupabase: !!supabase,
+                                        hasAuth: !!supabase?.auth,
+                                        hasSetSession: typeof supabase?.auth?.setSession === 'function'
+                                    });
+                                    
+                                    const setSessionStartTime = Date.now();
+                                    
+                                    // Use a more aggressive timeout approach - fire and forget if it hangs
+                                    let setSessionCompleted = false;
+                                    const setSessionPromise = supabase.auth.setSession({
+                                        access_token: accessToken,
+                                        refresh_token: refreshToken
+                                    }).then(result => {
+                                        setSessionCompleted = true;
+                                        return result;
+                                    }).catch(err => {
+                                        setSessionCompleted = true;
+                                        throw err;
+                                    });
+                                    
+                                    // Don't wait more than 2 seconds - if it hangs, continue anyway
+                                    const quickTimeout = new Promise((resolve) => 
+                                        setTimeout(() => {
+                                            if (!setSessionCompleted) {
+                                                console.warn('⚠️ [OAuth] setSession taking too long, continuing without waiting...');
                                             }
-                                        } catch (setErr) {
-                                            const setSessionDuration = Date.now() - setSessionStartTime;
-                                            console.error(`❌ [OAuth] setSession error after ${setSessionDuration}ms:`, {
-                                                name: setErr.name,
-                                                message: setErr.message,
-                                                stack: setErr.stack?.substring(0, 200),
-                                                cause: setErr.cause
+                                            resolve({ timeout: true });
+                                        }, 2000)
+                                    );
+                                    
+                                    try {
+                                        console.log('⏳ [OAuth] Waiting for setSession() to complete (max 2 seconds)...');
+                                        const result = await Promise.race([setSessionPromise, quickTimeout]);
+                                        const setSessionDuration = Date.now() - setSessionStartTime;
+                                        
+                                        if (!result.timeout && result.data && result.data.session) {
+                                            session = result.data.session;
+                                            console.log(`✅ [OAuth] Session set manually in ${setSessionDuration}ms:`, session.user.email);
+                                        } else if (result.timeout) {
+                                            console.warn(`⚠️ [OAuth] setSession timed out after ${setSessionDuration}ms`);
+                                            console.warn('⚠️ [OAuth] This is likely due to network/CORS issues in production');
+                                            console.warn('⚠️ [OAuth] Will try to verify if session was set despite timeout...');
+                                            
+                                            // Even if timeout, check if session was set (might have completed in background)
+                                            setTimeout(async () => {
+                                                try {
+                                                    const { data: sessionCheck } = await supabase.auth.getSession();
+                                                    if (sessionCheck.session && sessionCheck.session.user) {
+                                                        console.log('✅ [OAuth] Session was set despite timeout!');
+                                                        // Redirect if we're still on this page
+                                                        if (window.location.hash.includes('access_token')) {
+                                                            window.history.replaceState(null, '', window.location.pathname);
+                                                            window.location.replace('profile.html');
+                                                        }
+                                                    }
+                                                } catch (e) {
+                                                    // Ignore - we already timed out
+                                                }
+                                            }, 1000);
+                                        } else {
+                                            console.warn('⚠️ [OAuth] setSession returned but no session in result:', result);
+                                        }
+                                    } catch (setErr) {
+                                        const setSessionDuration = Date.now() - setSessionStartTime;
+                                        console.error(`❌ [OAuth] setSession error after ${setSessionDuration}ms:`, {
+                                            name: setErr.name,
+                                            message: setErr.message,
+                                            stack: setErr.stack?.substring(0, 200),
+                                            cause: setErr.cause
+                                        });
+                                        
+                                        // Check if it's an AbortError - this suggests network/CORS issue
+                                        if (setErr.name === 'AbortError') {
+                                            console.error('❌ [OAuth] AbortError detected - Supabase API calls are being cancelled');
+                                            console.error('❌ [OAuth] Possible causes:');
+                                            console.error('   1. Network request was cancelled (page navigation?)');
+                                            console.error('   2. CORS configuration issue');
+                                            console.error('   3. Supabase client not fully initialized');
+                                            console.error('   4. Check browser Network tab for failed requests');
+                                        }
+                                    }
+                                    
+                                    // Verify session one more time (with shorter timeout)
+                                    if (!session) {
+                                        console.log('🔍 [OAuth] Verifying session after manual setup...');
+                                        try {
+                                            const verifyPromise = supabase.auth.getSession();
+                                            const verifyTimeout = new Promise((_, reject) => 
+                                                setTimeout(() => reject(new Error('verify timeout')), 1500)
+                                            );
+                                            
+                                            const { data: sessionCheck } = await Promise.race([verifyPromise, verifyTimeout]);
+                                            if (sessionCheck.session && sessionCheck.session.user) {
+                                                session = sessionCheck.session;
+                                                console.log('✅ [OAuth] Session verified after manual setup:', session.user.email);
+                                            } else {
+                                                console.warn('⚠️ [OAuth] Session verification: no session found');
+                                            }
+                                        } catch (verifyErr) {
+                                            console.error('❌ [OAuth] Could not verify session:', {
+                                                name: verifyErr.name,
+                                                message: verifyErr.message
                                             });
                                             
-                                            // Check if it's an AbortError - this suggests network/CORS issue
-                                            if (setErr.name === 'AbortError') {
-                                                console.error('❌ [OAuth] AbortError detected - this suggests:');
-                                                console.error('   1. Network request was cancelled');
-                                                console.error('   2. Possible CORS issue');
-                                                console.error('   3. Supabase redirect URL might not be configured in dashboard');
-                                                console.error('   4. Check Supabase dashboard: Authentication > URL Configuration');
-                                                console.error('   5. Ensure https://www.memo-chess.com is in allowed redirect URLs');
-                                            }
-                                        }
-                                        
-                                        // Verify session one more time (with timeout)
-                                        if (!session) {
-                                            console.log('🔍 [OAuth] Verifying session after manual setup...');
-                                            try {
-                                                const verifyPromise = supabase.auth.getSession();
-                                                const verifyTimeout = new Promise((_, reject) => 
-                                                    setTimeout(() => reject(new Error('verify timeout')), 2000)
-                                                );
-                                                
-                                                const { data: sessionCheck } = await Promise.race([verifyPromise, verifyTimeout]);
-                                                if (sessionCheck.session && sessionCheck.session.user) {
-                                                    session = sessionCheck.session;
-                                                    console.log('✅ [OAuth] Session verified after manual setup:', session.user.email);
-                                                } else {
-                                                    console.warn('⚠️ [OAuth] Session verification: no session found');
-                                                }
-                                            } catch (verifyErr) {
-                                                console.error('❌ [OAuth] Could not verify session:', {
-                                                    name: verifyErr.name,
-                                                    message: verifyErr.message,
-                                                    stack: verifyErr.stack?.substring(0, 200)
-                                                });
-                                                
-                                                if (verifyErr.name === 'AbortError') {
-                                                    console.error('❌ [OAuth] getSession() also aborted - Supabase API calls are failing');
-                                                    console.error('❌ [OAuth] This suggests a configuration or network issue');
-                                                }
+                                            if (verifyErr.name === 'AbortError') {
+                                                console.error('❌ [OAuth] getSession() also aborted - ALL Supabase API calls are failing');
+                                                console.error('❌ [OAuth] This is a critical issue - Supabase client cannot make requests');
+                                                console.error('❌ [OAuth] Check: Network tab, CORS, Supabase client initialization');
                                             }
                                         }
                                     }
-                                } catch (err) {
-                                    console.error('❌ [OAuth] Error parsing tokens:', err);
                                 }
+                            } catch (err) {
+                                console.error('❌ [OAuth] Error parsing tokens:', err);
                             }
+                        }
                         }
                         
                         // CRITICAL: Only redirect if we have a valid Supabase session
