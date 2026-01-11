@@ -1996,8 +1996,6 @@
             
             if (typeof window.getSupabase !== 'function') {
                 console.error('❌ [AUTH CHECK] getSupabase() function not available after 5 seconds');
-                // Show login modal instead of redirecting (with retry logic)
-                showLoginModalWithRetry('getSupabase not available');
                 return;
             }
             
@@ -2026,31 +2024,7 @@
             
             if (!supabase || !supabase.auth) {
                 console.error('❌ [AUTH CHECK] getSupabase() did not return valid client after 5 seconds');
-                // Try checkAuthStatus as fallback
-                if (typeof window.checkAuthStatus === 'function') {
-                    console.log('⚠️ [AUTH CHECK] Falling back to checkAuthStatus()...');
-                    try {
-                        const authStatus = await window.checkAuthStatus();
-                        if (!authStatus.isLoggedIn) {
-                            console.log('❌ [AUTH CHECK] User not logged in');
-                            // Show login modal instead of redirecting (with retry logic)
-                            showLoginModalWithRetry('checkAuthStatus: not logged in');
-                            return;
-                        }
-                        console.log('✅ [AUTH CHECK] User authenticated via checkAuthStatus()');
-                        return;
-                    } catch (error) {
-                        console.error('❌ [AUTH CHECK] checkAuthStatus() failed:', error);
-                        // Show login modal instead of redirecting (with retry logic)
-                        showLoginModalWithRetry('checkAuthStatus failed');
-                        return;
-                    }
-                } else {
-                    console.error('❌ [AUTH CHECK] No way to verify auth');
-                    // Show login modal instead of redirecting (with retry logic)
-                    showLoginModalWithRetry('no auth verification');
-                    return;
-                }
+                return;
             }
             
             // Now we have a valid Supabase client - check session
@@ -2072,7 +2046,6 @@
                     sessionResult = await Promise.race([sessionPromise, timeoutPromise]);
                 } catch (timeoutError) {
                     console.error('❌ [AUTH CHECK] Session check timed out:', timeoutError);
-                    showLoginModalWithRetry('session check timeout');
                     return;
                 }
                 
@@ -2096,8 +2069,6 @@
                 
                 if (error) {
                     console.error('❌ [AUTH CHECK] Session check error:', error);
-                    // Show login modal instead of redirecting (with retry logic)
-                    showLoginModalWithRetry('session error');
                     return;
                 }
                 
@@ -2114,10 +2085,6 @@
                         userIsNull: session?.user === null,
                         userIsUndefined: session?.user === undefined
                     });
-                    console.log('🔍 [AUTH CHECK] Will show login modal instead of empty profile');
-                    
-                    // Show login modal instead of redirecting (with retry logic)
-                    showLoginModalWithRetry('no session');
                     return;
                 }
                 
@@ -2135,8 +2102,6 @@
             } catch (e) {
                 console.error('❌ [AUTH CHECK] Exception checking Supabase session:', e);
                 console.error('❌ [AUTH CHECK] Exception stack:', e.stack);
-                // Show login modal instead of redirecting (with retry logic)
-                showLoginModalWithRetry('exception');
                 return;
             }
         });
@@ -2220,9 +2185,6 @@
                     });
                 } catch (error) {
                     console.error('❌ [INIT PROFILE] Error checking auth status:', error);
-                    // If checkAuthStatus fails, show login modal
-                    console.log('❌ [INIT PROFILE] Auth check failed, showing login modal');
-                    showLoginModal();
                     return;
                 }
             } else {
@@ -2256,9 +2218,7 @@
                 }
                 
                 if (!supabase || !supabase.auth) {
-                    // No Supabase client - show login modal
-                    console.log('❌ [INIT PROFILE] No Supabase client available after waiting, showing login modal');
-                    showLoginModal();
+                    console.log('❌ [INIT PROFILE] No Supabase client available after waiting');
                     return;
                 }
                 
@@ -2273,8 +2233,7 @@
                     });
                     
                     if (error || !session || !session.user) {
-                        console.log('❌ [INIT PROFILE] No Supabase session found, showing login modal');
-                        showLoginModal();
+                        console.log('❌ [INIT PROFILE] No Supabase session found');
                         return;
                     }
                     // Has valid session
@@ -2287,15 +2246,13 @@
                     console.log('✅ [INIT PROFILE] Valid session found:', session.user.email);
                 } catch (e) {
                     console.error('❌ [INIT PROFILE] Error checking Supabase session:', e);
-                    showLoginModal();
                     return;
                 }
             }
             
-            // If user is not logged in, show login modal instead of loading empty profile
+            // If user is not logged in, return early
             if (!authStatus.isLoggedIn) {
-                console.log('❌ [INIT PROFILE] User not logged in, showing login modal');
-                showLoginModal();
+                console.log('❌ [INIT PROFILE] User not logged in');
                 return;
             }
             
