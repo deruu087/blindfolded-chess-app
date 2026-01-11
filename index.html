@@ -2637,6 +2637,7 @@
                 // Supabase doesn't auto-process OAuth tokens in production, so we need to manually parse and set session
                 const hash = window.location.hash;
                 const isOAuthCallback = hash && hash.includes('access_token');
+                let oauthProcessed = false;
                 
                 if (isOAuthCallback && typeof window.getSupabase === 'function') {
                     const supabase = window.getSupabase();
@@ -2657,7 +2658,7 @@
                             expiresAt: expiresAt
                         });
                         
-                        if (accessToken) {
+                        if (accessToken && refreshToken) {
                             try {
                                 // Decode the access token to get user info (JWT)
                                 const tokenParts = accessToken.split('.');
@@ -2669,49 +2670,75 @@
                                         exp: payload.exp
                                     });
                                     
-                                    // Create session object manually
-                                    const sessionData = {
-                                        access_token: accessToken,
-                                        refresh_token: refreshToken,
-                                        expires_at: expiresAt ? parseInt(expiresAt) : Math.floor(Date.now() / 1000) + 3600,
-                                        expires_in: expiresAt ? parseInt(expiresAt) - Math.floor(Date.now() / 1000) : 3600,
-                                        token_type: tokenType,
-                                        user: {
-                                            id: payload.sub,
-                                            email: payload.email,
-                                            user_metadata: payload.user_metadata || {},
-                                            app_metadata: payload.app_metadata || {}
-                                        }
-                                    };
-                                    
-                                    // Set the session using setSession
+                                    // Set the session using setSession - wrap in try/catch for abort errors
                                     console.log('🔐 [OAuth] Setting session manually...');
-                                    const { data, error } = await supabase.auth.setSession({
-                                        access_token: accessToken,
-                                        refresh_token: refreshToken
-                                    });
-                                    
-                                    if (!error && data.session && data.session.user) {
-                                        console.log('✅ [OAuth] Session established from URL:', data.session.user.email);
+                                    try {
+                                        const sessionPromise = supabase.auth.setSession({
+                                            access_token: accessToken,
+                                            refresh_token: refreshToken
+                                        });
                                         
-                                        // Store fallback flag in localStorage
-                                        localStorage.setItem('isLoggedIn', 'true');
-                                        localStorage.setItem('userEmail', data.session.user.email || '');
-                                        const userName = data.session.user.user_metadata?.name || 
-                                                       data.session.user.user_metadata?.full_name || 
-                                                       data.session.user.email?.split('@')[0] || 
-                                                       'User';
-                                        localStorage.setItem('userName', userName);
+                                        // Add timeout to prevent hanging
+                                        const timeoutPromise = new Promise((_, reject) => 
+                                            setTimeout(() => reject(new Error('setSession timeout')), 5000)
+                                        );
                                         
-                                        // Clean URL hash
-                                        window.history.replaceState(null, '', window.location.pathname);
+                                        const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
                                         
-                                        // Redirect to profile
-                                        console.log('✅ [OAuth] Redirecting to profile.html');
-                                        window.location.replace('profile.html');
-                                        return; // Exit early - redirect is happening
-                                    } else {
-                                        console.error('❌ [OAuth] Failed to set session:', error);
+                                        // Check if session was set (even if request was aborted)
+                                        const { data: sessionCheck } = await supabase.auth.getSession();
+                                        
+                                        if (sessionCheck.session && sessionCheck.session.user) {
+                                            console.log('✅ [OAuth] Session established from URL:', sessionCheck.session.user.email);
+                                            
+                                            // Store fallback flag in localStorage
+                                            localStorage.setItem('isLoggedIn', 'true');
+                                            localStorage.setItem('userEmail', sessionCheck.session.user.email || '');
+                                            const userName = sessionCheck.session.user.user_metadata?.name || 
+                                                           sessionCheck.session.user.user_metadata?.full_name || 
+                                                           sessionCheck.session.user.email?.split('@')[0] || 
+                                                           'User';
+                                            localStorage.setItem('userName', userName);
+                                            
+                                            // Clean URL hash
+                                            window.history.replaceState(null, '', window.location.pathname);
+                                            
+                                            // Wait a moment to ensure session is fully stored
+                                            await new Promise(resolve => setTimeout(resolve, 100));
+                                            
+                                            // Redirect to profile
+                                            console.log('✅ [OAuth] Redirecting to profile.html');
+                                            oauthProcessed = true;
+                                            window.location.replace('profile.html');
+                                            return; // Exit early - redirect is happening
+                                        } else if (error && error.name !== 'AbortError') {
+                                            console.error('❌ [OAuth] Failed to set session:', error);
+                                        } else {
+                                            console.warn('⚠️ [OAuth] setSession may have been aborted, but checking session...');
+                                        }
+                                    } catch (setSessionErr) {
+                                        // AbortError is okay if session was still set
+                                        if (setSessionErr.name === 'AbortError') {
+                                            console.warn('⚠️ [OAuth] setSession was aborted, checking if session exists...');
+                                            // Check if session was set despite abort
+                                            const { data: sessionCheck } = await supabase.auth.getSession();
+                                            if (sessionCheck.session && sessionCheck.session.user) {
+                                                console.log('✅ [OAuth] Session exists despite abort:', sessionCheck.session.user.email);
+                                                localStorage.setItem('isLoggedIn', 'true');
+                                                localStorage.setItem('userEmail', sessionCheck.session.user.email || '');
+                                                const userName = sessionCheck.session.user.user_metadata?.name || 
+                                                               sessionCheck.session.user.user_metadata?.full_name || 
+                                                               sessionCheck.session.user.email?.split('@')[0] || 
+                                                               'User';
+                                                localStorage.setItem('userName', userName);
+                                                window.history.replaceState(null, '', window.location.pathname);
+                                                await new Promise(resolve => setTimeout(resolve, 100));
+                                                oauthProcessed = true;
+                                                window.location.replace('profile.html');
+                                                return;
+                                            }
+                                        }
+                                        console.error('❌ [OAuth] Error setting session:', setSessionErr);
                                     }
                                 } else {
                                     console.error('❌ [OAuth] Invalid token format');
@@ -2720,75 +2747,22 @@
                                 console.error('❌ [OAuth] Error parsing/setting session:', err);
                             }
                         }
-                        
-                        // Fallback: Try waiting for Supabase to auto-process (retry up to 10 times)
-                        console.log('⏳ [OAuth] Fallback: Waiting for Supabase to auto-process hash...');
-                        let session = null;
-                        let attempts = 0;
-                        const maxAttempts = 10;
-                        
-                        while (attempts < maxAttempts && !session) {
-                            try {
-                                await new Promise(resolve => setTimeout(resolve, 200));
-                                
-                                const { data, error } = await supabase.auth.getSession();
-                                
-                                if (!error && data.session && data.session.user) {
-                                    session = data.session;
-                                    console.log('✅ [OAuth] Session found via fallback:', session.user.email);
-                                    break;
-                                }
-                                
-                                attempts++;
-                                if (attempts < maxAttempts) {
-                                    console.log(`⏳ [OAuth] Waiting for session... attempt ${attempts}/${maxAttempts}`);
-                                }
-                            } catch (err) {
-                                console.error(`❌ [OAuth] Error on attempt ${attempts + 1}:`, err);
-                                attempts++;
-                                if (attempts < maxAttempts) {
-                                    await new Promise(resolve => setTimeout(resolve, 200));
-                                }
-                            }
-                        }
-                        
-                        if (session && session.user) {
-                            // Store fallback flag in localStorage
-                            localStorage.setItem('isLoggedIn', 'true');
-                            localStorage.setItem('userEmail', session.user.email || '');
-                            const userName = session.user.user_metadata?.name || 
-                                           session.user.user_metadata?.full_name || 
-                                           session.user.email?.split('@')[0] || 
-                                           'User';
-                            localStorage.setItem('userName', userName);
-                            
-                            // Clean URL hash
-                            window.history.replaceState(null, '', window.location.pathname);
-                            
-                            // Redirect to profile
-                            console.log('✅ [OAuth] Redirecting to profile.html');
-                            window.location.replace('profile.html');
-                            return; // Exit early - redirect is happening
-                        } else {
-                            console.error('❌ [OAuth] Failed to establish session after all attempts');
-                            // Show body and continue with normal flow
-                            if (document.body) {
-                                document.body.style.display = '';
-                            }
-                        }
                     }
                 }
                 
-                // Set up auth state listener
-                setupAuthListener();
-                
-                // Handle OAuth callback (fallback - should not run if getSessionFromUrl succeeded)
-                // This must happen after Supabase is initialized
-                if (typeof handleOAuthCallback === 'function') {
-                    const oauthHandled = await handleOAuthCallback();
-                    // If OAuth was handled and redirect happened, don't continue with page load
-                    if (oauthHandled) {
-                        return; // Exit early - redirect is happening
+                // Only set up auth listener and handle OAuth callback if we haven't processed OAuth already
+                if (!oauthProcessed) {
+                    // Set up auth state listener
+                    setupAuthListener();
+                    
+                    // Handle OAuth callback (fallback - should not run if already processed)
+                    // This must happen after Supabase is initialized
+                    if (typeof handleOAuthCallback === 'function') {
+                        const oauthHandled = await handleOAuthCallback();
+                        // If OAuth was handled and redirect happened, don't continue with page load
+                        if (oauthHandled) {
+                            return; // Exit early - redirect is happening
+                        }
                     }
                 }
                 
