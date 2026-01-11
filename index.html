@@ -2653,20 +2653,52 @@
                         // Give it more time in production
                         const waitTime = isLocalhost ? 500 : 2000; // 2 seconds in production
                         console.log(`⏳ [OAuth] Waiting ${waitTime}ms for Supabase to auto-process hash...`);
+                        console.log(`⏳ [OAuth] Supabase client config:`, {
+                            hasAuth: !!supabase.auth,
+                            storage: supabase.auth?.storage?.constructor?.name || 'unknown',
+                            detectSessionInUrl: 'checking...'
+                        });
+                        
                         await new Promise(resolve => setTimeout(resolve, waitTime));
+                        console.log(`✅ [OAuth] Wait complete, checking session...`);
                         
                         // Check if session was auto-processed
                         let session = null;
                         try {
+                            console.log(`🔍 [OAuth] Calling supabase.auth.getSession()...`);
+                            const sessionStartTime = Date.now();
                             const { data, error } = await supabase.auth.getSession();
+                            const sessionDuration = Date.now() - sessionStartTime;
+                            
+                            console.log(`🔍 [OAuth] getSession() completed in ${sessionDuration}ms`);
+                            console.log(`🔍 [OAuth] Session result:`, {
+                                hasError: !!error,
+                                errorMessage: error?.message || null,
+                                hasSession: !!data?.session,
+                                hasUser: !!data?.session?.user,
+                                userEmail: data?.session?.user?.email || null
+                            });
+                            
                             if (!error && data.session && data.session.user) {
                                 session = data.session;
                                 console.log('✅ [OAuth] Session auto-processed by Supabase:', session.user.email);
                             } else {
-                                console.log('ℹ️ [OAuth] Session not auto-processed, will try manual setup');
+                                if (error) {
+                                    console.log('❌ [OAuth] getSession() returned error:', error.message || error);
+                                } else {
+                                    console.log('ℹ️ [OAuth] Session not auto-processed - no session found');
+                                    console.log('ℹ️ [OAuth] data.session:', data?.session);
+                                    console.log('ℹ️ [OAuth] data.session?.user:', data?.session?.user);
+                                }
+                                console.log('ℹ️ [OAuth] Will try manual setup');
                             }
                         } catch (err) {
-                            console.warn('⚠️ [OAuth] Error checking auto-processed session:', err.name || err.message);
+                            console.error('❌ [OAuth] Exception checking auto-processed session:', err);
+                            console.error('❌ [OAuth] Error details:', {
+                                name: err.name,
+                                message: err.message,
+                                stack: err.stack?.substring(0, 200)
+                            });
                         }
                         
                         // If session wasn't auto-processed, manually parse and set
