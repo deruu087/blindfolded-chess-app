@@ -2388,9 +2388,9 @@
             const hash = window.location.hash;
             const hasOAuthHash = hash && (hash.includes('access_token') || hash.includes('error') || hash.includes('type=recovery'));
             
-            if (hasOAuthHash && typeof getSupabase === 'function') {
-                const supabase = getSupabase();
-                if (supabase) {
+            if (hasOAuthHash && typeof window.getSupabase === 'function') {
+                const supabase = window.getSupabase();
+                if (supabase && supabase.auth) {
                     try {
                         // Wait a bit for Supabase to process the hash
                         await new Promise(resolve => setTimeout(resolve, 100));
@@ -2500,10 +2500,19 @@
                         return false;
                     }
                 } else {
-                    // Supabase not initialized - show body
+                    // Supabase not initialized - show body and wait for it
+                    console.warn('⚠️ OAuth callback: Supabase not ready yet, waiting...');
                     if (document.body) {
                         document.body.style.display = '';
                     }
+                    // Retry after a short delay
+                    setTimeout(async () => {
+                        const retryResult = await handleOAuthCallback();
+                        if (!retryResult) {
+                            console.error('❌ OAuth callback failed after retry');
+                        }
+                    }, 500);
+                    return false;
                 }
             } else {
                 // No OAuth hash - ensure body is visible
