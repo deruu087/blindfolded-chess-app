@@ -2950,7 +2950,52 @@
                                             if (verifyErr.name === 'AbortError') {
                                                 console.error('❌ [OAuth] getSession() also aborted - ALL Supabase API calls are failing');
                                                 console.error('❌ [OAuth] This is a critical issue - Supabase client cannot make requests');
-                                                console.error('❌ [OAuth] Check: Network tab, CORS, Supabase client initialization');
+                                                console.error('❌ [OAuth] WORKAROUND: Manually storing session in localStorage format Supabase expects');
+                                                
+                                                // WORKAROUND: Since all Supabase API calls are aborting, manually store the session
+                                                // in the format Supabase expects, then redirect. The profile page will read it.
+                                                try {
+                                                    // Supabase stores sessions in localStorage with key: sb-{project-ref}-auth-token
+                                                    const supabaseUrl = supabase.supabaseUrl || 'https://yaaxydrmuslgzjletzbw.supabase.co';
+                                                    const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || 'yaaxydrmuslgzjletzbw';
+                                                    const storageKey = `sb-${projectRef}-auth-token`;
+                                                    
+                                                    // Construct session object in Supabase's expected format
+                                                    const sessionData = {
+                                                        access_token: accessToken,
+                                                        refresh_token: refreshToken,
+                                                        expires_at: expiresAt ? parseInt(expiresAt) : Math.floor(Date.now() / 1000) + 3600,
+                                                        expires_in: 3600,
+                                                        token_type: 'bearer',
+                                                        user: {
+                                                            id: payload.sub,
+                                                            email: payload.email,
+                                                            user_metadata: payload.user_metadata || {},
+                                                            app_metadata: payload.app_metadata || {}
+                                                        }
+                                                    };
+                                                    
+                                                    // Store in localStorage (Supabase will read this on next page load)
+                                                    localStorage.setItem(storageKey, JSON.stringify(sessionData));
+                                                    console.log('✅ [OAuth] Manually stored session in localStorage:', storageKey);
+                                                    
+                                                    // Also store UI flags
+                                                    localStorage.setItem('isLoggedIn', 'true');
+                                                    localStorage.setItem('userEmail', payload.email || '');
+                                                    const userName = payload.user_metadata?.name || 
+                                                                   payload.user_metadata?.full_name || 
+                                                                   payload.email?.split('@')[0] || 
+                                                                   'User';
+                                                    localStorage.setItem('userName', userName);
+                                                    
+                                                    // Clean URL and redirect
+                                                    window.history.replaceState(null, '', window.location.pathname);
+                                                    console.log('✅ [OAuth] Redirecting to profile.html - it will read session from localStorage');
+                                                    window.location.replace('profile.html');
+                                                    return; // Exit early
+                                                } catch (storageErr) {
+                                                    console.error('❌ [OAuth] Failed to manually store session:', storageErr);
+                                                }
                                             }
                                         }
                                     }
