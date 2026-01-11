@@ -2633,10 +2633,59 @@
             if (client) {
                 console.log('✅ Supabase is ready to use!');
                 
+                // CRITICAL: Handle OAuth callback FIRST using getSessionFromUrl()
+                // This is required for production - Supabase doesn't auto-process OAuth tokens
+                const hash = window.location.hash;
+                const isOAuthCallback = hash && hash.includes('access_token');
+                
+                if (isOAuthCallback && typeof window.getSupabase === 'function') {
+                    const supabase = window.getSupabase();
+                    if (supabase && supabase.auth) {
+                        console.log('🔐 [OAuth] Processing OAuth callback from URL hash...');
+                        try {
+                            // Call getSessionFromUrl() to process the OAuth token
+                            const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+                            
+                            if (!error && data.session && data.session.user) {
+                                console.log('✅ [OAuth] Session established from URL:', data.session.user.email);
+                                
+                                // Store fallback flag in localStorage
+                                localStorage.setItem('isLoggedIn', 'true');
+                                localStorage.setItem('userEmail', data.session.user.email || '');
+                                const userName = data.session.user.user_metadata?.name || 
+                                               data.session.user.user_metadata?.full_name || 
+                                               data.session.user.email?.split('@')[0] || 
+                                               'User';
+                                localStorage.setItem('userName', userName);
+                                
+                                // Clean URL hash
+                                window.history.replaceState(null, '', window.location.pathname);
+                                
+                                // Redirect to profile
+                                console.log('✅ [OAuth] Redirecting to profile.html');
+                                window.location.replace('profile.html');
+                                return; // Exit early - redirect is happening
+                            } else {
+                                console.error('❌ [OAuth] Failed to get session from URL:', error);
+                                // Show body and continue with normal flow
+                                if (document.body) {
+                                    document.body.style.display = '';
+                                }
+                            }
+                        } catch (err) {
+                            console.error('❌ [OAuth] Error processing OAuth callback:', err);
+                            // Show body and continue with normal flow
+                            if (document.body) {
+                                document.body.style.display = '';
+                            }
+                        }
+                    }
+                }
+                
                 // Set up auth state listener
                 setupAuthListener();
                 
-                // Handle OAuth callback FIRST (if user just signed in with Google)
+                // Handle OAuth callback (fallback - should not run if getSessionFromUrl succeeded)
                 // This must happen after Supabase is initialized
                 if (typeof handleOAuthCallback === 'function') {
                     const oauthHandled = await handleOAuthCallback();
