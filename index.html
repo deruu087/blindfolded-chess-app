@@ -2667,16 +2667,36 @@
                         try {
                             console.log(`🔍 [OAuth] Calling supabase.auth.getSession()...`);
                             const sessionStartTime = Date.now();
-                            const { data, error } = await supabase.auth.getSession();
-                            const sessionDuration = Date.now() - sessionStartTime;
                             
-                            console.log(`🔍 [OAuth] getSession() completed in ${sessionDuration}ms`);
+                            // Add timeout to prevent hanging
+                            const getSessionPromise = supabase.auth.getSession();
+                            const timeoutPromise = new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('getSession timeout after 5 seconds')), 5000)
+                            );
+                            
+                            let sessionResult;
+                            try {
+                                sessionResult = await Promise.race([getSessionPromise, timeoutPromise]);
+                                const sessionDuration = Date.now() - sessionStartTime;
+                                console.log(`✅ [OAuth] getSession() completed in ${sessionDuration}ms`);
+                            } catch (timeoutErr) {
+                                const sessionDuration = Date.now() - sessionStartTime;
+                                console.error(`❌ [OAuth] getSession() timed out after ${sessionDuration}ms:`, timeoutErr.message);
+                                throw timeoutErr;
+                            }
+                            
+                            const { data, error } = sessionResult;
+                            
                             console.log(`🔍 [OAuth] Session result:`, {
                                 hasError: !!error,
                                 errorMessage: error?.message || null,
+                                errorName: error?.name || null,
                                 hasSession: !!data?.session,
                                 hasUser: !!data?.session?.user,
-                                userEmail: data?.session?.user?.email || null
+                                userEmail: data?.session?.user?.email || null,
+                                sessionType: typeof data?.session,
+                                sessionIsNull: data?.session === null,
+                                sessionIsUndefined: data?.session === undefined
                             });
                             
                             if (!error && data.session && data.session.user) {
@@ -2684,9 +2704,14 @@
                                 console.log('✅ [OAuth] Session auto-processed by Supabase:', session.user.email);
                             } else {
                                 if (error) {
-                                    console.log('❌ [OAuth] getSession() returned error:', error.message || error);
+                                    console.log('❌ [OAuth] getSession() returned error:', {
+                                        name: error.name,
+                                        message: error.message,
+                                        code: error.code || null
+                                    });
                                 } else {
                                     console.log('ℹ️ [OAuth] Session not auto-processed - no session found');
+                                    console.log('ℹ️ [OAuth] data:', data);
                                     console.log('ℹ️ [OAuth] data.session:', data?.session);
                                     console.log('ℹ️ [OAuth] data.session?.user:', data?.session?.user);
                                 }
@@ -2697,8 +2722,9 @@
                             console.error('❌ [OAuth] Error details:', {
                                 name: err.name,
                                 message: err.message,
-                                stack: err.stack?.substring(0, 200)
+                                stack: err.stack?.substring(0, 300)
                             });
+                            console.log('ℹ️ [OAuth] Will try manual setup after error');
                         }
                         
                         // If session wasn't auto-processed, manually parse and set
