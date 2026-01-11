@@ -2634,8 +2634,10 @@
                 console.log('✅ Supabase is ready to use!');
                 
                 // CRITICAL: Handle OAuth callback FIRST
-                // In localhost, Supabase auto-processes with detectSessionInUrl: true
-                // In production, we may need to wait longer or manually process
+                // KEY INSIGHT: On localhost, initSupabase() uses hardcoded fallback immediately,
+                // so the client initializes synchronously and detectSessionInUrl processes the hash.
+                // In production, initSupabase() must fetch from API first (async delay),
+                // so detectSessionInUrl might not process the hash in time.
                 const hash = window.location.hash;
                 const isOAuthCallback = hash && hash.includes('access_token');
                 let oauthProcessed = false;
@@ -2643,11 +2645,21 @@
                 if (isOAuthCallback && typeof window.getSupabase === 'function') {
                     const supabase = window.getSupabase();
                     if (supabase && supabase.auth) {
+                        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                         console.log('🔐 [OAuth] Processing OAuth callback from URL hash...');
                         console.log('🔐 [OAuth] Hash:', hash.substring(0, 100) + '...');
-                        
-                        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                         console.log('🔐 [OAuth] Environment:', isLocalhost ? 'localhost' : 'production');
+                        
+                        // CRITICAL: In production, the client might not be fully ready yet
+                        // Wait a moment to ensure Supabase's detectSessionInUrl has a chance to run
+                        // On localhost, initSupabase() uses hardcoded values immediately (synchronous),
+                        // so detectSessionInUrl processes the hash during client creation.
+                        // In production, initSupabase() fetches from API first (async delay),
+                        // so we need to give detectSessionInUrl time to process the hash.
+                        if (!isLocalhost) {
+                            console.log('⏳ [OAuth] Production: Waiting 300ms for Supabase detectSessionInUrl to process hash...');
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
                         
                         // Diagnostic: Check if Supabase client can make requests
                         console.log('🔍 [OAuth] Supabase client diagnostics:', {
@@ -2659,8 +2671,12 @@
                             storageType: supabase.auth.storage?.constructor?.name || 'unknown'
                         });
                         
+                        // KEY INSIGHT: On localhost, initSupabase() completes synchronously (hardcoded fallback),
+                        // so the client is ready immediately. In production, initSupabase() is async (API fetch),
+                        // so we need to verify the client is actually ready before making calls.
                         // Test if we can make a simple request (check current session)
-                        console.log('🔍 [OAuth] Testing Supabase client connectivity...');
+                        console.log('🔍 [OAuth] Testing Supabase client connectivity (this works on localhost, may fail in production if client not ready)...');
+                        let clientReady = false;
                         try {
                             const testStartTime = Date.now();
                             const testPromise = supabase.auth.getSession();
@@ -2670,6 +2686,7 @@
                             const testResult = await Promise.race([testPromise, testTimeout]);
                             const testDuration = Date.now() - testStartTime;
                             console.log(`✅ [OAuth] Supabase client connectivity test passed in ${testDuration}ms`);
+                            clientReady = true;
                         } catch (testErr) {
                             console.error('❌ [OAuth] Supabase client connectivity test FAILED:', {
                                 name: testErr.name,
@@ -2677,8 +2694,33 @@
                             });
                             if (testErr.name === 'AbortError') {
                                 console.error('❌ [OAuth] CRITICAL: Supabase client cannot make ANY requests');
-                                console.error('❌ [OAuth] This means setSession() will also fail');
-                                console.error('❌ [OAuth] Possible causes: CORS, network, or client configuration');
+                                console.error('❌ [OAuth] ROOT CAUSE: In production, initSupabase() is async (API fetch),');
+                                console.error('❌ [OAuth] so the client might not be fully ready when we try to use it.');
+                                console.error('❌ [OAuth] On localhost, it works because hardcoded fallback is synchronous.');
+                                console.error('❌ [OAuth] Solution: Wait longer or ensure client is fully initialized.');
+                                clientReady = false;
+                            } else {
+                                console.error('❌ [OAuth] Other error - client might still work, but proceed with caution');
+                                clientReady = false;
+                            }
+                        }
+                        
+                        // If client is not ready, wait a bit more and try again
+                        if (!clientReady && !isLocalhost) {
+                            console.log('⏳ [OAuth] Client not ready, waiting 1 second for full initialization...');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            console.log('⏳ [OAuth] Retrying connectivity test...');
+                            try {
+                                const retryPromise = supabase.auth.getSession();
+                                const retryTimeout = new Promise((_, reject) => 
+                                    setTimeout(() => reject(new Error('retry timeout')), 2000)
+                                );
+                                await Promise.race([retryPromise, retryTimeout]);
+                                console.log('✅ [OAuth] Client is now ready after retry');
+                                clientReady = true;
+                            } catch (retryErr) {
+                                console.error('❌ [OAuth] Client still not ready after retry:', retryErr.name);
+                                console.error('❌ [OAuth] This suggests a deeper issue - CORS, network, or Supabase config');
                             }
                         }
                         
