@@ -310,10 +310,14 @@ async function signInWithGoogle() {
     try {
         // Initiate Google OAuth flow
         // This will redirect to Google, then back to your site
+        const redirectUrl = window.location.origin + window.location.pathname;
+        console.log('🔐 [OAuth] Redirect URL:', redirectUrl);
+        console.log('🔐 [OAuth] Make sure this URL is in Supabase dashboard: Authentication > URL Configuration > Redirect URLs');
+        
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + window.location.pathname
+                redirectTo: redirectUrl
             }
         });
 

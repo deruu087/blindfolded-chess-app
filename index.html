@@ -2794,8 +2794,20 @@
                                             const setSessionDuration = Date.now() - setSessionStartTime;
                                             console.error(`❌ [OAuth] setSession error after ${setSessionDuration}ms:`, {
                                                 name: setErr.name,
-                                                message: setErr.message
+                                                message: setErr.message,
+                                                stack: setErr.stack?.substring(0, 200),
+                                                cause: setErr.cause
                                             });
+                                            
+                                            // Check if it's an AbortError - this suggests network/CORS issue
+                                            if (setErr.name === 'AbortError') {
+                                                console.error('❌ [OAuth] AbortError detected - this suggests:');
+                                                console.error('   1. Network request was cancelled');
+                                                console.error('   2. Possible CORS issue');
+                                                console.error('   3. Supabase redirect URL might not be configured in dashboard');
+                                                console.error('   4. Check Supabase dashboard: Authentication > URL Configuration');
+                                                console.error('   5. Ensure https://www.memo-chess.com is in allowed redirect URLs');
+                                            }
                                         }
                                         
                                         // Verify session one more time (with timeout)
@@ -2815,7 +2827,16 @@
                                                     console.warn('⚠️ [OAuth] Session verification: no session found');
                                                 }
                                             } catch (verifyErr) {
-                                                console.warn('⚠️ [OAuth] Could not verify session:', verifyErr.name || verifyErr.message);
+                                                console.error('❌ [OAuth] Could not verify session:', {
+                                                    name: verifyErr.name,
+                                                    message: verifyErr.message,
+                                                    stack: verifyErr.stack?.substring(0, 200)
+                                                });
+                                                
+                                                if (verifyErr.name === 'AbortError') {
+                                                    console.error('❌ [OAuth] getSession() also aborted - Supabase API calls are failing');
+                                                    console.error('❌ [OAuth] This suggests a configuration or network issue');
+                                                }
                                             }
                                         }
                                     }
