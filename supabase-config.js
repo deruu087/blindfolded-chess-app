@@ -50,17 +50,41 @@ async function initSupabase() {
     }
     
     // Configure with explicit storage settings for production compatibility
-    supabaseClient = supabase.createClient(configCache.url, configCache.anonKey, {
-        auth: {
-            storage: window.localStorage, // Explicitly use localStorage
-            autoRefreshToken: true,      // Enable automatic token refresh
-            persistSession: true,        // Persist sessions across page reloads
-            detectSessionInUrl: true    // Detect OAuth callbacks in URL hash
+    // CRITICAL: Ensure client is properly configured - AbortError suggests client not ready
+    try {
+        supabaseClient = supabase.createClient(configCache.url, configCache.anonKey, {
+            auth: {
+                storage: window.localStorage, // Explicitly use localStorage
+                autoRefreshToken: true,      // Enable automatic token refresh
+                persistSession: true,        // Persist sessions across page reloads
+                detectSessionInUrl: true    // Detect OAuth callbacks in URL hash
+            }
+        });
+        
+        // Verify client is properly initialized
+        if (!supabaseClient || !supabaseClient.auth) {
+            throw new Error('Supabase client created but auth is not available');
         }
-    });
-    
-    console.log('Supabase client initialized');
-    return supabaseClient;
+        
+        console.log('✅ Supabase client initialized successfully');
+        console.log('🔍 Supabase client verification:', {
+            url: configCache.url,
+            hasAuth: !!supabaseClient.auth,
+            hasStorage: !!supabaseClient.auth.storage,
+            hasGetSession: typeof supabaseClient.auth.getSession === 'function',
+            hasSetSession: typeof supabaseClient.auth.setSession === 'function'
+        });
+        
+        return supabaseClient;
+    } catch (error) {
+        console.error('❌ Failed to create Supabase client:', error);
+        console.error('❌ Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack?.substring(0, 200)
+        });
+        return null;
+    }
 }
 
 // Export for use in other files

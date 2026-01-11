@@ -2671,57 +2671,21 @@
                             storageType: supabase.auth.storage?.constructor?.name || 'unknown'
                         });
                         
-                        // KEY INSIGHT: On localhost, initSupabase() completes synchronously (hardcoded fallback),
-                        // so the client is ready immediately. In production, initSupabase() is async (API fetch),
-                        // so we need to verify the client is actually ready before making calls.
-                        // Test if we can make a simple request (check current session)
-                        console.log('🔍 [OAuth] Testing Supabase client connectivity (this works on localhost, may fail in production if client not ready)...');
-                        let clientReady = false;
-                        try {
-                            const testStartTime = Date.now();
-                            const testPromise = supabase.auth.getSession();
-                            const testTimeout = new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('test timeout')), 1000)
-                            );
-                            const testResult = await Promise.race([testPromise, testTimeout]);
-                            const testDuration = Date.now() - testStartTime;
-                            console.log(`✅ [OAuth] Supabase client connectivity test passed in ${testDuration}ms`);
-                            clientReady = true;
-                        } catch (testErr) {
-                            console.error('❌ [OAuth] Supabase client connectivity test FAILED:', {
-                                name: testErr.name,
-                                message: testErr.message
-                            });
-                            if (testErr.name === 'AbortError') {
-                                console.error('❌ [OAuth] CRITICAL: Supabase client cannot make ANY requests');
-                                console.error('❌ [OAuth] ROOT CAUSE: In production, initSupabase() is async (API fetch),');
-                                console.error('❌ [OAuth] so the client might not be fully ready when we try to use it.');
-                                console.error('❌ [OAuth] On localhost, it works because hardcoded fallback is synchronous.');
-                                console.error('❌ [OAuth] Solution: Wait longer or ensure client is fully initialized.');
-                                clientReady = false;
-                            } else {
-                                console.error('❌ [OAuth] Other error - client might still work, but proceed with caution');
-                                clientReady = false;
-                            }
-                        }
+                        // CRITICAL: Verify Supabase client is fully ready before making API calls
+                        // The AbortError suggests the client might not be fully initialized
+                        console.log('🔍 [OAuth] Verifying Supabase client is ready for API calls...');
+                        console.log('🔍 [OAuth] Client state:', {
+                            hasClient: !!supabase,
+                            hasAuth: !!supabase?.auth,
+                            hasGetSession: typeof supabase?.auth?.getSession === 'function',
+                            hasSetSession: typeof supabase?.auth?.setSession === 'function',
+                            supabaseUrl: supabase?.supabaseUrl || 'unknown'
+                        });
                         
-                        // If client is not ready, wait a bit more and try again
-                        if (!clientReady && !isLocalhost) {
-                            console.log('⏳ [OAuth] Client not ready, waiting 1 second for full initialization...');
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            console.log('⏳ [OAuth] Retrying connectivity test...');
-                            try {
-                                const retryPromise = supabase.auth.getSession();
-                                const retryTimeout = new Promise((_, reject) => 
-                                    setTimeout(() => reject(new Error('retry timeout')), 2000)
-                                );
-                                await Promise.race([retryPromise, retryTimeout]);
-                                console.log('✅ [OAuth] Client is now ready after retry');
-                                clientReady = true;
-                            } catch (retryErr) {
-                                console.error('❌ [OAuth] Client still not ready after retry:', retryErr.name);
-                                console.error('❌ [OAuth] This suggests a deeper issue - CORS, network, or Supabase config');
-                            }
+                        // Wait a moment to ensure client is fully initialized (especially in production)
+                        if (!isLocalhost) {
+                            console.log('⏳ [OAuth] Production: Waiting 500ms to ensure client is fully initialized...');
+                            await new Promise(resolve => setTimeout(resolve, 500));
                         }
                         
                         // First, wait for Supabase to auto-process (detectSessionInUrl: true)
@@ -2950,52 +2914,8 @@
                                             if (verifyErr.name === 'AbortError') {
                                                 console.error('❌ [OAuth] getSession() also aborted - ALL Supabase API calls are failing');
                                                 console.error('❌ [OAuth] This is a critical issue - Supabase client cannot make requests');
-                                                console.error('❌ [OAuth] WORKAROUND: Manually storing session in localStorage format Supabase expects');
-                                                
-                                                // WORKAROUND: Since all Supabase API calls are aborting, manually store the session
-                                                // in the format Supabase expects, then redirect. The profile page will read it.
-                                                try {
-                                                    // Supabase stores sessions in localStorage with key: sb-{project-ref}-auth-token
-                                                    const supabaseUrl = supabase.supabaseUrl || 'https://yaaxydrmuslgzjletzbw.supabase.co';
-                                                    const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || 'yaaxydrmuslgzjletzbw';
-                                                    const storageKey = `sb-${projectRef}-auth-token`;
-                                                    
-                                                    // Construct session object in Supabase's expected format
-                                                    const sessionData = {
-                                                        access_token: accessToken,
-                                                        refresh_token: refreshToken,
-                                                        expires_at: expiresAt ? parseInt(expiresAt) : Math.floor(Date.now() / 1000) + 3600,
-                                                        expires_in: 3600,
-                                                        token_type: 'bearer',
-                                                        user: {
-                                                            id: payload.sub,
-                                                            email: payload.email,
-                                                            user_metadata: payload.user_metadata || {},
-                                                            app_metadata: payload.app_metadata || {}
-                                                        }
-                                                    };
-                                                    
-                                                    // Store in localStorage (Supabase will read this on next page load)
-                                                    localStorage.setItem(storageKey, JSON.stringify(sessionData));
-                                                    console.log('✅ [OAuth] Manually stored session in localStorage:', storageKey);
-                                                    
-                                                    // Also store UI flags
-                                                    localStorage.setItem('isLoggedIn', 'true');
-                                                    localStorage.setItem('userEmail', payload.email || '');
-                                                    const userName = payload.user_metadata?.name || 
-                                                                   payload.user_metadata?.full_name || 
-                                                                   payload.email?.split('@')[0] || 
-                                                                   'User';
-                                                    localStorage.setItem('userName', userName);
-                                                    
-                                                    // Clean URL and redirect
-                                                    window.history.replaceState(null, '', window.location.pathname);
-                                                    console.log('✅ [OAuth] Redirecting to profile.html - it will read session from localStorage');
-                                                    window.location.replace('profile.html');
-                                                    return; // Exit early
-                                                } catch (storageErr) {
-                                                    console.error('❌ [OAuth] Failed to manually store session:', storageErr);
-                                                }
+                                                console.error('❌ [OAuth] Root cause: Supabase client is aborting all fetch requests');
+                                                console.error('❌ [OAuth] This must be fixed - no localStorage fallbacks will be used');
                                             }
                                         }
                                     }
