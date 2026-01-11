@@ -2753,14 +2753,8 @@
                                             sub: payload.sub
                                         });
                                         
-                                        // Store user info in localStorage (fallback)
-                                        localStorage.setItem('isLoggedIn', 'true');
-                                        localStorage.setItem('userEmail', payload.email || '');
-                                        const userName = payload.user_metadata?.name || 
-                                                       payload.user_metadata?.full_name || 
-                                                       payload.email?.split('@')[0] || 
-                                                       'User';
-                                        localStorage.setItem('userName', userName);
+                                        // CRITICAL: Do NOT store in localStorage - profile must load from Supabase only
+                                        // Only store after Supabase session is confirmed
                                         
                                         // Try to set session (non-blocking - don't wait if it hangs)
                                         console.log('🔐 [OAuth] Attempting to set session with setSession()...');
@@ -2831,24 +2825,45 @@
                             }
                         }
                         
-                        // If we have a session (auto or manual), redirect
+                        // CRITICAL: Only redirect if we have a valid Supabase session
+                        // Never redirect based on localStorage alone - profile must load from Supabase
                         if (session && session.user) {
+                            // Store user info in localStorage ONLY after Supabase session is confirmed
+                            localStorage.setItem('isLoggedIn', 'true');
+                            localStorage.setItem('userEmail', session.user.email || '');
+                            const userName = session.user.user_metadata?.name || 
+                                           session.user.user_metadata?.full_name || 
+                                           session.user.email?.split('@')[0] || 
+                                           'User';
+                            localStorage.setItem('userName', userName);
+                            
                             // Clean URL hash
                             window.history.replaceState(null, '', window.location.pathname);
                             
                             // Redirect to profile
-                            console.log('✅ [OAuth] Redirecting to profile.html');
+                            console.log('✅ [OAuth] Supabase session established, redirecting to profile.html');
                             oauthProcessed = true;
                             window.location.replace('profile.html');
                             return; // Exit early - redirect is happening
                         } else {
-                            // No session, but user info is in localStorage - redirect anyway
-                            // Profile page can handle session setup from localStorage
-                            console.log('⚠️ [OAuth] No session, but user info stored - redirecting to profile');
+                            // No Supabase session - do NOT redirect
+                            // Show error and let user try again
+                            console.error('❌ [OAuth] Failed to establish Supabase session - NOT redirecting');
+                            console.error('❌ [OAuth] Profile page requires Supabase session, not localStorage');
+                            
+                            // Show body so user can see the error
+                            if (document.body) {
+                                document.body.style.display = '';
+                            }
+                            
+                            // Show error message to user
+                            alert('OAuth login failed: Could not establish session. Please try again.');
+                            
+                            // Clean URL hash
                             window.history.replaceState(null, '', window.location.pathname);
-                            oauthProcessed = true;
-                            window.location.replace('profile.html');
-                            return;
+                            
+                            // Don't redirect - stay on page
+                            oauthProcessed = false;
                         }
                     }
                 }

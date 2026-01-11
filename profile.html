@@ -99,55 +99,29 @@
             setTimeout(updateSubscriptionDisplay, 50);
         })();
         
-        // Immediately update profile title and email from localStorage (before Supabase loads)
+        // CRITICAL: Do NOT load from localStorage - only from Supabase
+        // Profile data must come from Supabase session only
+        // Set loading state until Supabase data loads
         (function() {
-            function updateProfileInstantly() {
-                // Get cached user data
-                const cachedName = localStorage.getItem('userName');
-                const cachedEmail = localStorage.getItem('userEmail');
-                
-                // Update profile title immediately
-                if (cachedName) {
-                    const firstName = cachedName.split(' ')[0];
-                    const welcomeMessage = firstName ? `Hi ${firstName}` : 'Hi there';
-                    const profileTitle = document.querySelector('.profile-title');
-                    if (profileTitle) {
-                        profileTitle.textContent = welcomeMessage;
-                    }
+            function setLoadingState() {
+                const profileTitle = document.querySelector('.profile-title');
+                if (profileTitle) {
+                    profileTitle.textContent = 'Loading...';
                 }
-                
-                // Update email immediately
-                if (cachedEmail) {
-                    const emailElement = document.getElementById('userEmail');
-                    if (emailElement) {
-                        emailElement.textContent = cachedEmail;
-                    }
+                const emailElement = document.getElementById('userEmail');
+                if (emailElement) {
+                    emailElement.textContent = 'Loading...';
                 }
-                
-                // Try to update stats immediately if progressTracker is available
-                // This will show cached progress data instantly
-                // NOTE: This runs BEFORE initProfile() loads Supabase data, so it will use localStorage fallback
-                // initProfile() will call updateStats() again with Supabase data
-                // Don't call updateStats() here - wait for initProfile() to load Supabase data first
-                // This prevents the table from showing "No data available" before data loads
             }
             
             // Run immediately if DOM is ready
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', function() {
-                    updateProfileInstantly();
-                    // Also try after a short delay to ensure progress-tracker.js is loaded
-                    setTimeout(updateProfileInstantly, 100);
+                    setLoadingState();
                 });
             } else {
-                updateProfileInstantly();
-                setTimeout(updateProfileInstantly, 100);
+                setLoadingState();
             }
-            
-            // Also run with slight delays to catch elements that load later
-            setTimeout(updateProfileInstantly, 0);
-            setTimeout(updateProfileInstantly, 10);
-            setTimeout(updateProfileInstantly, 50);
         })();
     </script>
     <style>
@@ -3164,35 +3138,29 @@
         async function updateNavigation() {
             const profileLink = document.getElementById('profileLink');
             
-            // Check both localStorage and Supabase authentication
-            let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            // CRITICAL: Only check Supabase authentication - no localStorage fallback
+            let isLoggedIn = false;
             
-            // Also check Supabase session (more reliable for OAuth)
+            // Check Supabase session only
             if (typeof getCurrentUser === 'function') {
                 try {
                     const user = await getCurrentUser();
                     if (user) {
                         isLoggedIn = true;
-                        // Always update localStorage and userData with real Supabase data
-                        localStorage.setItem('isLoggedIn', 'true');
-                        localStorage.setItem('userEmail', user.email || '');
+                        // Update userData with real Supabase data
                         const userName = user.user_metadata?.name || 
                                       user.user_metadata?.full_name || 
                                       user.email?.split('@')[0] || 
                                       'User';
-                        localStorage.setItem('userName', userName);
                         userData.name = userName;
                         userData.email = user.email || ''; // Always use real email from Supabase
-            } else {
-                        // No Supabase user, clear localStorage if it says logged in
-                        if (isLoggedIn && !localStorage.getItem('userEmail')) {
-                            isLoggedIn = false;
-                            localStorage.setItem('isLoggedIn', 'false');
-                        }
+                    } else {
+                        // No Supabase user - not logged in
+                        isLoggedIn = false;
                     }
                 } catch (e) {
                     console.log('Error checking Supabase auth in navigation:', e);
-                    // Fall back to localStorage check
+                    isLoggedIn = false;
                 }
             }
             
@@ -3201,8 +3169,25 @@
         }
 
         async function showAccountInfoModal() {
-            const userName = localStorage.getItem('userName') || 'User';
-            const userEmail = localStorage.getItem('userEmail') || 'No email provided';
+            // CRITICAL: Only get user data from Supabase, not localStorage
+            let userName = 'User';
+            let userEmail = 'No email provided';
+            
+            // Get user from Supabase
+            if (typeof getCurrentUser === 'function') {
+                try {
+                    const user = await getCurrentUser();
+                    if (user) {
+                        userName = user.user_metadata?.name || 
+                                  user.user_metadata?.full_name || 
+                                  user.email?.split('@')[0] || 
+                                  'User';
+                        userEmail = user.email || 'No email provided';
+                    }
+                } catch (e) {
+                    console.log('Error getting user for account info modal:', e);
+                }
+            }
             
             // Get subscription from Supabase ONLY - no fallbacks
             let subscription = null;
