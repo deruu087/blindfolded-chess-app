@@ -2633,8 +2633,8 @@
             if (client) {
                 console.log('✅ Supabase is ready to use!');
                 
-                // CRITICAL: Handle OAuth callback FIRST using getSessionFromUrl()
-                // This is required for production - Supabase doesn't auto-process OAuth tokens
+                // CRITICAL: Handle OAuth callback FIRST - manually process hash for production
+                // Supabase doesn't auto-process OAuth tokens in production, so we need to wait and retry
                 const hash = window.location.hash;
                 const isOAuthCallback = hash && hash.includes('access_token');
                 
@@ -2642,38 +2642,58 @@
                     const supabase = window.getSupabase();
                     if (supabase && supabase.auth) {
                         console.log('🔐 [OAuth] Processing OAuth callback from URL hash...');
-                        try {
-                            // Call getSessionFromUrl() to process the OAuth token
-                            const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
-                            
-                            if (!error && data.session && data.session.user) {
-                                console.log('✅ [OAuth] Session established from URL:', data.session.user.email);
+                        
+                        // Wait for Supabase to process the hash, retry up to 10 times (2 seconds)
+                        let session = null;
+                        let attempts = 0;
+                        const maxAttempts = 10;
+                        
+                        while (attempts < maxAttempts && !session) {
+                            try {
+                                // Wait a bit for Supabase to process the hash
+                                await new Promise(resolve => setTimeout(resolve, 200));
                                 
-                                // Store fallback flag in localStorage
-                                localStorage.setItem('isLoggedIn', 'true');
-                                localStorage.setItem('userEmail', data.session.user.email || '');
-                                const userName = data.session.user.user_metadata?.name || 
-                                               data.session.user.user_metadata?.full_name || 
-                                               data.session.user.email?.split('@')[0] || 
-                                               'User';
-                                localStorage.setItem('userName', userName);
+                                // Try to get the session - Supabase should have processed the hash
+                                const { data, error } = await supabase.auth.getSession();
                                 
-                                // Clean URL hash
-                                window.history.replaceState(null, '', window.location.pathname);
+                                if (!error && data.session && data.session.user) {
+                                    session = data.session;
+                                    console.log('✅ [OAuth] Session established from URL:', session.user.email);
+                                    break;
+                                }
                                 
-                                // Redirect to profile
-                                console.log('✅ [OAuth] Redirecting to profile.html');
-                                window.location.replace('profile.html');
-                                return; // Exit early - redirect is happening
-                            } else {
-                                console.error('❌ [OAuth] Failed to get session from URL:', error);
-                                // Show body and continue with normal flow
-                                if (document.body) {
-                                    document.body.style.display = '';
+                                attempts++;
+                                if (attempts < maxAttempts) {
+                                    console.log(`⏳ [OAuth] Waiting for session... attempt ${attempts}/${maxAttempts}`);
+                                }
+                            } catch (err) {
+                                console.error(`❌ [OAuth] Error on attempt ${attempts + 1}:`, err);
+                                attempts++;
+                                if (attempts < maxAttempts) {
+                                    await new Promise(resolve => setTimeout(resolve, 200));
                                 }
                             }
-                        } catch (err) {
-                            console.error('❌ [OAuth] Error processing OAuth callback:', err);
+                        }
+                        
+                        if (session && session.user) {
+                            // Store fallback flag in localStorage
+                            localStorage.setItem('isLoggedIn', 'true');
+                            localStorage.setItem('userEmail', session.user.email || '');
+                            const userName = session.user.user_metadata?.name || 
+                                           session.user.user_metadata?.full_name || 
+                                           session.user.email?.split('@')[0] || 
+                                           'User';
+                            localStorage.setItem('userName', userName);
+                            
+                            // Clean URL hash
+                            window.history.replaceState(null, '', window.location.pathname);
+                            
+                            // Redirect to profile
+                            console.log('✅ [OAuth] Redirecting to profile.html');
+                            window.location.replace('profile.html');
+                            return; // Exit early - redirect is happening
+                        } else {
+                            console.error('❌ [OAuth] Failed to establish session after all attempts');
                             // Show body and continue with normal flow
                             if (document.body) {
                                 document.body.style.display = '';
