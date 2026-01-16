@@ -2223,7 +2223,9 @@
                             }
                             
                             // Clean up URL (remove hash) BEFORE redirect
-                            window.history.replaceState({}, document.title, window.location.pathname);
+                            // Use replaceState to clean hash, then redirect
+                            const currentPath = window.location.pathname || '/';
+                            window.history.replaceState({}, document.title, currentPath);
                             
                             // Send welcome email for new users (NON-BLOCKING - check if new user first)
                             console.log('📧 [EMAIL DEBUG] OAuth registration - checking if new user for email:', user.email);
@@ -2272,6 +2274,8 @@
                                 redirectToDodoPayments(pendingPlan);
                             } else {
                                 // Redirect to profile immediately - use replace to avoid back button issues
+                                // Ensure hash is cleaned before redirect
+                                window.history.replaceState({}, document.title, window.location.pathname || '/');
                                 window.location.replace('profile.html');
                             }
                             
@@ -2465,6 +2469,11 @@
                 const hash = window.location.hash;
                 const isOAuthCallback = hash && hash.includes('access_token');
                 let oauthProcessed = false;
+                
+                // If there's an OAuth hash, always redirect to profile after processing
+                if (isOAuthCallback) {
+                    console.log('🔐 [OAuth] OAuth callback detected, will redirect to profile.html after processing');
+                }
                 
                 if (isOAuthCallback && typeof window.getSupabase === 'function') {
                     const supabase = window.getSupabase();
@@ -2882,6 +2891,18 @@
                         if (oauthHandled) {
                             return; // Exit early - redirect is happening
                         }
+                    }
+                }
+                
+                // Fallback: If there's still an OAuth hash and user is signed in, redirect to profile
+                const remainingHash = window.location.hash;
+                if (remainingHash && remainingHash.includes('access_token')) {
+                    const session = await getSession();
+                    if (session && session.user) {
+                        console.log('✅ [OAuth Fallback] User signed in with OAuth hash, redirecting to profile.html');
+                        window.history.replaceState(null, '', window.location.pathname);
+                        window.location.replace('profile.html');
+                        return;
                     }
                 }
                 
