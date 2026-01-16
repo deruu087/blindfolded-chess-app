@@ -143,23 +143,24 @@ function setupAuthListener(callback) {
     // Check for existing session on initial load (handles OAuth redirect)
     supabase.auth.getSession().then(({ data, error }) => {
         if (!error && data.session && data.session.user) {
-            // If we have a session and we're on home page (or have OAuth hash), redirect to profile
-            const isHomePage = window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname === '';
-            const hasOAuthHash = window.location.hash && window.location.hash.includes('access_token');
+            // Only redirect if user is on root path (/) or has empty hash (#)
+            // This handles OAuth landing after Google login, but not normal navigation
+            const isRootPath = window.location.pathname === '/';
+            const isEmptyHash = window.location.hash === '#';
             
-            if ((isHomePage || hasOAuthHash) && window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
-                window.location.href = 'profile.html';
+            if ((isRootPath || isEmptyHash) && window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
+                window.location.replace('profile.html');
                 return;
             }
         }
     });
 
     supabase.auth.onAuthStateChange((event, session) => {
-        // Redirect to profile on SIGNED_IN event (for future logins)
+        // Redirect to profile on SIGNED_IN event (for email login or future logins)
         if (event === 'SIGNED_IN' && session && session.user) {
             // Only redirect if we're not already on profile page
             if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
-                window.location.href = 'profile.html';
+                window.location.replace('profile.html');
                 return;
             }
         }
