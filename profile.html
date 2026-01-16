@@ -1220,7 +1220,7 @@
                 </div>
 
                 <div class="logout-button-container">
-                    <button class="btn-logout" id="logoutButton">Logout</button>
+                    <button class="btn-logout" id="logoutButton" onclick="logout()">Logout</button>
                 </div>
             </div>
 
@@ -2962,6 +2962,44 @@
             });
         }
 
+        // Logout function - shows confirmation modal
+        function logout() {
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'block';
+            }
+        }
+
+        // Confirm logout function
+        async function confirmLogout() {
+            const result = await signOut();
+            
+            if (result.success) {
+                // Close modal
+                const modal = document.getElementById('logoutConfirmModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+                
+                // Redirect to home page
+                window.location.href = 'index.html';
+            } else {
+                alert(result.error || 'Failed to sign out');
+            }
+        }
+
+        // Cancel logout function
+        function cancelLogout() {
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Make functions globally accessible
+        window.logout = logout;
+        window.confirmLogout = confirmLogout;
+        window.cancelLogout = cancelLogout;
 
         // Register handler - redirects to home page where proper Supabase auth is handled
         function handleRegister(event) {
@@ -3413,8 +3451,8 @@
                 Are you sure you want to log out? You'll need to sign in again to access your account.
             </div>
             <div class="logout-confirm-buttons">
-                <button class="btn-logout-confirm btn-logout-yes">Yes, Logout</button>
-                <button class="btn-logout-confirm btn-logout-no">Cancel</button>
+                <button class="btn-logout-confirm btn-logout-yes" onclick="confirmLogout()">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no" onclick="cancelLogout()">Cancel</button>
             </div>
         </div>
     </div>
