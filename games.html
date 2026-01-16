@@ -3385,11 +3385,14 @@
                 console.error('Error initializing tabs:', error);
             }
             
-        // Profile link click handler - checks auth before navigation
-        (function() {
+            // Profile link click handler - checks auth before navigation
             const profileLink = document.getElementById('profileLink');
             if (profileLink) {
-                profileLink.addEventListener('click', async function(e) {
+                // Remove any existing click handlers by cloning
+                const newProfileLink = profileLink.cloneNode(true);
+                profileLink.parentNode.replaceChild(newProfileLink, profileLink);
+                
+                newProfileLink.addEventListener('click', async function(e) {
                     e.preventDefault();
                     
                     // Check auth state using getSupabase() and getSession()
@@ -3420,7 +3423,6 @@
                     }
                 });
             }
-        })();
 
             // Load completed challenges from Supabase (optional - games work without this)
             // Wait for Supabase scripts to load first
