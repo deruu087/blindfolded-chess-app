@@ -141,6 +141,15 @@ function setupAuthListener(callback) {
     }
 
     supabase.auth.onAuthStateChange((event, session) => {
+        // Redirect to profile on SIGNED_IN event
+        if (event === 'SIGNED_IN' && session && session.user) {
+            // Only redirect if we're not already on profile page
+            if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
+                window.location.href = 'profile.html';
+                return;
+            }
+        }
+        
         if (callback) {
             callback(event, session);
         }

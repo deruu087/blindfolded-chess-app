@@ -49,6 +49,12 @@ async function initSupabase() {
         }
     }
     
+    // Return existing client if already created (prevent multiple instances)
+    if (supabaseClient) {
+        console.log('✅ Using existing Supabase client');
+        return supabaseClient;
+    }
+    
     // Configure with explicit storage settings for production compatibility
     // CRITICAL: Ensure client is properly configured - AbortError suggests client not ready
     try {
