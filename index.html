@@ -1912,10 +1912,7 @@
             
             if (result.success) {
                 closeModal();
-                if (typeof updateNavigation === 'function') {
-                    updateNavigation();
-                }
-                window.location.reload();
+                window.location.href = 'profile.html';
             } else {
                 showError(signInForm, result.error || 'Invalid email or password');
                 submitButton.disabled = false;
@@ -1956,10 +1953,7 @@
             
             if (result.success) {
                 closeModal();
-                if (typeof updateNavigation === 'function') {
-                    updateNavigation();
-                }
-                window.location.reload();
+                window.location.href = 'profile.html';
             } else {
                 showError(registerForm, result.error || 'Registration failed');
                 submitButton.disabled = false;
