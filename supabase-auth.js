@@ -1,254 +1,158 @@
-// Supabase Authentication Functions
+// Clean, minimal Supabase authentication
+// Single source of truth - Supabase session only
 
 /**
- * Sign up a new user with email and password
+ * Sign in with email and password
+ */
+async function signInWithEmail(email, password) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true, user: data.user, session: data.session };
+}
+
+/**
+ * Sign up with email and password
  */
 async function signUpWithEmail(email, password, name) {
     const supabase = getSupabase();
     if (!supabase) {
-        console.error('Supabase not initialized');
         return { success: false, error: 'Supabase not initialized' };
     }
 
-    try {
-        // Sign up the user
-        const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: {
-                    name: name  // Store name in user metadata
-                }
+    const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+            data: {
+                name: name
             }
-        });
-
-        if (error) {
-            console.error('Sign up error:', error);
-            return { success: false, error: error.message };
         }
+    });
 
-        console.log('✅ User signed up successfully!', data);
-        return { 
-            success: true, 
-            user: data.user,
-            session: data.session 
-        };
-    } catch (error) {
-        console.error('Sign up exception:', error);
+    if (error) {
         return { success: false, error: error.message };
     }
+
+    return { success: true, user: data.user, session: data.session };
 }
 
+/**
+ * Sign in with Google OAuth
+ * Redirects to Google for authentication
+ */
+async function signInWithGoogle() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    const redirectUrl = window.location.origin + window.location.pathname;
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: redirectUrl
+        }
+    });
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    // Redirect to Google OAuth
+    window.location.href = data.url;
+    
+    return { success: true, url: data.url };
+}
 
 /**
- * Get the current signed-in user
+ * Sign out
+ */
+async function signOut() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+/**
+ * Get current session
+ * Single source of truth for authentication state
+ */
+async function getSession() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        return null;
+    }
+
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error || !data.session) {
+        return null;
+    }
+
+    return data.session;
+}
+
+/**
+ * Get current user
  */
 async function getCurrentUser() {
-    const supabase = getSupabase();
-    if (!supabase) {
-        return null;
-    }
-
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        return user;
-    } catch (error) {
-        console.error('Error getting current user:', error);
-        return null;
-    }
+    const session = await getSession();
+    return session?.user || null;
 }
 
 /**
- * Check if user is currently signed in
+ * Check if user is signed in
  */
 async function isSignedIn() {
-    const user = await getCurrentUser();
-    return user !== null;
+    const session = await getSession();
+    return session !== null;
 }
 
 /**
- * Wait for Supabase to be fully initialized and ready
- * This ensures we don't check auth before Supabase is ready (especially important in production)
- * 
- * @param {number} maxWaitMs - Maximum time to wait in milliseconds (default: 10000 = 10 seconds)
- * @returns {Promise<boolean>} - True if Supabase is ready, false if timeout
+ * Setup auth state change listener
+ * Updates UI when auth state changes
  */
-async function waitForSupabaseReady(maxWaitMs = 10000) {
-    const startTime = Date.now();
-    
-    // First, wait for initSupabase to be available
-    while (typeof window.initSupabase !== 'function' && (Date.now() - startTime) < maxWaitMs) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    
-    // If initSupabase is available but not called yet, wait a bit more
-    if (typeof window.initSupabase === 'function') {
-        // Give it a moment to initialize if it's in progress
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    // Now wait for getSupabase to return a valid client
-    while ((Date.now() - startTime) < maxWaitMs) {
-        if (typeof window.getSupabase === 'function') {
-            const supabase = window.getSupabase();
-            if (supabase) {
-                // Verify the client is actually ready by checking if it has the auth property
-                if (supabase.auth) {
-                    console.log('✅ Supabase is ready');
-                    return true;
-                }
-            }
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    console.warn('⚠️ waitForSupabaseReady: Timeout waiting for Supabase to be ready');
-    return false;
-}
-
-/**
- * Centralized function to check authentication status
- * This is the SINGLE SOURCE OF TRUTH for checking if a user is logged in
- * 
- * @returns {Promise<{isLoggedIn: boolean, user: object|null, email: string|null, name: string|null}>}
- */
-async function checkAuthStatus() {
-    // CRITICAL: Wait for Supabase to be fully initialized before checking auth
-    // This prevents false negatives in production where Supabase takes longer to initialize
-    const supabaseReady = await waitForSupabaseReady();
-    
-    if (!supabaseReady) {
-        // Supabase not ready after waiting - use localStorage as fallback
-        // This is safer than returning false, as it prevents redirecting logged-in users
-        console.warn('⚠️ Supabase not ready, using localStorage fallback for auth check');
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        return {
-            isLoggedIn: isLoggedIn,
-            user: null,
-            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
-            name: isLoggedIn ? localStorage.getItem('userName') : null
-        };
-    }
-    
-    // Always check Supabase session first (source of truth)
-    const supabase = getSupabase();
-    if (!supabase) {
-        // This shouldn't happen if waitForSupabaseReady returned true, but handle it anyway
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        return {
-            isLoggedIn: isLoggedIn,
-            user: null,
-            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
-            name: isLoggedIn ? localStorage.getItem('userName') : null
-        };
-    }
-
-    try {
-        // Get current session from Supabase
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error || !session || !session.user) {
-            // No valid session - user is logged out
-            localStorage.setItem('isLoggedIn', 'false');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('userName');
-            
-            return {
-                isLoggedIn: false,
-                user: null,
-                email: null,
-                name: null
-            };
-        }
-
-        // Valid session - user is logged in
-        const user = session.user;
-        const email = user.email || '';
-        const userName = user.user_metadata?.name || 
-                        user.user_metadata?.full_name || 
-                        email.split('@')[0] || 
-                        'User';
-        
-        // Update localStorage to match Supabase session
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('userName', userName);
-        
-        return {
-            isLoggedIn: true,
-            user: user,
-            email: email,
-            name: userName
-        };
-    } catch (error) {
-        console.error('Error checking auth status:', error);
-        // On error, check localStorage as fallback
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        return {
-            isLoggedIn: isLoggedIn,
-            user: null,
-            email: isLoggedIn ? localStorage.getItem('userEmail') : null,
-            name: isLoggedIn ? localStorage.getItem('userName') : null
-        };
-    }
-}
-
-// Listen for auth state changes (when user signs in/out)
-function setupAuthListener() {
+function setupAuthListener(callback) {
     const supabase = getSupabase();
     if (!supabase) {
         return;
     }
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        
-        if (event === 'SIGNED_IN' && session && session.user) {
-            console.log('User signed in:', session.user.email);
-            
-            // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
-            localStorage.removeItem('chessProgress');
-            console.log('🔒 Cleared localStorage progress on auth state change (SIGNED_IN)');
-            
-            // Update localStorage immediately
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', session.user.email || '');
-            const userName = session.user.user_metadata?.name || 
-                           session.user.user_metadata?.full_name || 
-                           session.user.email?.split('@')[0] || 
-                           'User';
-            localStorage.setItem('userName', userName);
-            
-            // Update navigation or UI as needed
-            if (typeof updateNavigation === 'function') {
-                await updateNavigation();
-            }
-        } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-            if (event === 'SIGNED_OUT') {
-                console.log('User signed out');
-                // Clear localStorage
-                localStorage.setItem('isLoggedIn', 'false');
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('userName');
-                // CRITICAL: Clear progress data to prevent data leakage between accounts
-                localStorage.removeItem('chessProgress');
-            }
-            
-            // Update navigation or UI as needed
-            if (typeof updateNavigation === 'function') {
-                await updateNavigation();
-            }
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (callback) {
+            callback(event, session);
         }
     });
 }
 
-
 // Make functions available globally
+window.signInWithEmail = signInWithEmail;
 window.signUpWithEmail = signUpWithEmail;
+window.signInWithGoogle = signInWithGoogle;
+window.signOut = signOut;
+window.getSession = getSession;
 window.getCurrentUser = getCurrentUser;
 window.isSignedIn = isSignedIn;
 window.setupAuthListener = setupAuthListener;
-window.checkAuthStatus = checkAuthStatus;
-window.waitForSupabaseReady = waitForSupabaseReady;
-
-
