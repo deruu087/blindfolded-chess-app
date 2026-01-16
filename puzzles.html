@@ -2964,6 +2964,89 @@
             });
         }
 
+        // Sign in form handler
+        async function handleSignIn(event) {
+            event.preventDefault();
+            const email = document.getElementById('signInEmail').value.trim();
+            const password = document.getElementById('signInPassword').value;
+            
+            const signInForm = document.getElementById('signInForm');
+            const errorMessage = signInForm.querySelector('.error-message');
+            
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            if (!email || !password) {
+                showError(signInForm, 'Please enter both email and password');
+                return;
+            }
+            
+            const submitButton = signInForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing In...';
+            
+            const result = await signInWithEmail(email, password);
+            
+            if (result.success) {
+                closeModal();
+                window.location.href = 'profile.html';
+            } else {
+                showError(signInForm, result.error || 'Invalid email or password');
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+            }
+        }
+
+        // Google OAuth handler
+        async function handleGoogleSignIn() {
+            const result = await signInWithGoogle();
+            if (!result.success) {
+                alert(result.error || 'Google sign-in failed');
+            }
+        }
+
+        // Logout function
+        function logout() {
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'block';
+            }
+        }
+
+        // Confirm logout function
+        async function confirmLogout() {
+            const result = await signOut();
+            
+            if (result.success) {
+                // Close modal
+                const modal = document.getElementById('logoutConfirmModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+                
+                // Redirect to home page
+                window.location.href = 'index.html';
+            } else {
+                alert(result.error || 'Failed to sign out');
+            }
+        }
+
+        // Cancel logout function
+        function cancelLogout() {
+            const modal = document.getElementById('logoutConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Make functions globally accessible
+        window.handleSignIn = handleSignIn;
+        window.handleGoogleSignIn = handleGoogleSignIn;
+        window.logout = logout;
+        window.confirmLogout = confirmLogout;
+        window.cancelLogout = cancelLogout;
 
         // Register form handler
         async function handleRegister(event) {
@@ -2998,93 +3081,13 @@
             submitButton.disabled = true;
             submitButton.textContent = 'Creating Account...';
             
-            try {
-                // Register with Supabase
-                if (typeof signUpWithEmail === 'function') {
-                    const result = await signUpWithEmail(email, password, name);
-                    
-                    if (result.success) {
-                        console.log('✅ Registration successful!', result.user);
-                        
-                        // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
-                        localStorage.removeItem('chessProgress');
-                        console.log('🔒 Cleared localStorage progress for new account');
-                        
-                        // Store user data in localStorage
-                        localStorage.setItem('isLoggedIn', 'true');
-                        localStorage.setItem('userEmail', email);
-                        localStorage.setItem('userName', name);
-                        
-                        // Create initial user_progress record in Supabase
-                        if (result.user && typeof window.saveUserProgress === 'function') {
-                            try {
-                                await window.saveUserProgress({
-                                    completedGames: [],
-                                    completedPuzzles: [],
-                                    totalGamesPlayed: 0,
-                                    trainingHours: 0,
-                                    currentStreak: 0
-                                });
-                                console.log('✅ Initial user progress created');
-                            } catch (progressError) {
-                                console.log('Note: Could not create initial progress (will be created on first activity)', progressError);
-                            }
-                        }
-                        
-                        // Update navigation
-                        updateNavigation();
-                        closeModal();
-                        
-                        // Send welcome email (NON-BLOCKING - wrapped in try-catch, won't affect registration flow)
-                        console.log('📧 [EMAIL DEBUG] Attempting to send welcome email after registration');
-                        if (typeof window.sendEmail === 'function') {
-                            window.sendEmail('welcome', email, name).then(result => {
-                                console.log('📧 [EMAIL DEBUG] Welcome email result:', result);
-                                if (result && result.success) {
-                                    console.log('✅ [EMAIL DEBUG] Welcome email sent successfully!');
-                                }
-                            }).catch(error => {
-                                console.warn('❌ [EMAIL DEBUG] Welcome email error (non-critical):', error);
-                            });
-                        } else {
-                            console.warn('⚠️ [EMAIL DEBUG] window.sendEmail function not available');
-                        }
-                        
-                        // Check if there's a pending subscription
-                        const pendingPlan = localStorage.getItem('pendingSubscription');
-                        if (pendingPlan) {
-                            // User was trying to subscribe before registering
-                            localStorage.removeItem('pendingSubscription');
-                            // Redirect to subscription flow
-                            if (typeof redirectToDodoPayments === 'function') {
-                                redirectToDodoPayments(pendingPlan);
-                            } else {
-                                window.location.href = 'index.html';
-                            }
-                        } else {
-                            // Redirect to profile
-                            window.location.href = 'profile.html';
-                        }
-                    } else {
-                        // Registration failed
-                        showError(registerForm, result.error || 'Registration failed. Please try again.');
-                        submitButton.disabled = false;
-                        submitButton.textContent = originalButtonText;
-                    }
-                } else {
-                    // Supabase not available - fallback to localStorage (for testing)
-                    console.warn('Supabase not available, using localStorage fallback');
-                    localStorage.setItem('isLoggedIn', 'true');
-                    localStorage.setItem('userEmail', email);
-                    localStorage.setItem('userName', name);
-                    localStorage.setItem('userPassword', password);
-                    updateNavigation();
-                    closeModal();
-                    window.location.href = 'profile.html';
-                }
-            } catch (error) {
-                console.error('Registration error:', error);
-                showError(registerForm, error.message || 'An error occurred. Please try again.');
+            const result = await signUpWithEmail(email, password, name);
+            
+            if (result.success) {
+                closeModal();
+                window.location.href = 'profile.html';
+            } else {
+                showError(registerForm, result.error || 'Registration failed');
                 submitButton.disabled = false;
                 submitButton.textContent = originalButtonText;
             }
@@ -3260,6 +3263,16 @@
             // Update navigation (checks Supabase auth)
             if (typeof updateNavigation === 'function') {
                 await updateNavigation();
+            }
+            
+            // Add event listeners for forms
+            const signInForm = document.getElementById('signInForm');
+            const registerForm = document.getElementById('registerForm');
+            if (signInForm) {
+                signInForm.addEventListener('submit', handleSignIn);
+            }
+            if (registerForm) {
+                registerForm.addEventListener('submit', handleRegister);
             }
             
             // Initialize tabs
@@ -6647,7 +6660,7 @@
                 <h2>Sign In</h2>
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
-            <form id="signInForm">
+            <form id="signInForm" onsubmit="handleSignIn(event)">
                 <div class="form-group">
                     <label class="form-label" for="signInEmail">Email</label>
                     <input type="email" id="signInEmail" class="form-input" placeholder="Enter your email" required>
@@ -6662,7 +6675,7 @@
             </div>
         </form>
         <div class="google-signup">
-            <button type="button" class="btn-modal btn-google">
+            <button type="button" class="btn-modal btn-google" onclick="handleGoogleSignIn()">
                 <div class="google-icon"></div>
                 Sign in with Google
             </button>
@@ -6717,8 +6730,8 @@
                 Are you sure you want to log out? You'll need to sign in again to access your account.
             </div>
             <div class="logout-confirm-buttons">
-                <button class="btn-logout-confirm btn-logout-yes">Yes, Logout</button>
-                <button class="btn-logout-confirm btn-logout-no">Cancel</button>
+                <button class="btn-logout-confirm btn-logout-yes" onclick="confirmLogout()">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no" onclick="cancelLogout()">Cancel</button>
             </div>
         </div>
     </div>
