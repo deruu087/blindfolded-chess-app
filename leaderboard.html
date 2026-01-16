@@ -812,21 +812,6 @@
             modal.style.display = 'block';
         }
 
-        // Logout function
-        function logout() {
-            // Clear user data and localStorage
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userName');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('subscriptionPlan');
-            localStorage.removeItem('hasActiveSubscription');
-            
-            // Update navigation
-            updateNavigation();
-            
-            // Redirect to home page
-            window.location.href = 'index.html';
-        }
 
         // Show sign in modal
         function showSignInModal() {

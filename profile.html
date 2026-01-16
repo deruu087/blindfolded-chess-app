@@ -1220,7 +1220,7 @@
                 </div>
 
                 <div class="logout-button-container">
-                    <button class="btn-logout" id="logoutButton" onclick="window.logout()">Logout</button>
+                    <button class="btn-logout" id="logoutButton">Logout</button>
                 </div>
             </div>
 
@@ -2847,67 +2847,6 @@
             // Profile editing functionality removed
         }
 
-        // Logout function - shows confirmation modal
-        function logout() {
-            console.log('Logout function called');
-            const modal = document.getElementById('logoutConfirmModal');
-            if (modal) {
-                console.log('Modal found, showing it');
-                modal.style.display = 'block';
-            } else {
-                console.error('Logout modal not found!');
-            }
-        }
-        
-        // Make logout function globally accessible
-        window.logout = logout;
-
-        // Confirm logout function - INSTANT VERSION
-        function confirmLogout() {
-            // Hide modal immediately
-            const modal = document.getElementById('logoutConfirmModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            
-            // Clear localStorage FIRST (immediate, synchronous)
-            localStorage.clear();
-            
-            // Clear userData object
-            userData.name = '';
-            userData.email = '';
-            userData.subscription = 'free';
-            
-            // Redirect IMMEDIATELY - don't wait for anything
-            window.location.href = 'index.html?logout=1';
-            
-            // Sign out from Supabase in background (non-blocking, don't wait)
-            // This happens after redirect is initiated, so it doesn't block
-            if (typeof window.signOut === 'function') {
-                window.signOut().catch(() => {});
-            } else if (typeof getSupabase === 'function') {
-                const supabase = getSupabase();
-                if (supabase) {
-                    supabase.auth.signOut().catch(() => {});
-                }
-            }
-        }
-        
-        // Make confirmLogout globally accessible (for onclick handlers)
-        window.confirmLogout = confirmLogout;
-        console.log('confirmLogout function registered globally');
-
-        // Cancel logout function
-        function cancelLogout() {
-            console.log('Cancel logout called');
-            const modal = document.getElementById('logoutConfirmModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-        
-        // Make cancelLogout globally accessible (for onclick handlers)
-        window.cancelLogout = cancelLogout;
 
         // Cancel Subscription Modal Functions
         function showCancelSubscriptionModal() {
@@ -3023,12 +2962,6 @@
             });
         }
 
-        // Sign in handler - redirects to home page where proper Supabase auth is handled
-        function handleSignIn(event) {
-            event.preventDefault();
-            console.log('Sign in attempted from profile page - redirecting to home for proper authentication');
-            window.location.href = 'index.html#signin';
-        }
 
         // Register handler - redirects to home page where proper Supabase auth is handled
         function handleRegister(event) {
@@ -3037,39 +2970,6 @@
             window.location.href = 'index.html#register';
         }
 
-        // Google sign-in handler (works for both sign-in and registration)
-        async function signInWithGoogle() {
-            try {
-                if (typeof window.signInWithGoogle === 'function') {
-                    const result = await window.signInWithGoogle();
-                    
-                    if (result.success && result.url) {
-                        // Redirect to Google OAuth
-                        window.location.href = result.url;
-            } else {
-                        // Show error
-                        const signInForm = document.getElementById('signInForm');
-                        if (signInForm) {
-                            showError(signInForm, result.error || 'Google sign-in failed. Please try again.');
-                        } else {
-                            alert(result.error || 'Google sign-in failed. Please try again.');
-                        }
-                    }
-                } else {
-                    alert('Google sign-in is not available. Please use email/password.');
-                }
-            } catch (error) {
-                console.error('Google sign-in error:', error);
-                alert('An error occurred with Google sign-in. Please try again.');
-            }
-        }
-
-        // Google registration handler (same as sign-in - Google OAuth handles both)
-        async function registerWithGoogle() {
-            // Google OAuth works for both sign-in and registration
-            // If user exists, they sign in; if not, account is created
-            await signInWithGoogle();
-        }
         
         // Handle OAuth callback from Google
         async function handleOAuthCallback() {
@@ -3443,7 +3343,7 @@
                 <h2>Sign In</h2>
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
-            <form id="signInForm" onsubmit="handleSignIn(event)">
+            <form id="signInForm">
                 <div class="form-group">
                     <label class="form-label" for="signInEmail">Email</label>
                     <input type="email" id="signInEmail" class="form-input" placeholder="Enter your email" required>
@@ -3458,7 +3358,7 @@
             </div>
         </form>
         <div class="google-signup">
-            <button type="button" class="btn-modal btn-google" onclick="signInWithGoogle()">
+            <button type="button" class="btn-modal btn-google">
                 <div class="google-icon"></div>
                 Sign in with Google
             </button>
@@ -3513,8 +3413,8 @@
                 Are you sure you want to log out? You'll need to sign in again to access your account.
             </div>
             <div class="logout-confirm-buttons">
-                <button class="btn-logout-confirm btn-logout-yes" onclick="if(typeof window.confirmLogout === 'function') { window.confirmLogout(); } else { console.error('confirmLogout not found!'); }">Yes, Logout</button>
-                <button class="btn-logout-confirm btn-logout-no" onclick="if(typeof window.cancelLogout === 'function') { window.cancelLogout(); } else { console.error('cancelLogout not found!'); }">Cancel</button>
+                <button class="btn-logout-confirm btn-logout-yes">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no">Cancel</button>
             </div>
         </div>
     </div>

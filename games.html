@@ -3011,52 +3011,6 @@
             modal.style.display = 'block';
         }
 
-        // Logout function - shows confirmation modal
-        function logout() {
-            document.getElementById('logoutConfirmModal').style.display = 'block';
-        }
-
-        // Confirm logout function
-        async function confirmLogout() {
-            // Clear user data and localStorage
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userName');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('subscriptionPlan');
-            localStorage.removeItem('hasActiveSubscription');
-            localStorage.removeItem('cachedSubscriptionStatus');
-            localStorage.removeItem('cachedSubscriptionPlan');
-            // CRITICAL: Clear progress data to prevent data leakage between accounts
-            localStorage.removeItem('chessProgress');
-            
-            // Sign out from Supabase in background (non-blocking, don't wait for it)
-            if (typeof window.signOut === 'function') {
-                window.signOut().catch(() => {
-                    // Ignore errors, we've already cleared localStorage
-                });
-            } else if (typeof getSupabase === 'function') {
-                const supabase = getSupabase();
-                if (supabase) {
-                    supabase.auth.signOut().catch(() => {
-                        // Ignore errors, we've already cleared localStorage
-                    });
-                }
-            }
-            
-            // Hide modal
-            const modal = document.getElementById('logoutConfirmModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            
-            // Redirect to home page immediately (use replace to avoid adding to history)
-            window.location.replace('index.html');
-        }
-
-        // Cancel logout function
-        function cancelLogout() {
-            document.getElementById('logoutConfirmModal').style.display = 'none';
-        }
 
         // Subscription Required Modal functions
         function showSubscriptionRequiredModal() {
@@ -3102,98 +3056,6 @@
             });
         }
 
-        // Sign in form handler
-        async function handleSignIn(event) {
-            event.preventDefault();
-            const email = document.getElementById('signInEmail').value.trim();
-            const password = document.getElementById('signInPassword').value;
-            
-            // Get form elements for error display
-            const signInForm = document.getElementById('signInForm');
-            const errorMessage = signInForm.querySelector('.error-message');
-            
-            // Remove any existing error messages
-            if (errorMessage) {
-                errorMessage.remove();
-            }
-            
-            // Validate inputs
-            if (!email || !password) {
-                showError(signInForm, 'Please enter both email and password');
-                return;
-            }
-            
-            // Show loading state
-            const submitButton = signInForm.querySelector('button[type="submit"]');
-            const originalButtonText = submitButton.textContent;
-            submitButton.disabled = true;
-            submitButton.textContent = 'Signing In...';
-            
-            try {
-                // Sign in with Supabase
-                if (typeof signInWithEmail === 'function') {
-                    const result = await signInWithEmail(email, password);
-                    
-                    if (result.success && result.user) {
-                        console.log('✅ Sign in successful!', result.user);
-                        
-                        // CRITICAL: Clear any old progress data from localStorage to prevent data leakage
-                        localStorage.removeItem('chessProgress');
-                        console.log('🔒 Cleared localStorage progress on sign in');
-                        
-                        // Hide page content immediately to prevent flash
-                        document.body.style.display = 'none';
-                        
-                        // Store user data in localStorage
-                        localStorage.setItem('isLoggedIn', 'true');
-                        localStorage.setItem('userEmail', result.user.email || email);
-                        localStorage.setItem('userName', result.user.user_metadata?.name || result.user.user_metadata?.full_name || 'User');
-                        
-                        // Check if there's a pending subscription
-                        const pendingPlan = localStorage.getItem('pendingSubscription');
-                        if (pendingPlan) {
-                            // User was trying to subscribe before signing in
-                            localStorage.removeItem('pendingSubscription');
-                            // Redirect to subscription flow
-                            if (typeof redirectToDodoPayments === 'function') {
-                                redirectToDodoPayments(pendingPlan);
-                            } else {
-                                window.location.href = 'index.html';
-                            }
-                        } else {
-                            // Redirect to profile immediately after sign-in (no delay)
-                            window.location.replace('profile.html');
-                        }
-                    } else {
-                        // Sign in failed
-                        showError(signInForm, result.error || 'Invalid email or password. Please try again.');
-                        submitButton.disabled = false;
-                        submitButton.textContent = originalButtonText;
-                    }
-                } else {
-                    // Supabase not available - fallback to localStorage (for testing)
-                    console.warn('Supabase not available, using localStorage fallback');
-                    const storedEmail = localStorage.getItem('userEmail');
-                    const storedPassword = localStorage.getItem('userPassword');
-                    
-                    if (email === storedEmail && password === storedPassword) {
-                        localStorage.setItem('isLoggedIn', 'true');
-                        updateNavigation();
-                        closeModal();
-                        window.location.href = 'profile.html';
-                    } else {
-                        showError(signInForm, 'Invalid email or password');
-                        submitButton.disabled = false;
-                        submitButton.textContent = originalButtonText;
-                    }
-                }
-            } catch (error) {
-                console.error('Sign in error:', error);
-                showError(signInForm, error.message || 'An error occurred. Please try again.');
-                submitButton.disabled = false;
-                submitButton.textContent = originalButtonText;
-            }
-        }
 
         // Register form handler
         async function handleRegister(event) {
@@ -3341,39 +3203,6 @@
             submitButton.parentElement.insertBefore(errorDiv, submitButton);
         }
 
-        // Google sign-in handler
-        async function signInWithGoogle() {
-            try {
-                if (typeof window.signInWithGoogle === 'function') {
-                    const result = await window.signInWithGoogle();
-                    
-                    if (result.success && result.url) {
-                        // Redirect to Google OAuth
-                        window.location.href = result.url;
-                    } else {
-                        // Show error
-                        const signInForm = document.getElementById('signInForm');
-                        if (signInForm) {
-                            showError(signInForm, result.error || 'Google sign-in failed. Please try again.');
-                        } else {
-                            alert(result.error || 'Google sign-in failed. Please try again.');
-                        }
-                    }
-                } else {
-                    alert('Google sign-in is not available. Please use email/password.');
-                }
-            } catch (error) {
-                console.error('Google sign-in error:', error);
-                alert('An error occurred with Google sign-in. Please try again.');
-            }
-        }
-
-        // Google registration handler (same as sign-in - Google OAuth handles both)
-        async function registerWithGoogle() {
-            // Google OAuth works for both sign-in and registration
-            // If user exists, they sign in; if not, account is created
-            await signInWithGoogle();
-        }
         
         // Handle OAuth callback from Google
         async function handleOAuthCallback() {
@@ -3743,7 +3572,6 @@
             setupTrainingTimer();
             
             // Add event listeners for forms
-            document.getElementById('signInForm').addEventListener('submit', handleSignIn);
             document.getElementById('registerForm').addEventListener('submit', handleRegister);
             
             // Add event listeners for close buttons
@@ -7321,7 +7149,7 @@
                 <h2>Sign In</h2>
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
-            <form id="signInForm" onsubmit="handleSignIn(event)">
+            <form id="signInForm">
                 <div class="form-group">
                     <label class="form-label" for="signInEmail">Email</label>
                     <input type="email" id="signInEmail" class="form-input" placeholder="Enter your email" required>
@@ -7336,7 +7164,7 @@
             </div>
         </form>
         <div class="google-signup">
-            <button type="button" class="btn-modal btn-google" onclick="signInWithGoogle()">
+            <button type="button" class="btn-modal btn-google">
                 <div class="google-icon"></div>
                 Sign in with Google
             </button>
@@ -7391,8 +7219,8 @@
                 Are you sure you want to log out? You'll need to sign in again to access your account.
             </div>
             <div class="logout-confirm-buttons">
-                <button class="btn-logout-confirm btn-logout-yes" onclick="confirmLogout()">Yes, Logout</button>
-                <button class="btn-logout-confirm btn-logout-no" onclick="cancelLogout()">Cancel</button>
+                <button class="btn-logout-confirm btn-logout-yes">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no">Cancel</button>
             </div>
         </div>
     </div>

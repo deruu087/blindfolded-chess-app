@@ -39,61 +39,6 @@ async function signUpWithEmail(email, password, name) {
     }
 }
 
-/**
- * Sign in an existing user with email and password
- */
-async function signInWithEmail(email, password) {
-    const supabase = getSupabase();
-    if (!supabase) {
-        console.error('Supabase not initialized');
-        return { success: false, error: 'Supabase not initialized' };
-    }
-
-    try {
-        // Sign in the user
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password
-        });
-
-        if (error) {
-            console.error('Sign in error:', error);
-            return { success: false, error: error.message };
-        }
-
-        console.log('✅ User signed in successfully!', data);
-        return { success: true, user: data.user };
-    } catch (error) {
-        console.error('Sign in exception:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-/**
- * Sign out the current user
- */
-async function signOut() {
-    const supabase = getSupabase();
-    if (!supabase) {
-        console.error('Supabase not initialized');
-        return { success: false, error: 'Supabase not initialized' };
-    }
-
-    try {
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-            console.error('Sign out error:', error);
-            return { success: false, error: error.message };
-        }
-
-        console.log('✅ User signed out successfully!');
-        return { success: true };
-    } catch (error) {
-        console.error('Sign out exception:', error);
-        return { success: false, error: error.message };
-    }
-}
 
 /**
  * Get the current signed-in user
@@ -297,52 +242,12 @@ function setupAuthListener() {
     });
 }
 
-/**
- * Sign in or sign up with Google OAuth
- */
-async function signInWithGoogle() {
-    const supabase = getSupabase();
-    if (!supabase) {
-        console.error('Supabase not initialized');
-        return { success: false, error: 'Supabase not initialized' };
-    }
-
-    try {
-        // Initiate Google OAuth flow
-        // This will redirect to Google, then back to your site
-        const redirectUrl = window.location.origin + window.location.pathname;
-        console.log('🔐 [OAuth] Redirect URL:', redirectUrl);
-        console.log('🔐 [OAuth] Make sure this URL is in Supabase dashboard: Authentication > URL Configuration > Redirect URLs');
-        
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: redirectUrl
-            }
-        });
-
-        if (error) {
-            console.error('Google OAuth error:', error);
-            return { success: false, error: error.message };
-        }
-
-        // The OAuth flow will redirect, so we return the URL
-        console.log('✅ Google OAuth initiated');
-        return { success: true, url: data.url };
-    } catch (error) {
-        console.error('Google OAuth exception:', error);
-        return { success: false, error: error.message };
-    }
-}
 
 // Make functions available globally
 window.signUpWithEmail = signUpWithEmail;
-window.signInWithEmail = signInWithEmail;
-window.signOut = signOut;
 window.getCurrentUser = getCurrentUser;
 window.isSignedIn = isSignedIn;
 window.setupAuthListener = setupAuthListener;
-window.signInWithGoogle = signInWithGoogle;
 window.checkAuthStatus = checkAuthStatus;
 window.waitForSupabaseReady = waitForSupabaseReady;
 
