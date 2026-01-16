@@ -2926,40 +2926,8 @@
         
         // Check login status and update navigation
         async function updateNavigation() {
-            const profileLink = document.getElementById('profileLink');
-            
-            // Use centralized auth check function
-            let authStatus;
-            if (typeof window.checkAuthStatus === 'function') {
-                authStatus = await window.checkAuthStatus();
-            } else {
-                // Fallback if function not available
-                authStatus = {
-                    isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
-                    user: null,
-                    email: localStorage.getItem('userEmail'),
-                    name: localStorage.getItem('userName')
-                };
-            }
-            
-            const isLoggedIn = authStatus.isLoggedIn;
-            
-            // Set up profile link behavior
-            if (profileLink) {
-                if (isLoggedIn) {
-                    // User is logged in - ensure link goes to profile page
-                    profileLink.href = 'profile.html';
-                    // Remove any onclick handlers that might prevent navigation
-                    profileLink.onclick = null;
-                } else {
-                    // User is not logged in - show sign in modal when clicked
-                    profileLink.href = '#';
-                    profileLink.onclick = function(e) {
-                        e.preventDefault();
-                        showSignInModal();
-                    };
-                }
-            }
+            // Navigation UI updates can go here if needed
+            // Profile link click handler is set up separately below
         }
 
         // Show account information modal
@@ -3417,6 +3385,43 @@
                 console.error('Error initializing tabs:', error);
             }
             
+        // Profile link click handler - checks auth before navigation
+        (function() {
+            const profileLink = document.getElementById('profileLink');
+            if (profileLink) {
+                profileLink.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    
+                    // Check auth state using getSupabase() and getSession()
+                    if (typeof window.getSupabase === 'function') {
+                        const supabase = window.getSupabase();
+                        if (supabase && supabase.auth) {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            if (session && session.user) {
+                                // User is authenticated - navigate to profile
+                                window.location.href = 'profile.html';
+                            } else {
+                                // User is NOT authenticated - show login modal
+                                if (typeof showSignInModal === 'function') {
+                                    showSignInModal();
+                                }
+                            }
+                        } else {
+                            // Supabase not ready - show login modal
+                            if (typeof showSignInModal === 'function') {
+                                showSignInModal();
+                            }
+                        }
+                    } else {
+                        // getSupabase not available - show login modal
+                        if (typeof showSignInModal === 'function') {
+                            showSignInModal();
+                        }
+                    }
+                });
+            }
+        })();
+
             // Load completed challenges from Supabase (optional - games work without this)
             // Wait for Supabase scripts to load first
             if (typeof window.getUserProgress === 'function') {
