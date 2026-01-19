@@ -3957,20 +3957,34 @@
                 
                 // Use the Supabase helper function (from supabase-helpers.js)
                 // Wait for it to be available if needed
+                // Note: We need to get a reference to the Supabase helper BEFORE we assign our local function
+                let supabaseDeleteHelper = null;
                 let attempts = 0;
-                while (typeof window.deleteCustomGame === 'undefined' && attempts < 50) {
+                while (attempts < 50) {
+                    // Check if supabase-helpers.js has loaded and exported the function
+                    if (typeof window.deleteCustomGame === 'function') {
+                        // Check if it's the Supabase helper (it should take just gameId, not event)
+                        // We'll store it before our local function overwrites it
+                        supabaseDeleteHelper = window.deleteCustomGame;
+                        break;
+                    }
                     await new Promise(resolve => setTimeout(resolve, 100));
                     attempts++;
                 }
                 
-                if (typeof window.deleteCustomGame !== 'function') {
+                // If we didn't get it, try one more time after a short delay
+                if (!supabaseDeleteHelper && typeof window.deleteCustomGame === 'function') {
+                    supabaseDeleteHelper = window.deleteCustomGame;
+                }
+                
+                if (!supabaseDeleteHelper || typeof supabaseDeleteHelper !== 'function') {
                     console.error('❌ Supabase deleteCustomGame function not available');
                     alert('Error: Cannot delete game. Please refresh the page and try again.');
                     return;
                 }
                 
                 // Call the Supabase delete function with the database ID
-                const result = await window.deleteCustomGame(gameToDelete.id);
+                const result = await supabaseDeleteHelper(gameToDelete.id);
                 
                 if (result.success) {
                     console.log('✅ Game deleted successfully from Supabase');
