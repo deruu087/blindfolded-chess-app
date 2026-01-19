@@ -2092,6 +2092,19 @@
         // This duplicate function has been removed to avoid conflicts
         
         // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
+        // In-memory cache for user profile data (name, email, greeting)
+        // This cache persists across page loads within the same session
+        let profileCache = (function() {
+            // Use a module-level cache that persists in memory
+            if (!window._profileCache) {
+                window._profileCache = {
+                    userData: null,
+                    timestamp: null
+                };
+            }
+            return window._profileCache;
+        })();
+
         let userData = {
             name: "Loading...",
             email: "", // Will be set from Supabase auth - no fallback to prevent showing guest@example.com
@@ -2235,11 +2248,31 @@
             // Ensure profile content is visible (in case early auth check didn't show it)
             showProfileContent();
             
-            // User is logged in - proceed with loading profile data
-            // Update user info immediately from authStatus (instant display)
+            // Check cache first for instant display
+            if (profileCache.userData && profileCache.userData.email === authStatus.email) {
+                console.log('✅ [INIT PROFILE] Using cached user data for instant display');
+                userData.name = profileCache.userData.name;
+                userData.email = profileCache.userData.email;
+                updateUserInfo(); // Instant display from cache
+            } else {
+                // No cache or different user - update from authStatus
+                userData.name = authStatus.name || 'User';
+                userData.email = authStatus.email || '';
+                updateUserInfo();
+            }
+            
+            // Always fetch fresh user data in background (updates cache)
+            // This ensures cache is populated/updated for future visits
             userData.name = authStatus.name || 'User';
             userData.email = authStatus.email || '';
-            updateUserInfo();
+            
+            // Update cache with fresh user data
+            profileCache.userData = {
+                name: userData.name,
+                email: userData.email
+            };
+            profileCache.timestamp = Date.now();
+            console.log('✅ [INIT PROFILE] Cached user data for future visits');
             
             // SIMPLIFIED: Load Supabase data - Wait for Supabase to be ready first
             // Step 1: Wait for Supabase scripts to load
@@ -2303,12 +2336,16 @@
                 updateStats(null);
             }
             
-            // Then get fresh data from Supabase (updates in background)
+            // Then get fresh user data from Supabase (updates cache in background)
             if (authStatus.user) {
-                // We already have user data from checkAuthStatus
+                // We already have user data from checkAuthStatus - update cache
                 userData.name = authStatus.name;
                 userData.email = authStatus.email;
-                updateUserInfo();
+                profileCache.userData = {
+                    name: userData.name,
+                    email: userData.email
+                };
+                profileCache.timestamp = Date.now();
             } else if (typeof getCurrentUser === 'function') {
                 try {
                     const user = await getCurrentUser();
@@ -2320,8 +2357,13 @@
                                           'User';
                         userData.name = supabaseName;
                         userData.email = user.email || userData.email; // Get real email from Supabase
-                        localStorage.setItem('userName', supabaseName);
-                        localStorage.setItem('userEmail', user.email || '');
+                        
+                        // Update cache with fresh user data
+                        profileCache.userData = {
+                            name: userData.name,
+                            email: userData.email
+                        };
+                        profileCache.timestamp = Date.now();
                         
                         // Update UI again with fresh Supabase data
                         updateUserInfo();
@@ -2975,6 +3017,13 @@
             const result = await signOut();
             
             if (result.success) {
+                // Clear profile cache on logout
+                if (window._profileCache) {
+                    window._profileCache.userData = null;
+                    window._profileCache.timestamp = null;
+                    console.log('🧹 Cleared profile cache on logout');
+                }
+                
                 // Close modal
                 const modal = document.getElementById('logoutConfirmModal');
                 if (modal) {
