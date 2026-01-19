@@ -3925,12 +3925,48 @@
             console.log('Right section cleared');
         }
 
+        // Store reference to Supabase delete helper at module level (before function definition)
+        // This ensures we get the helper from supabase-helpers.js before any local function overwrites it
+        let supabaseDeleteHelperRef = null;
+        
+        // Function to get the Supabase delete helper (cached)
+        async function getSupabaseDeleteHelper() {
+            if (supabaseDeleteHelperRef) {
+                return supabaseDeleteHelperRef;
+            }
+            
+            // Wait for supabase-helpers.js to load
+            let attempts = 0;
+            while (attempts < 50) {
+                if (typeof window.deleteCustomGame === 'function') {
+                    // Store the reference
+                    supabaseDeleteHelperRef = window.deleteCustomGame;
+                    console.log('✅ Got Supabase delete helper reference');
+                    return supabaseDeleteHelperRef;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            console.error('❌ Supabase deleteCustomGame function not available');
+            return null;
+        }
+        
         // Function to delete a custom game
         async function deleteCustomGame(event, gameId) {
             event.stopPropagation(); // Prevent the game from being selected
             
             try {
                 console.log('🗑️ Deleting custom game:', gameId);
+                console.log('🗑️ Event object:', event);
+                console.log('🗑️ GameId type:', typeof gameId, gameId);
+                
+                // Validate gameId
+                if (!gameId || typeof gameId !== 'string') {
+                    console.error('❌ Invalid gameId:', gameId);
+                    alert('Error: Invalid game ID. Please refresh the page and try again.');
+                    return;
+                }
                 
                 // Use Supabase helper function to delete the game
                 // First, we need to get the Supabase game ID from the custom game ID
@@ -3944,6 +3980,8 @@
                 }
                 
                 const customGames = await window.getUserCustomGames();
+                console.log('🗑️ Found custom games:', customGames.length);
+                
                 const gameToDelete = customGames.find(g => {
                     // Match by the game_data.id field
                     return g.game_data && g.game_data.id === gameId;
@@ -3951,39 +3989,23 @@
                 
                 if (!gameToDelete) {
                     console.error('❌ Game not found in Supabase:', gameId);
+                    console.error('❌ Available game IDs:', customGames.map(g => g.game_data?.id));
                     alert('Error: Game not found. It may have already been deleted.');
                     return;
                 }
                 
-                // Use the Supabase helper function (from supabase-helpers.js)
-                // Wait for it to be available if needed
-                // Note: We need to get a reference to the Supabase helper BEFORE we assign our local function
-                let supabaseDeleteHelper = null;
-                let attempts = 0;
-                while (attempts < 50) {
-                    // Check if supabase-helpers.js has loaded and exported the function
-                    if (typeof window.deleteCustomGame === 'function') {
-                        // Check if it's the Supabase helper (it should take just gameId, not event)
-                        // We'll store it before our local function overwrites it
-                        supabaseDeleteHelper = window.deleteCustomGame;
-                        break;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    attempts++;
-                }
+                console.log('🗑️ Found game to delete:', gameToDelete.id);
+                console.log('🗑️ Database ID:', gameToDelete.id);
                 
-                // If we didn't get it, try one more time after a short delay
-                if (!supabaseDeleteHelper && typeof window.deleteCustomGame === 'function') {
-                    supabaseDeleteHelper = window.deleteCustomGame;
-                }
-                
-                if (!supabaseDeleteHelper || typeof supabaseDeleteHelper !== 'function') {
-                    console.error('❌ Supabase deleteCustomGame function not available');
+                // Get the Supabase delete helper
+                const supabaseDeleteHelper = await getSupabaseDeleteHelper();
+                if (!supabaseDeleteHelper) {
                     alert('Error: Cannot delete game. Please refresh the page and try again.');
                     return;
                 }
                 
-                // Call the Supabase delete function with the database ID
+                // Call the Supabase delete function with the database ID (NOT the event!)
+                console.log('🗑️ Calling Supabase delete with ID:', gameToDelete.id);
                 const result = await supabaseDeleteHelper(gameToDelete.id);
                 
                 if (result.success) {
