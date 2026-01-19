@@ -3445,8 +3445,8 @@
         };
 
         // Initialize games data on page load
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🎯 DOMContentLoaded event fired - games.html');
+        async function loadGamesOnPageLoad() {
+            console.log('🎯 loadGamesOnPageLoad() called');
             console.log('DOM loaded, loading games...');
             
             // CRITICAL: Load games FIRST, independently of Supabase
@@ -3478,6 +3478,19 @@
                     console.error('Error updating game buttons:', e);
                 }
             }
+        }
+
+        // Call immediately if DOM is already loaded, otherwise wait for DOMContentLoaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadGamesOnPageLoad);
+        } else {
+            // DOM already loaded, call immediately
+            console.log('🎯 DOM already loaded, calling loadGamesOnPageLoad() immediately...');
+            loadGamesOnPageLoad();
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🎯 DOMContentLoaded event fired - games.html');
             
             // Initialize tabs (doesn't depend on Supabase)
             try {
@@ -3956,8 +3969,6 @@
             // Update all tabs with the same game data
             const tabPrefixes = ['', 'my-games-', 'gm-games-'];
             
-            console.log('🔄 Updating game categories with customGames:', customGames.length, customGames.map(g => g.id));
-            
             tabPrefixes.forEach(prefix => {
                 // Update short games
                 updateGameCategory(prefix + 'short-games-submenu', shortGames);
@@ -3966,13 +3977,10 @@
                 // Update long games
                 updateGameCategory(prefix + 'long-games-submenu', longGames);
                 // Update custom games
-                const customMenuId = prefix + 'my-games-submenu';
-                console.log(`🔄 Calling updateGameCategory for ${customMenuId} with ${customGames.length} games`);
-                updateGameCategory(customMenuId, customGames);
+                updateGameCategory(prefix + 'my-games-submenu', customGames);
             });
             
             // Update the My Games tab's custom submenu specifically
-            console.log('🔄 Calling updateGameCategory for my-games-my-games-submenu with', customGames.length, 'games');
             updateGameCategory('my-games-my-games-submenu', customGames);
             
             // Update opening tab
