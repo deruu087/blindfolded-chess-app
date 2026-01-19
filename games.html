@@ -3403,9 +3403,13 @@
             // CRITICAL: Load games FIRST, independently of Supabase
             // Games should work even if Supabase fails
             try {
+                console.log('🚀 About to call GameLoader.loadGamesFromFiles()...');
+                console.log('🚀 GameLoader available:', typeof GameLoader !== 'undefined');
                 gamesData = await GameLoader.loadGamesFromFiles();
+                console.log('✅ GameLoader.loadGamesFromFiles() completed');
                 console.log('Loaded games:', gamesData);
                 console.log('Number of games loaded:', gamesData ? gamesData.games.length : 0);
+                console.log('Custom games count:', gamesData ? gamesData.games.filter(g => g && g.id && g.id.startsWith('custom-game-')).length : 0);
                 
                 // Update game buttons immediately after loading games
                 updateGameButtons();
