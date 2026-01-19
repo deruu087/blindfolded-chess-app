@@ -109,47 +109,77 @@
                     const cachedData = sessionStorage.getItem('profileCache');
                     if (cachedData) {
                         const parsed = JSON.parse(cachedData);
-                        const profileTitle = document.querySelector('.profile-title');
-                        const emailElement = document.getElementById('userEmail');
                         
                         // Only use cache if it's recent (less than 24 hours old)
                         const cacheAge = Date.now() - (parsed.timestamp || 0);
                         const maxAge = 24 * 60 * 60 * 1000; // 24 hours
                         
                         if (cacheAge < maxAge && parsed.userData) {
-                            if (profileTitle && parsed.userData.greeting) {
-                                profileTitle.textContent = parsed.userData.greeting;
+                            // Wait for DOM to be ready, then update elements
+                            function updateElementsFromCache() {
+                                const profileTitle = document.querySelector('.profile-title');
+                                const emailElement = document.getElementById('userEmail');
+                                
+                                if (profileTitle && parsed.userData.greeting) {
+                                    profileTitle.textContent = parsed.userData.greeting;
+                                    console.log('✅ Updated profile title from cache:', parsed.userData.greeting);
+                                }
+                                if (emailElement && parsed.userData.email) {
+                                    emailElement.textContent = parsed.userData.email;
+                                    console.log('✅ Updated email from cache:', parsed.userData.email);
+                                }
+                                
+                                // Return true if at least one element was updated
+                                return (profileTitle && parsed.userData.greeting) || (emailElement && parsed.userData.email);
                             }
-                            if (emailElement && parsed.userData.email) {
-                                emailElement.textContent = parsed.userData.email;
+                            
+                            // Try to update immediately if DOM is ready
+                            if (document.readyState === 'loading') {
+                                // DOM not ready yet, wait for it
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    if (updateElementsFromCache()) {
+                                        console.log('✅ Loaded cached profile data after DOM ready');
+                                    }
+                                });
+                            } else {
+                                // DOM is ready, update immediately
+                                if (updateElementsFromCache()) {
+                                    console.log('✅ Loaded cached profile data immediately');
+                                    return true; // Cache was used
+                                }
                             }
-                            console.log('✅ Loaded cached profile data immediately');
-                            return true; // Cache was used
+                            
+                            // Also try with a small delay to catch late-rendering elements
+                            setTimeout(function() {
+                                updateElementsFromCache();
+                            }, 10);
+                            
+                            return true; // Cache exists and is valid
                         }
                     }
                 } catch (e) {
-                    console.log('No cached profile data available');
+                    console.log('No cached profile data available:', e);
                 }
                 return false; // No cache available
             }
             
-            // Try to load cache immediately
-            const cacheLoaded = loadCachedProfileData();
+            // Try to load cache
+            const cacheExists = loadCachedProfileData();
             
             // Only set loading state if cache wasn't available
-            if (!cacheLoaded) {
+            if (!cacheExists) {
                 function setLoadingState() {
                     const profileTitle = document.querySelector('.profile-title');
                     if (profileTitle && profileTitle.textContent === 'My Profile') {
                         profileTitle.textContent = 'Loading...';
                     }
                     const emailElement = document.getElementById('userEmail');
-                    if (emailElement && emailElement.textContent === '') {
+                    if (emailElement && (emailElement.textContent === '' || emailElement.textContent === 'Loading...')) {
                         emailElement.textContent = 'Loading...';
                     }
                 }
                 
-                // Run immediately if DOM is ready
+                // Run when DOM is ready
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', function() {
                         setLoadingState();
