@@ -2948,9 +2948,9 @@
                     
                     if (supabaseProgress) {
                         // Use completed_games from Supabase (already filtered to "By Moves" games in test mode)
-                                const gamesArray = supabaseProgress.completed_games || [];
-                                const puzzlesArray = supabaseProgress.completed_puzzles || [];
-                                
+                        const gamesArray = supabaseProgress.completed_games || [];
+                        const puzzlesArray = supabaseProgress.completed_puzzles || [];
+                        
                         console.log('📊 Progress bars - Supabase data:', {
                             completedGames: gamesArray,
                             completedPuzzles: puzzlesArray
@@ -2958,7 +2958,7 @@
                         
                         // Count games from "By Moves" tab completed in challenge/test mode
                         // Use completed_games array (already filtered)
-                                completedGames = gamesArray.filter(gameId => {
+                        completedGames = gamesArray.filter(gameId => {
                             const game = allItems.find(g => g.id === gameId);
                             const isValid = game && 
                                            game.type === 'game' && 
@@ -2968,12 +2968,12 @@
                                 console.log(`📊 Progress bar - Game ${gameId}: type=${game.type}, moves=${game.moves}, valid=${isValid}`);
                             }
                             return isValid;
-                                }).length;
+                        }).length;
                         console.log('📊 Progress bars - Completed games count:', completedGames);
                                 
                         // Count puzzles with difficulty levels only
-                                completedPuzzles = puzzlesArray.length > 0 
-                                    ? puzzlesArray.filter(gameId => {
+                        completedPuzzles = puzzlesArray.length > 0 
+                            ? puzzlesArray.filter(gameId => {
                                 const puzzle = allItems.find(g => g.id === gameId);
                                 const isValid = puzzle && 
                                                puzzle.type === 'puzzle' && 
@@ -2985,25 +2985,11 @@
                                 return isValid;
                             }).length
                             : 0;
-            } else {
-                        // Fallback to localStorage - only count games from "By Moves" completed in challenge mode
-                        const challengeModeArray = progressTracker.userProgress.challengeModeCompletions || [];
-                        completedGames = challengeModeArray.filter(gameId => {
-                            const game = allItems.find(g => g.id === gameId);
-                            return game && 
-                                   game.type === 'game' && 
-                                   !gameId.startsWith('custom-game-') &&
-                                   (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
-                        }).length;
-                        
-                        // Count puzzles with difficulty levels only
-                        completedPuzzles = progressTracker.userProgress.completedGames.filter(gameId => {
-                            const puzzle = allItems.find(g => g.id === gameId);
-                            return puzzle && 
-                                   puzzle.type === 'puzzle' && 
-                                   puzzle.difficulty && 
-                                   validDifficulties.includes(puzzle.difficulty.toLowerCase());
-                        }).length;
+                    } else {
+                        // CRITICAL: No Supabase data - show 0 progress (NO FALLBACK to progressTracker or localStorage)
+                        console.log('📊 Progress bars - No Supabase data, showing 0 progress (no fallback)');
+                        completedGames = 0;
+                        completedPuzzles = 0;
                     }
                     
                     console.log('Progress bar debug:');
