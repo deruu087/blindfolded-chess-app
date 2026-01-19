@@ -2822,22 +2822,34 @@
                         console.log('=== LOADING CUSTOM GAMES FROM SUPABASE ===');
                         // Check if user is logged in using Supabase session
                         let isLoggedIn = false;
+                        console.log('🔍 Checking authentication...');
+                        console.log('  - window.isSignedIn available:', typeof window.isSignedIn === 'function');
+                        console.log('  - window.getCurrentUser available:', typeof window.getCurrentUser === 'function');
+                        console.log('  - window.getSupabase available:', typeof window.getSupabase === 'function');
+                        console.log('  - window.getUserCustomGames available:', typeof window.getUserCustomGames === 'function');
+                        
                         if (typeof window.isSignedIn === 'function') {
                             isLoggedIn = await window.isSignedIn();
+                            console.log('  - isSignedIn() result:', isLoggedIn);
                         } else if (typeof window.getCurrentUser === 'function') {
                             const user = await window.getCurrentUser();
                             isLoggedIn = user !== null;
+                            console.log('  - getCurrentUser() result:', user ? 'user found' : 'no user');
                         } else if (typeof window.getSupabase === 'function') {
                             const supabase = window.getSupabase();
                             if (supabase && supabase.auth) {
                                 const { data: { session } } = await supabase.auth.getSession();
                                 isLoggedIn = session !== null && session.user !== null;
+                                console.log('  - getSession() result:', session ? 'session found' : 'no session');
                             }
                         }
                         
+                        console.log('🔐 Final isLoggedIn status:', isLoggedIn);
+                        
                         if (isLoggedIn && typeof window.getUserCustomGames === 'function') {
-                            console.log('User is logged in, loading custom games from Supabase...');
+                            console.log('✅ User is logged in, loading custom games from Supabase...');
                             const customGamesData = await window.getUserCustomGames();
+                            console.log('📦 Raw custom games data from Supabase:', customGamesData);
                             
                             if (customGamesData && Array.isArray(customGamesData) && customGamesData.length > 0) {
                                 // Extract game_data from each custom game record, filtering out invalid records
@@ -2860,11 +2872,18 @@
                                     .filter(game => game !== null && game !== undefined); // Remove null/undefined entries
                                 
                                 if (customGames && Array.isArray(customGames) && customGames.length > 0) {
+                                    console.log(`📋 Extracted ${customGames.length} valid custom games`);
+                                    console.log('📋 Custom game IDs:', customGames.map(g => g.id));
                                     // Avoid duplicates
                                     const existingIds = allGames.map(g => g && g.id).filter(id => id !== undefined);
+                                    console.log('📋 Existing game IDs:', existingIds);
                                     const newCustomGames = customGames.filter(g => g && g.id && !existingIds.includes(g.id));
+                                    console.log(`📋 New custom games (after deduplication): ${newCustomGames.length}`);
                                     allGames = allGames.concat(newCustomGames);
                                     console.log(`✅ Loaded ${newCustomGames.length} custom games from Supabase`);
+                                    console.log('✅ Custom games added to allGames:', newCustomGames.map(g => ({ id: g.id, name: g.name })));
+                                } else {
+                                    console.log('⚠️ No valid custom games after extraction');
                                 }
                             } else {
                                 console.log('No custom games found in Supabase');
