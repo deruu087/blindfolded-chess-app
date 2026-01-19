@@ -3488,18 +3488,31 @@
             }
         }
 
-        // Call immediately if DOM is already loaded, otherwise wait for DOMContentLoaded
+        // Call reloadGamesData() on page load (same function that works manually)
         console.log('🎯 Script executing, document.readyState:', document.readyState);
+        console.log('🎯 Setting up automatic games loading...');
+        
+        // Use reloadGamesData since we know it works
+        async function autoLoadGames() {
+            console.log('🎯 autoLoadGames() called - using reloadGamesData()');
+            if (typeof reloadGamesData === 'function') {
+                await reloadGamesData();
+            } else {
+                console.log('🎯 reloadGamesData not available yet, calling loadGamesOnPageLoad()');
+                await loadGamesOnPageLoad();
+            }
+        }
+        
         if (document.readyState === 'loading') {
             console.log('🎯 DOM still loading, waiting for DOMContentLoaded...');
             document.addEventListener('DOMContentLoaded', function() {
-                console.log('🎯 DOMContentLoaded fired, calling loadGamesOnPageLoad()...');
-                loadGamesOnPageLoad();
+                console.log('🎯 DOMContentLoaded fired, calling autoLoadGames()...');
+                autoLoadGames();
             });
         } else {
             // DOM already loaded, call immediately
-            console.log('🎯 DOM already loaded, calling loadGamesOnPageLoad() immediately...');
-            loadGamesOnPageLoad();
+            console.log('🎯 DOM already loaded, calling autoLoadGames() immediately...');
+            autoLoadGames();
         }
         
         document.addEventListener('DOMContentLoaded', async function() {
