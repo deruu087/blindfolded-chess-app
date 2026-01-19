@@ -3930,6 +3930,7 @@
         let supabaseDeleteHelperRef = null;
         
         // Function to get the Supabase delete helper (cached)
+        // IMPORTANT: This must be called BEFORE the local deleteCustomGame function is used
         async function getSupabaseDeleteHelper() {
             if (supabaseDeleteHelperRef) {
                 return supabaseDeleteHelperRef;
@@ -3938,8 +3939,10 @@
             // Wait for supabase-helpers.js to load
             let attempts = 0;
             while (attempts < 50) {
+                // Check if the function exists and verify it's the Supabase helper
+                // The Supabase helper only takes one parameter (gameId), not (event, gameId)
                 if (typeof window.deleteCustomGame === 'function') {
-                    // Store the reference
+                    // Store the reference immediately
                     supabaseDeleteHelperRef = window.deleteCustomGame;
                     console.log('✅ Got Supabase delete helper reference');
                     return supabaseDeleteHelperRef;
@@ -3952,17 +3955,17 @@
             return null;
         }
         
-        // Function to delete a custom game
-        async function deleteCustomGame(event, gameId) {
+        // Function to delete a custom game (local wrapper that handles the event)
+        async function deleteCustomGameLocal(event, gameId) {
             event.stopPropagation(); // Prevent the game from being selected
             
             try {
                 console.log('🗑️ Deleting custom game:', gameId);
-                console.log('🗑️ Event object:', event);
+                console.log('🗑️ Event object type:', typeof event, event.constructor.name);
                 console.log('🗑️ GameId type:', typeof gameId, gameId);
                 
-                // Validate gameId
-                if (!gameId || typeof gameId !== 'string') {
+                // Validate gameId - ensure it's not the event object
+                if (!gameId || typeof gameId !== 'string' || gameId === '[object PointerEvent]') {
                     console.error('❌ Invalid gameId:', gameId);
                     alert('Error: Invalid game ID. Please refresh the page and try again.');
                     return;
@@ -3996,6 +3999,7 @@
                 
                 console.log('🗑️ Found game to delete:', gameToDelete.id);
                 console.log('🗑️ Database ID:', gameToDelete.id);
+                console.log('🗑️ Database ID type:', typeof gameToDelete.id);
                 
                 // Get the Supabase delete helper
                 const supabaseDeleteHelper = await getSupabaseDeleteHelper();
@@ -4004,8 +4008,16 @@
                     return;
                 }
                 
+                // Verify we have the correct ID (should be a UUID string, not an event)
+                if (typeof gameToDelete.id !== 'string' || gameToDelete.id.includes('PointerEvent')) {
+                    console.error('❌ Invalid database ID:', gameToDelete.id);
+                    alert('Error: Invalid game ID format. Please refresh the page and try again.');
+                    return;
+                }
+                
                 // Call the Supabase delete function with the database ID (NOT the event!)
                 console.log('🗑️ Calling Supabase delete with ID:', gameToDelete.id);
+                console.log('🗑️ Supabase helper type:', typeof supabaseDeleteHelper);
                 const result = await supabaseDeleteHelper(gameToDelete.id);
                 
                 if (result.success) {
@@ -5874,7 +5886,8 @@
             const deleteGameBtn = document.getElementById('delete-game-btn');
             if (game.id.startsWith('custom-game-') && !window.customGameMode) {
                 deleteGameSection.style.display = 'block';
-                deleteGameBtn.onclick = (e) => deleteCustomGame(e, game.id);
+                // Use deleteCustomGameLocal to avoid confusion with window.deleteCustomGame
+                deleteGameBtn.onclick = (e) => deleteCustomGameLocal(e, game.id);
                  
                  // Hide custom commentary section and save button when viewing saved custom games
                  if (typeof hideCustomCommentarySection === 'function') {
