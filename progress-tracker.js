@@ -495,74 +495,82 @@ class ProgressTracker {
     }
     
     // Save progress to Supabase
+    // CRITICAL: Only save the specific game/puzzle that was just completed, not all games
     async saveToSupabase(completedType = 'game', gameId = null, inChallengeMode = false) {
         if (typeof window.saveUserProgress === 'function') {
             try {
-                // Fetch games.json to separate games from puzzles
+                // CRITICAL: Fetch existing progress from Supabase first, then add only the new completion
                 let completedGames = [];
                 let completedPuzzles = [];
                 
-                try {
-                    // Fetch both games.json and puzzles.json to get all items
-                    const [gamesResponse, puzzlesResponse] = await Promise.all([
-                        fetch('/games/games.json'),
-                        fetch('/games/puzzles.json')
-                    ]);
-                    
-                    let allItems = [];
-                    
-                    // Load games
-                    if (gamesResponse.ok) {
-                        const gamesData = await gamesResponse.json();
-                        if (gamesData && gamesData.games) {
-                            allItems = allItems.concat(gamesData.games);
+                // Fetch existing progress from Supabase to merge with new completion
+                if (typeof window.getUserProgress === 'function') {
+                    try {
+                        const existingProgress = await window.getUserProgress();
+                        if (existingProgress) {
+                            // Get existing completed games and puzzles
+                            completedGames = existingProgress.completed_games || [];
+                            completedPuzzles = existingProgress.completed_puzzles || [];
+                            console.log('📥 Fetched existing progress from Supabase:', {
+                                existingGames: completedGames,
+                                existingPuzzles: completedPuzzles
+                            });
                         }
+                    } catch (error) {
+                        console.log('⚠️ Could not fetch existing progress (will create new):', error);
                     }
-                    
-                    // Load puzzles
-                    if (puzzlesResponse.ok) {
-                        const puzzlesData = await puzzlesResponse.json();
-                        if (puzzlesData && puzzlesData.puzzles) {
-                            allItems = allItems.concat(puzzlesData.puzzles);
-                        }
-                    }
-                    
-                    if (allItems.length > 0) {
-                        console.log('🔍 Filtering games and puzzles for Supabase columns...');
-                        console.log('🔍 challengeModeCompletions:', this.userProgress.challengeModeCompletions);
-                        console.log('🔍 puzzleChallengeCompletions:', this.userProgress.puzzleChallengeCompletions);
-                        
-                        // completed_games: Only games from "By Moves" completed in test mode
-                        // Use challengeModeCompletions array (already filtered to "By Moves" games in test mode)
-                        console.log('🔍 Processing challengeModeCompletions for completed_games:', this.userProgress.challengeModeCompletions);
-                        this.userProgress.challengeModeCompletions.forEach(gameId => {
-                            console.log(`🔍 Checking game: ${gameId}`);
-                            const game = allItems.find(g => g.id === gameId);
-                            if (game) {
-                                console.log(`✅ Found game in allItems: ${gameId}, type: ${game.type}, moves: ${game.moves}`);
-                                if (game.type === 'game') {
-                                    // Verify it's from "By Moves" (not custom, has moves count)
-                                    const isNotCustom = !gameId.startsWith('custom-game-');
-                                    const hasValidMoves = (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
-                                    console.log(`🔍 Game ${gameId} checks: isNotCustom=${isNotCustom}, hasValidMoves=${hasValidMoves}`);
-                                    if (isNotCustom && hasValidMoves) {
-                                        if (!completedGames.includes(gameId)) {
-                                            completedGames.push(gameId);
-                                            console.log(`✅ Added game to completed_games (By Moves, test mode): ${gameId}`);
-                                        } else {
-                                            console.log(`⚠️ Game already in completedGames: ${gameId}`);
-                                        }
+                }
+                
+                // Now add only the newly completed game/puzzle (not all games from challengeModeCompletions)
+                if (gameId && completedType === 'game' && inChallengeMode) {
+                    // Verify it's a valid game before adding
+                    try {
+                        const gamesResponse = await fetch('/games/games.json');
+                        if (gamesResponse.ok) {
+                            const gamesData = await gamesResponse.json();
+                            const game = gamesData?.games?.find(g => g.id === gameId);
+                            if (game && game.type === 'game') {
+                                const isNotCustom = !gameId.startsWith('custom-game-');
+                                const hasValidMoves = (game.moves <= 10 || (game.moves > 10 && game.moves <= 30) || game.moves > 30);
+                                if (isNotCustom && hasValidMoves) {
+                                    if (!completedGames.includes(gameId)) {
+                                        completedGames.push(gameId);
+                                        console.log(`✅ Adding newly completed game to Supabase: ${gameId}`);
                                     } else {
-                                        console.warn(`⚠️ Game ${gameId} filtered out: isNotCustom=${isNotCustom}, hasValidMoves=${hasValidMoves}`);
+                                        console.log(`⚠️ Game ${gameId} already in completed_games`);
                                     }
                                 } else {
-                                    console.warn(`⚠️ Item ${gameId} is not a game, type: ${game.type}`);
+                                    console.warn(`⚠️ Game ${gameId} is not valid for completed_games (custom or invalid moves)`);
                                 }
-                            } else {
-                                console.warn(`⚠️ Game not found in allItems: ${gameId}`);
                             }
-                        });
-                        
+                        }
+                    } catch (error) {
+                        console.error('Error verifying game:', error);
+                    }
+                } else if (gameId && completedType === 'puzzle' && inChallengeMode) {
+                    // Verify it's a valid puzzle before adding
+                    try {
+                        const puzzlesResponse = await fetch('/games/puzzles.json');
+                        if (puzzlesResponse.ok) {
+                            const puzzlesData = await puzzlesResponse.json();
+                            const puzzle = puzzlesData?.puzzles?.find(p => p.id === gameId);
+                            if (puzzle && puzzle.type === 'puzzle') {
+                                const validDifficulties = ['easy', 'intermediate', 'advanced', 'epic'];
+                                if (puzzle.difficulty && validDifficulties.includes(puzzle.difficulty.toLowerCase())) {
+                                    if (!completedPuzzles.includes(gameId)) {
+                                        completedPuzzles.push(gameId);
+                                        console.log(`✅ Adding newly completed puzzle to Supabase: ${gameId}`);
+                                    } else {
+                                        console.log(`⚠️ Puzzle ${gameId} already in completed_puzzles`);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error verifying puzzle:', error);
+                    }
+                }
+                
                 console.log('📊 Final data to save:', {
                     completedGames: completedGames.length,
                     completedPuzzles: completedPuzzles.length,
