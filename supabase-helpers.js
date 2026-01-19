@@ -368,21 +368,31 @@ async function saveCustomGame(gameData) {
  * Get all custom games for the current user
  */
 async function getUserCustomGames() {
+    console.log('🔍 getUserCustomGames() called');
     const supabase = getSupabase();
     if (!supabase) {
-        console.error('Supabase not initialized');
+        console.error('❌ Supabase not initialized');
         return null;
     }
+    console.log('✅ Supabase client available');
 
     // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (!user) {
-        console.log('No user logged in');
+    if (userError) {
+        console.error('❌ Error getting user:', userError);
         return null;
     }
+    
+    if (!user) {
+        console.log('⚠️ No user logged in');
+        return null;
+    }
+    
+    console.log('✅ User found:', user.id, user.email);
 
     // Fetch user's custom games from database
+    console.log('📥 Fetching custom games from custom_games table for user:', user.id);
     const { data, error } = await supabase
         .from('custom_games')
         .select('*')
@@ -390,8 +400,20 @@ async function getUserCustomGames() {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching custom games:', error);
+        console.error('❌ Error fetching custom games:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         return null;
+    }
+
+    console.log('✅ Custom games fetched:', data ? data.length : 0, 'records');
+    if (data && data.length > 0) {
+        console.log('📦 First custom game sample:', {
+            id: data[0].id,
+            user_id: data[0].user_id,
+            has_game_data: !!data[0].game_data,
+            game_data_type: typeof data[0].game_data,
+            game_data_keys: data[0].game_data ? Object.keys(data[0].game_data) : 'N/A'
+        });
     }
 
     return data;

@@ -2785,6 +2785,7 @@
     <script src="progress-tracker.js"></script>
     <script>
         // GameLoader class to handle loading games from files
+        console.log('📝 GameLoader class definition script executing...');
         class GameLoader {
             static async loadGamesFromFiles() {
                 try {
@@ -3398,6 +3399,7 @@
 
         // Initialize games data on page load
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🎯 DOMContentLoaded event fired - games.html');
             console.log('DOM loaded, loading games...');
             
             // CRITICAL: Load games FIRST, independently of Supabase
@@ -3405,6 +3407,12 @@
             try {
                 console.log('🚀 About to call GameLoader.loadGamesFromFiles()...');
                 console.log('🚀 GameLoader available:', typeof GameLoader !== 'undefined');
+                
+                if (typeof GameLoader === 'undefined') {
+                    console.error('❌ GameLoader is not defined!');
+                    return;
+                }
+                
                 gamesData = await GameLoader.loadGamesFromFiles();
                 console.log('✅ GameLoader.loadGamesFromFiles() completed');
                 console.log('Loaded games:', gamesData);
