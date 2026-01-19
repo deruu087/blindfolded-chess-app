@@ -2413,12 +2413,21 @@
                         userData.name = supabaseName;
                         userData.email = user.email || userData.email; // Get real email from Supabase
                         
-                        // Update cache with fresh user data
+                        // Generate greeting message
+                        let firstName = userData.name;
+                        if (firstName && firstName.includes(' ')) {
+                            firstName = firstName.split(' ')[0];
+                        }
+                        const greetingMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+                        
+                        // Update cache with fresh user data (including greeting)
                         profileCache.userData = {
                             name: userData.name,
-                            email: userData.email
+                            email: userData.email,
+                            greeting: greetingMessage
                         };
                         profileCache.timestamp = Date.now();
+                        saveProfileCache(); // Save to sessionStorage
                         
                         // Update UI again with fresh Supabase data
                         updateUserInfo();
