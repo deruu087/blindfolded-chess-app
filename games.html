@@ -6432,8 +6432,43 @@
                     const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
                     applyCastling(parsedMove, true, true);
                 } else if (sourceSquare && destinationSquare && pieceImage) {
+                    // Handle en passant capture - check both saved data and parsed move
+                    const parsedMove = moveParser.parseMove(moveNotation, isWhiteMove);
+                    const isEnPassant = (move.isEnPassant && move.enPassantCapturedSquare) || parsedMove.isEnPassant;
+                    let enPassantCapturedSquare = move.enPassantCapturedSquare;
+                    
+                    // If parsed move detected en passant but we don't have the captured square, calculate it
+                    if (parsedMove.isEnPassant && !enPassantCapturedSquare) {
+                        // For en passant, the captured pawn is on the same file as target, one rank back
+                        const targetFile = parsedMove.target[0];
+                        const targetRank = parseInt(parsedMove.target[1]);
+                        const capturedRank = isWhiteMove ? targetRank - 1 : targetRank + 1;
+                        enPassantCapturedSquare = targetFile + capturedRank;
+                        console.log('executeMove: Calculated en passant captured square:', enPassantCapturedSquare);
+                    }
+                    
+                    // Remove the captured pawn from parser's tracking BEFORE moving the piece
+                    if (isEnPassant && enPassantCapturedSquare) {
+                        const capturedIsWhite = !isWhiteMove;
+                        if (typeof moveParser.removePiece === 'function') {
+                            moveParser.removePiece('P', enPassantCapturedSquare, capturedIsWhite);
+                            console.log('executeMove: Removed captured pawn from parser tracking:', enPassantCapturedSquare);
+                        }
+                    }
+                    
                     // Use the proper animation for existing pieces
                     animateExistingPiece(sourceSquare, destinationSquare, pieceImage);
+                    
+                    // Remove the captured pawn from DOM after animation completes
+                    if (isEnPassant && enPassantCapturedSquare) {
+                        setTimeout(() => {
+                            const enPassantSquareElement = document.querySelector(`[data-square="${enPassantCapturedSquare}"]`);
+                            if (enPassantSquareElement) {
+                                enPassantSquareElement.innerHTML = '';
+                                console.log('executeMove: Removed en passant captured pawn from DOM:', enPassantCapturedSquare);
+                            }
+                        }, 350); // Wait for animation to complete
+                    }
                     
                     // Update piece positions in the parser - use the piece from notation
                     const piece = moveNotation.charAt(0).toUpperCase();
