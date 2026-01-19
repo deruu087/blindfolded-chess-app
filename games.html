@@ -6552,11 +6552,41 @@
             setupInitialPosition();
 
             // Apply moves up to current position
+            const enPassantCaptures = []; // Track en passant captures to clean up after all moves
             for (let i = 0; i < currentMoveIndex && i < currentGame.moves_detailed.length; i++) {
                 const move = currentGame.moves_detailed[i];
                 console.log(`Applying move ${i + 1}:`, move.white || move.black);
                 applyMove(move, false, false);
+                
+                // Track en passant captures for final cleanup
+                if (move.isEnPassant && move.enPassantCapturedSquare) {
+                    enPassantCaptures.push(move.enPassantCapturedSquare);
+                }
             }
+            
+            // Final cleanup: Ensure all en passant captured pawns are removed
+            // This is a safeguard in case something restored them during move application
+            enPassantCaptures.forEach(capturedSquare => {
+                const enPassantSquareElement = document.querySelector(`[data-square="${capturedSquare}"]`);
+                if (enPassantSquareElement && enPassantSquareElement.innerHTML.trim() !== '') {
+                    // Check if there's actually a piece there (might be the capturing pawn on the target square)
+                    const piece = enPassantSquareElement.querySelector('.chess-piece, .piece');
+                    if (piece) {
+                        // Only remove if it's a pawn (en passant only captures pawns)
+                        const pieceImg = piece.querySelector('img');
+                        if (pieceImg && (pieceImg.src.includes('pdt45') || pieceImg.src.includes('plt45'))) {
+                            // Double-check: this should be the captured square, not the target square
+                            // For en passant, the captured pawn is on a different square than the target
+                            const isOnCapturedSquare = piece.dataset.square === capturedSquare || 
+                                                       enPassantSquareElement.dataset.square === capturedSquare;
+                            if (isOnCapturedSquare) {
+                                enPassantSquareElement.innerHTML = '';
+                                console.log('Final cleanup: Removed en passant captured pawn from', capturedSquare);
+                            }
+                        }
+                    }
+                }
+            });
             
             // Play sound only for the current (last applied) move
             if (currentMoveIndex > 0 && currentMoveIndex <= currentGame.moves_detailed.length) {
