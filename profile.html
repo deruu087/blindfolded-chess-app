@@ -2546,8 +2546,8 @@
             // Update training time every second if timer is running
             setInterval(function() {
                 if (progressTracker.trainingTimer.isRunning) {
-                    // Always pass globalSupabaseProgress to ensure latest data is used
-                    updateStats(globalSupabaseProgress);
+                    // Always fetch fresh from Supabase (no cache)
+                    updateStats(null);
                 }
             }, 1000);
         }
