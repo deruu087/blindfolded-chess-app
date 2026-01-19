@@ -563,39 +563,13 @@ class ProgressTracker {
                             }
                         });
                         
-                        // completed_puzzles: Only puzzles from "By Difficulty" completed in test mode
-                        // Use puzzleChallengeCompletions array (puzzles completed in test mode)
-                        const validDifficulties = ['easy', 'intermediate', 'advanced', 'epic'];
-                        if (this.userProgress.puzzleChallengeCompletions) {
-                            this.userProgress.puzzleChallengeCompletions.forEach(puzzleId => {
-                                const puzzle = allItems.find(g => g.id === puzzleId);
-                                if (puzzle && puzzle.type === 'puzzle') {
-                                    // Verify it has a valid difficulty level (from "By Difficulty" tab)
-                                    if (puzzle.difficulty && validDifficulties.includes(puzzle.difficulty.toLowerCase())) {
-                                        if (!completedPuzzles.includes(puzzleId)) {
-                                            completedPuzzles.push(puzzleId);
-                                            console.log(`✅ Added puzzle to completed_puzzles (By Difficulty, test mode): ${puzzleId}`);
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                        
-                        console.log('📊 Separated results:', {
-                            completedGames: completedGames.length,
-                            completedPuzzles: completedPuzzles.length,
-                            gamesList: completedGames,
-                            puzzlesList: completedPuzzles
-                        });
-                    }
-                } catch (fetchError) {
-                    console.error('Error fetching games.json/puzzles.json to separate types:', fetchError);
-                    // Fallback: save all as games if we can't fetch
-                    completedGames = [...this.userProgress.completedGames];
-                }
-                
-                // Get challenge mode completions (games from "By Moves" completed in test mode)
-                const challengeModeGames = this.userProgress.challengeModeCompletions || [];
+                console.log('📊 Final data to save:', {
+                    completedGames: completedGames.length,
+                    completedPuzzles: completedPuzzles.length,
+                    gamesList: completedGames,
+                    puzzlesList: completedPuzzles,
+                    newlyCompleted: gameId
+                });
                 
                 // Calculate current training hours (include active session if timer is running)
                 let totalTrainingHours = this.userProgress.totalTrainingHours || 0;
