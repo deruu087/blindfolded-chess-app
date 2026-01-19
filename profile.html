@@ -2151,8 +2151,15 @@
         // Initialize progress tracker (but we'll use Supabase as source of truth)
         let progressTracker = new ProgressTracker();
         
-        // Store Supabase progress data globally so updateStats can use it
+        // CRITICAL: Progress data must ALWAYS come from Supabase, never cached
+        // Clear any stale progress data on page load
         let globalSupabaseProgress = null;
+        
+        // Clear progress cache on page load to ensure fresh data
+        (function() {
+            globalSupabaseProgress = null;
+            console.log('🧹 Cleared progress cache on page load - will fetch fresh from Supabase');
+        })();
 
         // Tab switching functionality is handled in the earlier script block
         // This duplicate function has been removed to avoid conflicts
@@ -2731,24 +2738,44 @@
             console.log('Account reset to free');
         }
 
-        // SIMPLIFIED: Simple function to update profile stats from Supabase data
+        // CRITICAL: Progress data must ALWAYS come fresh from Supabase, no cache, no fallback
         window.updateStats = async function updateStats(supabaseData = null) {
-            // If no data provided, try to fetch from Supabase
-            let supabaseProgress = supabaseData || globalSupabaseProgress;
+            // CRITICAL: Always fetch fresh from Supabase, never use cached globalSupabaseProgress
+            let supabaseProgress = null;
             
-            // If still null, try fetching directly (with waitForSupabase fallback)
-            if (!supabaseProgress && typeof window.getUserProgress === 'function') {
-                try {
-                    supabaseProgress = await window.getUserProgress();
-                    if (supabaseProgress) {
-                        globalSupabaseProgress = supabaseProgress;
+            // If data was passed, use it (but still validate it's from Supabase)
+            if (supabaseData) {
+                supabaseProgress = supabaseData;
+                // Update global only for current session, but don't use as fallback
+                globalSupabaseProgress = supabaseData;
+            } else {
+                // No data passed - MUST fetch fresh from Supabase
+                if (typeof window.getUserProgress === 'function') {
+                    try {
+                        console.log('🔄 Fetching fresh progress data from Supabase (no cache, no fallback)');
+                        supabaseProgress = await window.getUserProgress();
+                        if (supabaseProgress) {
+                            globalSupabaseProgress = supabaseProgress;
+                        } else {
+                            // No data in Supabase - explicitly set to null to show 0 progress
+                            console.log('📊 No progress data in Supabase - showing 0 progress');
+                            supabaseProgress = null;
+                            globalSupabaseProgress = null;
+                        }
+                    } catch (e) {
+                        console.error('❌ Error fetching progress from Supabase:', e);
+                        // On error, show 0 progress (don't use cached data)
+                        supabaseProgress = null;
+                        globalSupabaseProgress = null;
                     }
-                } catch (e) {
-                    console.warn('Could not fetch Supabase data:', e);
+                } else {
+                    console.warn('⚠️ getUserProgress not available - showing 0 progress');
+                    supabaseProgress = null;
+                    globalSupabaseProgress = null;
                 }
             }
             
-            // Get data from Supabase or use empty defaults
+            // Get data from Supabase or use empty defaults (0 progress if no data)
             const completedGamesArray = supabaseProgress?.completed_games || [];
             const completedPuzzlesArray = supabaseProgress?.completed_puzzles || [];
             const trainingHours = supabaseProgress?.training_hours ?? 0;
@@ -2895,23 +2922,27 @@
                     ).length;
                     
                     // Get completed games and puzzles from Supabase data (source of truth)
-                    // Use globalSupabaseProgress if available (already loaded), otherwise reload
+                    // CRITICAL: Always fetch fresh from Supabase, no cache, no fallback
                     let completedGames = 0;
                     let completedPuzzles = 0;
                     
-                    // Try to use globalSupabaseProgress first (already loaded)
-                    let supabaseProgress = globalSupabaseProgress;
-                    
-                    // If not available, try to load from Supabase
-                    if (!supabaseProgress && typeof window.getUserProgress === 'function') {
+                    // Always fetch fresh from Supabase (never use cached globalSupabaseProgress)
+                    let supabaseProgress = null;
+                    if (typeof window.getUserProgress === 'function') {
                         try {
+                            console.log('🔄 Fetching fresh progress for progress bars from Supabase');
                             supabaseProgress = await window.getUserProgress();
-                            // Update global for future use
                             if (supabaseProgress) {
                                 globalSupabaseProgress = supabaseProgress;
+                            } else {
+                                // No data - show 0 progress
+                                supabaseProgress = null;
+                                globalSupabaseProgress = null;
                             }
                         } catch (e) {
-                            console.error('Error loading progress for progress bars:', e);
+                            console.error('❌ Error loading progress for progress bars:', e);
+                            supabaseProgress = null;
+                            globalSupabaseProgress = null;
                         }
                     }
                     
