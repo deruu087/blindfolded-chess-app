@@ -6677,6 +6677,15 @@
                 const pieceImage = moveParser.getPieceImage(parsedMove.piece, isWhiteMove);
                 movePiece(parsedMove.source, parsedMove.target, pieceImage, animate, enableSound);
                 
+                // Handle en passant capture - remove the captured pawn
+                if (move.isEnPassant && move.enPassantCapturedSquare) {
+                    const enPassantSquareElement = document.querySelector(`[data-square="${move.enPassantCapturedSquare}"]`);
+                    if (enPassantSquareElement) {
+                        enPassantSquareElement.innerHTML = '';
+                        console.log('En passant: Removed captured pawn from', move.enPassantCapturedSquare, 'when replaying move');
+                    }
+                }
+                
                 // Update piece positions in the parser
                 moveParser.updatePiecePosition(parsedMove.piece, parsedMove.source, parsedMove.target, isWhiteMove);
             }

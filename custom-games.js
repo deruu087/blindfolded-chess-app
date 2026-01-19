@@ -1771,7 +1771,9 @@ function saveCustomGameLocal() {
                         black_from: null,
                         black_to: null,
                         annotation: '',
-                        commentary: moveData.white.commentary || ''
+                        commentary: moveData.white.commentary || '',
+                        isEnPassant: moveData.white.isEnPassant || false,
+                        enPassantCapturedSquare: moveData.white.enPassantCapturedSquare || null
                     });
                 }
                 
@@ -1801,7 +1803,9 @@ function saveCustomGameLocal() {
                         black_from: moveData.black.from,
                         black_to: moveData.black.to,
                         annotation: '',
-                        commentary: moveData.black.commentary || ''
+                        commentary: moveData.black.commentary || '',
+                        isEnPassant: moveData.black.isEnPassant || false,
+                        enPassantCapturedSquare: moveData.black.enPassantCapturedSquare || null
                     });
                 }
             });
