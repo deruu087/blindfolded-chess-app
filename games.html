@@ -2821,6 +2821,14 @@
                     // Load custom games from Supabase
                     try {
                         console.log('=== LOADING CUSTOM GAMES FROM SUPABASE ===');
+                        
+                        // Wait for supabase-helpers.js to load if needed
+                        let attempts = 0;
+                        while (typeof window.getUserCustomGames !== 'function' && attempts < 20) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            attempts++;
+                        }
+                        
                         // Check if user is logged in using Supabase session
                         let isLoggedIn = false;
                         console.log('🔍 Checking authentication...');
