@@ -3566,65 +3566,47 @@
             }
 
             // Load completed challenges from Supabase (optional - games work without this)
-            // Wait for Supabase scripts to load first
+            // CRITICAL: Load completed challenges ONLY from Supabase (no cache, no fallback)
             if (typeof window.getUserProgress === 'function') {
                 try {
+                    console.log('🔄 Fetching fresh progress from Supabase for badges (no cache, no fallback)');
                     const supabaseProgress = await window.getUserProgress();
                     if (supabaseProgress) {
                         console.log('✅ Loading completed games/puzzles from Supabase for badges...');
                         console.log('Supabase completed_games:', supabaseProgress.completed_games);
                         console.log('Supabase completed_puzzles:', supabaseProgress.completed_puzzles);
                         
-                        // Update progressTracker with Supabase data
-                        if (supabaseProgress.completed_games) {
-                            progressTracker.userProgress.completedGames = supabaseProgress.completed_games;
+                        // Build completedChallenges Set directly from Supabase data (no progressTracker)
+                        completedChallenges = new Set();
+                        if (supabaseProgress.completed_games && Array.isArray(supabaseProgress.completed_games)) {
+                            supabaseProgress.completed_games.forEach(gameId => completedChallenges.add(gameId));
                         }
-                        if (supabaseProgress.completed_puzzles) {
-                            // Merge puzzles into completedGames for badge display
-                            const allCompleted = [...(supabaseProgress.completed_games || []), ...supabaseProgress.completed_puzzles];
-                            progressTracker.userProgress.completedGames = allCompleted;
-                        }
-                        if (supabaseProgress.challenge_mode_completions) {
-                            progressTracker.userProgress.challengeModeCompletions = supabaseProgress.challenge_mode_completions;
-                        }
-                        if (supabaseProgress.completed_puzzles) {
-                            progressTracker.userProgress.puzzleChallengeCompletions = supabaseProgress.completed_puzzles;
-                        }
-                        if (supabaseProgress.training_hours !== undefined) {
-                            progressTracker.userProgress.totalTrainingHours = supabaseProgress.training_hours;
-                        }
-                        if (supabaseProgress.current_streak !== undefined) {
-                            progressTracker.userProgress.currentStreak = supabaseProgress.current_streak;
+                        if (supabaseProgress.completed_puzzles && Array.isArray(supabaseProgress.completed_puzzles)) {
+                            supabaseProgress.completed_puzzles.forEach(puzzleId => completedChallenges.add(puzzleId));
                         }
                         
-                        console.log('✅ Updated progressTracker from Supabase:', {
-                            completedGames: progressTracker.userProgress.completedGames,
-                            challengeModeCompletions: progressTracker.userProgress.challengeModeCompletions,
-                            puzzleChallengeCompletions: progressTracker.userProgress.puzzleChallengeCompletions
-                        });
+                        console.log('✅ Loaded completed challenges from Supabase:', completedChallenges);
+                        console.log('Completed challenges array:', Array.from(completedChallenges));
                         
                         // Update Supabase data table
                         updateSupabaseDataTable(supabaseProgress);
                     } else {
-                        // No data - update table to show null
+                        // No data in Supabase - clear completed challenges (show 0 badges)
+                        console.log('📊 No Supabase data - clearing completed challenges (no badges)');
+                        completedChallenges = new Set();
                         updateSupabaseDataTable(null);
                     }
                 } catch (error) {
-                    console.error('Error loading progress from Supabase:', error);
+                    console.error('❌ Error loading progress from Supabase:', error);
+                    // On error, clear completed challenges (no fallback to cache)
+                    completedChallenges = new Set();
                     updateSupabaseDataTable(null);
                 }
             } else {
-                updateSupabaseDataTable(null);
-            }
-            
-            // Load completed challenges from progress tracker (now includes Supabase data)
-            try {
-                completedChallenges = loadCompletedChallenges();
-                console.log('Loaded completed challenges:', completedChallenges);
-                console.log('Completed challenges array:', Array.from(completedChallenges));
-            } catch (error) {
-                console.error('Error loading completed challenges:', error);
+                // getUserProgress not available - clear completed challenges
+                console.log('⚠️ getUserProgress not available - clearing completed challenges');
                 completedChallenges = new Set();
+                updateSupabaseDataTable(null);
             }
             
             // Update the game buttons display (already called after games load, but call again to refresh badges)
@@ -7212,25 +7194,51 @@
          }
 
 
-         function updateGameListBadges() {
-             // Refresh completed challenges from progress tracker
-             completedChallenges = loadCompletedChallenges();
-             console.log('Updating badges with completed challenges:', completedChallenges);
-             
-             // Update badges in the games list sidebar
-             const badges = document.querySelectorAll('.game-completion-badge');
-             console.log('Found badges:', badges.length);
-             badges.forEach(badge => {
-                 const gameId = badge.dataset.game;
-                 const isCompleted = completedChallenges.has(gameId);
-                 console.log(`Game ${gameId}: completed = ${isCompleted}`);
-                 if (isCompleted) {
-                     badge.classList.add('show');
-                 } else {
-                     badge.classList.remove('show');
-                 }
-             });
-         }
+        async function updateGameListBadges() {
+            // CRITICAL: Always fetch fresh from Supabase (no cache, no fallback to progressTracker)
+            if (typeof window.getUserProgress === 'function') {
+                try {
+                    console.log('🔄 Fetching fresh progress from Supabase for badges update');
+                    const supabaseProgress = await window.getUserProgress();
+                    if (supabaseProgress) {
+                        // Build completedChallenges Set directly from Supabase data
+                        completedChallenges = new Set();
+                        if (supabaseProgress.completed_games && Array.isArray(supabaseProgress.completed_games)) {
+                            supabaseProgress.completed_games.forEach(gameId => completedChallenges.add(gameId));
+                        }
+                        if (supabaseProgress.completed_puzzles && Array.isArray(supabaseProgress.completed_puzzles)) {
+                            supabaseProgress.completed_puzzles.forEach(puzzleId => completedChallenges.add(puzzleId));
+                        }
+                    } else {
+                        // No data - clear completed challenges
+                        completedChallenges = new Set();
+                    }
+                } catch (error) {
+                    console.error('❌ Error loading progress for badges:', error);
+                    // On error, clear completed challenges (no fallback)
+                    completedChallenges = new Set();
+                }
+            } else {
+                // getUserProgress not available - clear completed challenges
+                completedChallenges = new Set();
+            }
+            
+            console.log('Updating badges with completed challenges:', completedChallenges);
+            
+            // Update badges in the games list sidebar
+            const badges = document.querySelectorAll('.game-completion-badge');
+            console.log('Found badges:', badges.length);
+            badges.forEach(badge => {
+                const gameId = badge.dataset.game;
+                const isCompleted = completedChallenges.has(gameId);
+                console.log(`Game ${gameId}: completed = ${isCompleted}`);
+                if (isCompleted) {
+                    badge.classList.add('show');
+                } else {
+                    badge.classList.remove('show');
+                }
+            });
+        }
 
          document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing...');
