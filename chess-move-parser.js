@@ -334,6 +334,23 @@ class ChessMoveParser {
         }
     }
 
+    removePiece(piece, square, isWhite) {
+        const color = isWhite ? 'white' : 'black';
+        const positions = this.piecePositions[color][piece];
+        
+        if (Array.isArray(positions)) {
+            const index = positions.indexOf(square);
+            if (index !== -1) {
+                positions.splice(index, 1);
+                console.log(`Removed ${color} ${piece} from ${square} in move parser`);
+            }
+        } else if (positions === square) {
+            // If it's a single piece (like king/queen), we can't really remove it
+            // This shouldn't happen for en passant (only pawns)
+            console.warn(`Attempted to remove single piece ${piece} from ${square}`);
+        }
+    }
+
     resetBoard() {
         this.piecePositions = this.initializePiecePositions();
     }
