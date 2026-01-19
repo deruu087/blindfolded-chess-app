@@ -3397,6 +3397,53 @@
         // The loadMyGamesContent and loadGMGamesContent functions are no longer needed
         // since all tabs display the same game categories
 
+        // TEST FUNCTION - Run this in console to test custom games loading
+        window.testCustomGames = async function() {
+            console.log('🧪 TEST: Testing custom games loading...');
+            
+            // Check if functions are available
+            console.log('🧪 window.getSupabase:', typeof window.getSupabase);
+            console.log('🧪 window.getUserCustomGames:', typeof window.getUserCustomGames);
+            console.log('🧪 window.isSignedIn:', typeof window.isSignedIn);
+            console.log('🧪 window.getCurrentUser:', typeof window.getCurrentUser);
+            
+            // Check authentication
+            let isLoggedIn = false;
+            if (typeof window.isSignedIn === 'function') {
+                isLoggedIn = await window.isSignedIn();
+                console.log('🧪 isSignedIn():', isLoggedIn);
+            } else if (typeof window.getCurrentUser === 'function') {
+                const user = await window.getCurrentUser();
+                isLoggedIn = user !== null;
+                console.log('🧪 getCurrentUser():', user ? 'user found' : 'no user');
+            } else if (typeof window.getSupabase === 'function') {
+                const supabase = window.getSupabase();
+                if (supabase && supabase.auth) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    isLoggedIn = session !== null && session.user !== null;
+                    console.log('🧪 getSession():', session ? 'session found' : 'no session');
+                }
+            }
+            
+            console.log('🧪 Final isLoggedIn:', isLoggedIn);
+            
+            // Try to load custom games
+            if (isLoggedIn && typeof window.getUserCustomGames === 'function') {
+                console.log('🧪 Calling getUserCustomGames()...');
+                const customGames = await window.getUserCustomGames();
+                console.log('🧪 Result:', customGames);
+                console.log('🧪 Number of games:', customGames ? customGames.length : 0);
+                if (customGames && customGames.length > 0) {
+                    console.log('🧪 First game sample:', customGames[0]);
+                    console.log('🧪 First game game_data:', customGames[0].game_data);
+                }
+                return customGames;
+            } else {
+                console.log('🧪 Cannot load - isLoggedIn:', isLoggedIn, 'getUserCustomGames available:', typeof window.getUserCustomGames === 'function');
+                return null;
+            }
+        };
+
         // Initialize games data on page load
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🎯 DOMContentLoaded event fired - games.html');

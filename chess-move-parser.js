@@ -342,6 +342,7 @@ class ChessMoveParser {
 // Game loader utility
 class GameLoader {
     static async loadGamesFromFiles() {
+        console.log('🎮🎮🎮 GameLoader.loadGamesFromFiles() CALLED (chess-move-parser.js) 🎮🎮🎮');
         let allGames = [];
         
         // Load main games
