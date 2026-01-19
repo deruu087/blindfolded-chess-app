@@ -7410,7 +7410,8 @@
         console.log('🔴 FINAL SCRIPT BLOCK - Auto-loading games');
         (async function() {
             console.log('🔴 Auto-load function starting...');
-            // Wait for reloadGamesData to be available
+            
+            // Step 1: Wait for reloadGamesData to be available
             let attempts = 0;
             while (typeof reloadGamesData !== 'function' && attempts < 100) {
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -7420,16 +7421,48 @@
                 }
             }
             
-            if (typeof reloadGamesData === 'function') {
-                console.log('🔴 reloadGamesData is available! Calling it...');
-                try {
-                    await reloadGamesData();
-                    console.log('🔴 reloadGamesData() completed successfully!');
-                } catch (error) {
-                    console.error('🔴 Error calling reloadGamesData:', error);
-                }
-            } else {
+            if (typeof reloadGamesData !== 'function') {
                 console.error('🔴 reloadGamesData never became available after', attempts, 'attempts');
+                return;
+            }
+            
+            console.log('🔴 reloadGamesData is available!');
+            
+            // Step 2: Initialize Supabase if needed
+            if (typeof initSupabase === 'function') {
+                console.log('🔴 Initializing Supabase...');
+                await initSupabase();
+            }
+            
+            // Step 3: Wait for Supabase to be ready (so isSignedIn() works correctly)
+            console.log('🔴 Waiting for Supabase to be ready...');
+            attempts = 0;
+            while (attempts < 100) {
+                const supabase = typeof window.getSupabase === 'function' ? window.getSupabase() : null;
+                if (supabase && supabase.auth && typeof supabase.auth.getSession === 'function') {
+                    // Test if we can actually get a session (Supabase is fully ready)
+                    try {
+                        const { data } = await supabase.auth.getSession();
+                        console.log('🔴 Supabase is ready! Session check successful.');
+                        break;
+                    } catch (error) {
+                        // Not ready yet, continue waiting
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+                if (attempts % 10 === 0) {
+                    console.log('🔴 Waiting for Supabase to be ready... attempt', attempts);
+                }
+            }
+            
+            // Step 4: Now call reloadGamesData() - Supabase should be ready
+            console.log('🔴 Calling reloadGamesData()...');
+            try {
+                await reloadGamesData();
+                console.log('🔴 reloadGamesData() completed successfully!');
+            } catch (error) {
+                console.error('🔴 Error calling reloadGamesData:', error);
             }
         })();
     </script>
