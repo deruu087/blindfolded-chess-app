@@ -6675,25 +6675,36 @@
                 applyCastling(parsedMove, animate, enableSound);
                 } else {
                 const pieceImage = moveParser.getPieceImage(parsedMove.piece, isWhiteMove);
+                
+                // Handle en passant capture BEFORE moving the piece
+                // Remove the captured pawn from parser's tracking first
+                if (move.isEnPassant && move.enPassantCapturedSquare) {
+                    const capturedIsWhite = !isWhiteMove;
+                    if (typeof moveParser.removePiece === 'function') {
+                        moveParser.removePiece('P', move.enPassantCapturedSquare, capturedIsWhite);
+                        console.log('En passant: Removed captured pawn from parser tracking:', move.enPassantCapturedSquare);
+                    }
+                }
+                
                 movePiece(parsedMove.source, parsedMove.target, pieceImage, animate, enableSound);
                 
-                // Handle en passant capture - remove the captured pawn
+                // Handle en passant capture - remove the captured pawn from DOM
                 if (move.isEnPassant && move.enPassantCapturedSquare) {
-                    // Use setTimeout to ensure removal happens after movePiece completes
-                    setTimeout(() => {
-                        const enPassantSquareElement = document.querySelector(`[data-square="${move.enPassantCapturedSquare}"]`);
-                        if (enPassantSquareElement) {
-                            enPassantSquareElement.innerHTML = '';
-                            console.log('En passant: Removed captured pawn from', move.enPassantCapturedSquare, 'when replaying move');
-                            
-                            // Also remove from move parser's internal tracking
-                            // The captured pawn is the opposite color
-                            const capturedIsWhite = !isWhiteMove;
-                            if (typeof moveParser.removePiece === 'function') {
-                                moveParser.removePiece('P', move.enPassantCapturedSquare, capturedIsWhite);
+                    // Remove immediately (synchronously) since movePiece is synchronous when animate=false
+                    const enPassantSquareElement = document.querySelector(`[data-square="${move.enPassantCapturedSquare}"]`);
+                    if (enPassantSquareElement) {
+                        enPassantSquareElement.innerHTML = '';
+                        console.log('En passant: Removed captured pawn from DOM:', move.enPassantCapturedSquare, 'when replaying move');
+                    } else {
+                        // If element not found immediately, try again after a short delay
+                        setTimeout(() => {
+                            const enPassantSquareElement = document.querySelector(`[data-square="${move.enPassantCapturedSquare}"]`);
+                            if (enPassantSquareElement) {
+                                enPassantSquareElement.innerHTML = '';
+                                console.log('En passant: Removed captured pawn from DOM (delayed):', move.enPassantCapturedSquare);
                             }
-                        }
-                    }, animate ? 350 : 10); // Wait for animation if animated, otherwise just a small delay
+                        }, animate ? 350 : 50);
+                    }
                 }
                 
                 // Update piece positions in the parser
