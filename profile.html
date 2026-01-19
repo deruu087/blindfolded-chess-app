@@ -2386,11 +2386,21 @@
                 // We already have user data from checkAuthStatus - update cache
                 userData.name = authStatus.name;
                 userData.email = authStatus.email;
+                
+                // Generate greeting message
+                let firstName = userData.name;
+                if (firstName && firstName.includes(' ')) {
+                    firstName = firstName.split(' ')[0];
+                }
+                const greetingMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+                
                 profileCache.userData = {
                     name: userData.name,
-                    email: userData.email
+                    email: userData.email,
+                    greeting: greetingMessage
                 };
                 profileCache.timestamp = Date.now();
+                saveProfileCache(); // Save to sessionStorage
             } else if (typeof getCurrentUser === 'function') {
                 try {
                     const user = await getCurrentUser();
