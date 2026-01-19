@@ -3956,6 +3956,8 @@
             // Update all tabs with the same game data
             const tabPrefixes = ['', 'my-games-', 'gm-games-'];
             
+            console.log('🔄 Updating game categories with customGames:', customGames.length, customGames.map(g => g.id));
+            
             tabPrefixes.forEach(prefix => {
                 // Update short games
                 updateGameCategory(prefix + 'short-games-submenu', shortGames);
@@ -3964,10 +3966,13 @@
                 // Update long games
                 updateGameCategory(prefix + 'long-games-submenu', longGames);
                 // Update custom games
-                updateGameCategory(prefix + 'my-games-submenu', customGames);
+                const customMenuId = prefix + 'my-games-submenu';
+                console.log(`🔄 Calling updateGameCategory for ${customMenuId} with ${customGames.length} games`);
+                updateGameCategory(customMenuId, customGames);
             });
             
             // Update the My Games tab's custom submenu specifically
+            console.log('🔄 Calling updateGameCategory for my-games-my-games-submenu with', customGames.length, 'games');
             updateGameCategory('my-games-my-games-submenu', customGames);
             
             // Update opening tab
