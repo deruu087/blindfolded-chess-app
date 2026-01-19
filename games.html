@@ -3996,7 +3996,9 @@
         // Make functions globally accessible
         window.reloadGamesData = reloadGamesData;
         window.updateGameButtons = updateGameButtons;
-        window.deleteCustomGame = deleteCustomGame;
+        // Note: deleteCustomGame is NOT assigned to window here because
+        // we want to use the Supabase helper function from supabase-helpers.js
+        // The local deleteCustomGame function handles the event and calls the Supabase helper
 
         // Function to update game buttons display
         function updateGameButtons() {
