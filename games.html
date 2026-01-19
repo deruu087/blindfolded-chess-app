@@ -6602,6 +6602,20 @@
             // Re-initialize drag and drop for all pieces
             reinitializeDragAndDrop();
             
+            // Final cleanup AFTER reinitializeDragAndDrop: Ensure all en passant captured pawns are removed
+            // This is critical because reinitializeDragAndDrop might restore pieces
+            enPassantCaptures.forEach(capturedSquare => {
+                const enPassantSquareElement = document.querySelector(`[data-square="${capturedSquare}"]`);
+                if (enPassantSquareElement) {
+                    const piece = enPassantSquareElement.querySelector('.chess-piece, .piece');
+                    if (piece) {
+                        // Remove the piece - it should have been captured
+                        enPassantSquareElement.innerHTML = '';
+                        console.log('Post-reinitialize cleanup: Removed en passant captured pawn from', capturedSquare);
+                    }
+                }
+            });
+            
             // Make pieces invisible if in test mode
             // This must happen after reinitializeDragAndDrop() to ensure pieces are found
             if (isChallengeMode) {
