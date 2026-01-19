@@ -1855,12 +1855,33 @@ function saveCustomGameLocal() {
 async function saveGameToServer(gameData) {
     console.log('🚀 saveGameToServer called with gameData:', gameData);
     try {
-        // Check if user is logged in
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        // Check if user is logged in using Supabase session
+        let isLoggedIn = false;
+        if (typeof window.isSignedIn === 'function') {
+            isLoggedIn = await window.isSignedIn();
+        } else if (typeof window.getCurrentUser === 'function') {
+            const user = await window.getCurrentUser();
+            isLoggedIn = user !== null;
+        } else {
+            // Fallback: check Supabase directly
+            if (typeof window.getSupabase === 'function') {
+                const supabase = window.getSupabase();
+                if (supabase && supabase.auth) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    isLoggedIn = session !== null && session.user !== null;
+                }
+            }
+        }
+        
         console.log('🔐 User logged in:', isLoggedIn);
         if (!isLoggedIn) {
             console.error('❌ User not logged in. Please sign in to save games.');
-            alert('Please sign in to save custom games.');
+            // Show sign-in modal if available, otherwise alert
+            if (typeof showSignInModal === 'function') {
+                showSignInModal();
+            } else {
+                alert('Please sign in to save custom games.');
+            }
             return;
         }
         
