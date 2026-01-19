@@ -1407,6 +1407,22 @@ function updateCustomBoardFromMoves() {
                 fromSquareElement.innerHTML = '';
             }
         }
+        
+        // Handle en passant capture - remove the captured pawn
+        if (move.isEnPassant && move.enPassantCapturedSquare) {
+            const enPassantSquareElement = document.querySelector(`[data-square="${move.enPassantCapturedSquare}"]`);
+            if (enPassantSquareElement) {
+                enPassantSquareElement.innerHTML = '';
+                console.log('En passant: Removed captured pawn from', move.enPassantCapturedSquare, 'when replaying move', i + 1);
+            }
+        }
+        
+        // Handle regular captures - remove the captured piece
+        if (move.isCapture && !move.isEnPassant) {
+            // The captured piece should already be removed when we cleared the destination square above
+            // But we log it for debugging
+            console.log('Regular capture: Removed piece from', toSquare, 'when replaying move', i + 1);
+        }
     }
     
     // Re-add event listeners
