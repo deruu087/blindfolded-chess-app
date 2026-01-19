@@ -6676,32 +6676,45 @@
                 } else {
                 const pieceImage = moveParser.getPieceImage(parsedMove.piece, isWhiteMove);
                 
-                // Handle en passant capture BEFORE moving the piece
-                // Remove the captured pawn from parser's tracking first
-                if (move.isEnPassant && move.enPassantCapturedSquare) {
+                // Handle en passant capture - check both saved data and parsed move
+                const isEnPassant = (move.isEnPassant && move.enPassantCapturedSquare) || parsedMove.isEnPassant;
+                let enPassantCapturedSquare = move.enPassantCapturedSquare;
+                
+                // If parsed move detected en passant but we don't have the captured square, calculate it
+                if (parsedMove.isEnPassant && !enPassantCapturedSquare) {
+                    // For en passant, the captured pawn is on the same file as target, one rank back
+                    const targetFile = parsedMove.target[0];
+                    const targetRank = parseInt(parsedMove.target[1]);
+                    const capturedRank = isWhiteMove ? targetRank - 1 : targetRank + 1;
+                    enPassantCapturedSquare = targetFile + capturedRank;
+                    console.log('Calculated en passant captured square:', enPassantCapturedSquare);
+                }
+                
+                // Remove the captured pawn from parser's tracking BEFORE moving the piece
+                if (isEnPassant && enPassantCapturedSquare) {
                     const capturedIsWhite = !isWhiteMove;
                     if (typeof moveParser.removePiece === 'function') {
-                        moveParser.removePiece('P', move.enPassantCapturedSquare, capturedIsWhite);
-                        console.log('En passant: Removed captured pawn from parser tracking:', move.enPassantCapturedSquare);
+                        moveParser.removePiece('P', enPassantCapturedSquare, capturedIsWhite);
+                        console.log('En passant: Removed captured pawn from parser tracking:', enPassantCapturedSquare);
                     }
                 }
                 
                 movePiece(parsedMove.source, parsedMove.target, pieceImage, animate, enableSound);
                 
-                // Handle en passant capture - remove the captured pawn from DOM
-                if (move.isEnPassant && move.enPassantCapturedSquare) {
+                // Remove the captured pawn from DOM immediately
+                if (isEnPassant && enPassantCapturedSquare) {
                     // Remove immediately (synchronously) since movePiece is synchronous when animate=false
-                    const enPassantSquareElement = document.querySelector(`[data-square="${move.enPassantCapturedSquare}"]`);
+                    const enPassantSquareElement = document.querySelector(`[data-square="${enPassantCapturedSquare}"]`);
                     if (enPassantSquareElement) {
                         enPassantSquareElement.innerHTML = '';
-                        console.log('En passant: Removed captured pawn from DOM:', move.enPassantCapturedSquare, 'when replaying move');
+                        console.log('En passant: Removed captured pawn from DOM:', enPassantCapturedSquare, 'when replaying move');
                     } else {
                         // If element not found immediately, try again after a short delay
                         setTimeout(() => {
-                            const enPassantSquareElement = document.querySelector(`[data-square="${move.enPassantCapturedSquare}"]`);
+                            const enPassantSquareElement = document.querySelector(`[data-square="${enPassantCapturedSquare}"]`);
                             if (enPassantSquareElement) {
                                 enPassantSquareElement.innerHTML = '';
-                                console.log('En passant: Removed captured pawn from DOM (delayed):', move.enPassantCapturedSquare);
+                                console.log('En passant: Removed captured pawn from DOM (delayed):', enPassantCapturedSquare);
                             }
                         }, animate ? 350 : 50);
                     }
