@@ -101,26 +101,62 @@
         
         // CRITICAL: Do NOT load from localStorage - only from Supabase
         // Profile data must come from Supabase session only
-        // Set loading state until Supabase data loads
+        // Preload cached profile data immediately to avoid "Loading..." flash
         (function() {
-            function setLoadingState() {
-                const profileTitle = document.querySelector('.profile-title');
-                if (profileTitle) {
-                    profileTitle.textContent = 'Loading...';
+            function loadCachedProfileData() {
+                try {
+                    // Try to load from sessionStorage (persists across page reloads)
+                    const cachedData = sessionStorage.getItem('profileCache');
+                    if (cachedData) {
+                        const parsed = JSON.parse(cachedData);
+                        const profileTitle = document.querySelector('.profile-title');
+                        const emailElement = document.getElementById('userEmail');
+                        
+                        // Only use cache if it's recent (less than 24 hours old)
+                        const cacheAge = Date.now() - (parsed.timestamp || 0);
+                        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+                        
+                        if (cacheAge < maxAge && parsed.userData) {
+                            if (profileTitle && parsed.userData.greeting) {
+                                profileTitle.textContent = parsed.userData.greeting;
+                            }
+                            if (emailElement && parsed.userData.email) {
+                                emailElement.textContent = parsed.userData.email;
+                            }
+                            console.log('✅ Loaded cached profile data immediately');
+                            return true; // Cache was used
+                        }
+                    }
+                } catch (e) {
+                    console.log('No cached profile data available');
                 }
-                const emailElement = document.getElementById('userEmail');
-                if (emailElement) {
-                    emailElement.textContent = 'Loading...';
-                }
+                return false; // No cache available
             }
             
-            // Run immediately if DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
+            // Try to load cache immediately
+            const cacheLoaded = loadCachedProfileData();
+            
+            // Only set loading state if cache wasn't available
+            if (!cacheLoaded) {
+                function setLoadingState() {
+                    const profileTitle = document.querySelector('.profile-title');
+                    if (profileTitle && profileTitle.textContent === 'My Profile') {
+                        profileTitle.textContent = 'Loading...';
+                    }
+                    const emailElement = document.getElementById('userEmail');
+                    if (emailElement && emailElement.textContent === '') {
+                        emailElement.textContent = 'Loading...';
+                    }
+                }
+                
+                // Run immediately if DOM is ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        setLoadingState();
+                    });
+                } else {
                     setLoadingState();
-                });
-            } else {
-                setLoadingState();
+                }
             }
         })();
     </script>
@@ -2253,12 +2289,12 @@
                 console.log('✅ [INIT PROFILE] Using cached user data for instant display');
                 userData.name = profileCache.userData.name;
                 userData.email = profileCache.userData.email;
-                updateUserInfo(); // Instant display from cache
+                updateUserInfo(); // Instant display from cache (includes greeting)
             } else {
-                // No cache or different user - update from authStatus
+                // No cache or different user - update from authStatus immediately
                 userData.name = authStatus.name || 'User';
                 userData.email = authStatus.email || '';
-                updateUserInfo();
+                updateUserInfo(); // Update UI immediately
             }
             
             // Always fetch fresh user data in background (updates cache)
@@ -2266,12 +2302,21 @@
             userData.name = authStatus.name || 'User';
             userData.email = authStatus.email || '';
             
-            // Update cache with fresh user data
+            // Generate greeting message (same logic as updateUserInfo)
+            let firstName = userData.name;
+            if (firstName && firstName.includes(' ')) {
+                firstName = firstName.split(' ')[0]; // Get first word
+            }
+            const greetingMessage = firstName ? `Hi ${firstName}` : 'Hi there';
+            
+            // Update cache with fresh user data (including greeting)
             profileCache.userData = {
                 name: userData.name,
-                email: userData.email
+                email: userData.email,
+                greeting: greetingMessage
             };
             profileCache.timestamp = Date.now();
+            saveProfileCache(); // Save to sessionStorage
             console.log('✅ [INIT PROFILE] Cached user data for future visits');
             
             // SIMPLIFIED: Load Supabase data - Wait for Supabase to be ready first
