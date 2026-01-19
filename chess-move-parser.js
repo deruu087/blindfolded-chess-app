@@ -367,8 +367,21 @@ class GameLoader {
         try {
             console.log('=== LOADING CUSTOM GAMES FROM SUPABASE ===');
             
-            // Check if user is logged in and Supabase function is available
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            // Check if user is logged in using Supabase session
+            let isLoggedIn = false;
+            if (typeof window.isSignedIn === 'function') {
+                isLoggedIn = await window.isSignedIn();
+            } else if (typeof window.getCurrentUser === 'function') {
+                const user = await window.getCurrentUser();
+                isLoggedIn = user !== null;
+            } else if (typeof window.getSupabase === 'function') {
+                const supabase = window.getSupabase();
+                if (supabase && supabase.auth) {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    isLoggedIn = session !== null && session.user !== null;
+                }
+            }
+            
             if (isLoggedIn && typeof window.getUserCustomGames === 'function') {
                 console.log('User is logged in, loading custom games from Supabase...');
                 const customGamesData = await window.getUserCustomGames();
