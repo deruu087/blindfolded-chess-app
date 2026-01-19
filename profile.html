@@ -2129,9 +2129,27 @@
         
         // User data - CRITICAL: subscription initialized to 'free', will be updated from Supabase only
         // In-memory cache for user profile data (name, email, greeting)
-        // This cache persists across page loads within the same session
+        // This cache persists across page loads using sessionStorage
         let profileCache = (function() {
-            // Use a module-level cache that persists in memory
+            // Try to load from sessionStorage first (persists across page reloads)
+            try {
+                const cached = sessionStorage.getItem('profileCache');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    const cacheAge = Date.now() - (parsed.timestamp || 0);
+                    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+                    
+                    if (cacheAge < maxAge && parsed.userData) {
+                        console.log('✅ Loaded profile cache from sessionStorage');
+                        window._profileCache = parsed;
+                        return window._profileCache;
+                    }
+                }
+            } catch (e) {
+                console.log('No valid profile cache in sessionStorage');
+            }
+            
+            // Initialize new cache
             if (!window._profileCache) {
                 window._profileCache = {
                     userData: null,
@@ -2140,6 +2158,16 @@
             }
             return window._profileCache;
         })();
+        
+        // Helper function to save cache to sessionStorage
+        function saveProfileCache() {
+            try {
+                sessionStorage.setItem('profileCache', JSON.stringify(profileCache));
+                console.log('✅ Saved profile cache to sessionStorage');
+            } catch (e) {
+                console.log('Could not save profile cache to sessionStorage:', e);
+            }
+        }
 
         let userData = {
             name: "Loading...",
