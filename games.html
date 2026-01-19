@@ -7405,6 +7405,35 @@
     <!-- Supabase Authentication Functions -->
     <script src="supabase-auth.js" onerror="console.error('Failed to load supabase-auth.js')"></script>
     
+    <!-- Auto-load games on page load - placed at end to ensure all scripts are loaded -->
+    <script>
+        console.log('🔴 FINAL SCRIPT BLOCK - Auto-loading games');
+        (async function() {
+            console.log('🔴 Auto-load function starting...');
+            // Wait for reloadGamesData to be available
+            let attempts = 0;
+            while (typeof reloadGamesData !== 'function' && attempts < 100) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+                if (attempts % 10 === 0) {
+                    console.log('🔴 Waiting for reloadGamesData... attempt', attempts);
+                }
+            }
+            
+            if (typeof reloadGamesData === 'function') {
+                console.log('🔴 reloadGamesData is available! Calling it...');
+                try {
+                    await reloadGamesData();
+                    console.log('🔴 reloadGamesData() completed successfully!');
+                } catch (error) {
+                    console.error('🔴 Error calling reloadGamesData:', error);
+                }
+            } else {
+                console.error('🔴 reloadGamesData never became available after', attempts, 'attempts');
+            }
+        })();
+    </script>
+    
     <script>
         // Initialize Supabase when page loads
         // CRITICAL: This runs independently - games should already be loaded
