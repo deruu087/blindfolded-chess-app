@@ -102,18 +102,15 @@ async function getUserProgress() {
         // Check if it's a "no rows" error (user has no progress record yet)
         if (error.code === 'PGRST116') {
             console.log('⚠️ No progress record found for user (this is normal for new users)');
-            console.log('🔍 Searching for any records with this user_id:', user.id);
-            
-            // Try to see if there are ANY records for this user (without .single())
-            const { data: allData, error: allError } = await supabase
-                .from('user_progress')
-                .select('*')
-                .eq('user_id', user.id);
-            
-            console.log('🔍 All records for this user_id:', { count: allData?.length || 0, data: allData, error: allError });
-            
             return null; // Return null to indicate no record exists
         }
+        
+        // Check if table doesn't exist (relation does not exist)
+        if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+            console.log('⚠️ user_progress table does not exist - returning null (no progress data)');
+            return null; // Return null - table doesn't exist, so no progress
+        }
+        
         console.error('❌ Error fetching progress:', error);
         console.error('Error code:', error.code);
         console.error('Error message:', error.message);
