@@ -224,13 +224,10 @@ function setupAuthListener(callback) {
     }
 
     // Check for existing session on initial load (handles OAuth redirect)
+    // NOTE: We DON'T send welcome email here - only in onAuthStateChange SIGNED_IN event
+    // This prevents duplicate emails when both initial session and SIGNED_IN fire
     supabase.auth.getSession().then(async ({ data, error }) => {
         if (!error && data.session && data.session.user) {
-            const user = data.session.user;
-            
-            // Send welcome email if new user
-            await sendWelcomeEmailIfNew(user);
-            
             // Only redirect if user is on root path (/) or has empty hash (#)
             // This handles OAuth landing after Google login, but not normal navigation
             const isRootPath = window.location.pathname === '/';
