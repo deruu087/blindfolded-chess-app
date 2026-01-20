@@ -181,13 +181,41 @@ function setupAuthListener(callback) {
         const existingFlag = sessionStorage.getItem(userWelcomeKey);
         const alreadyInSet = window._welcomeEmailSent.has(userEmailKey);
         
-        if (existingFlag || alreadyInSet) {
-            console.log('📧 Welcome email already sent/sending for user:', user.email, '(flag:', existingFlag || 'in set', ')');
+        // Also check localStorage as a backup (persists across page reloads/redirects)
+        const localStorageFlag = localStorage.getItem(userWelcomeKey);
+        
+        // If flag exists, check if it was sent recently (within last 10 minutes)
+        if (existingFlag || localStorageFlag) {
+            const flagValue = existingFlag || localStorageFlag;
+            if (flagValue.startsWith('sent_')) {
+                const sentTimestamp = parseInt(flagValue.split('_')[1]);
+                const minutesSinceSent = (Date.now() - sentTimestamp) / (1000 * 60);
+                // If sent within last 10 minutes, don't send again
+                if (minutesSinceSent < 10) {
+                    console.log('📧 Welcome email already sent for user:', user.email, '(sent', Math.round(minutesSinceSent), 'minutes ago)');
+                    return false;
+                }
+            } else {
+                // Flag exists but not marked as sent yet - might be in progress
+                console.log('📧 Welcome email already being processed for user:', user.email);
+                return false;
+            }
+        }
+        
+        if (alreadyInSet) {
+            console.log('📧 Welcome email already in sending queue for user:', user.email);
             return false;
         }
         
-        // Mark as "sending" IMMEDIATELY in BOTH places (synchronously) to prevent race conditions
-        sessionStorage.setItem(userWelcomeKey, Date.now().toString());
+        // Mark as "sending" IMMEDIATELY in ALL places (synchronously) to prevent race conditions
+        const timestamp = Date.now().toString();
+        try {
+            sessionStorage.setItem(userWelcomeKey, timestamp);
+            localStorage.setItem(userWelcomeKey, timestamp); // Also store in localStorage as backup
+        } catch (e) {
+            // Storage might be disabled, continue anyway
+            console.warn('Could not set storage flags:', e);
+        }
         window._welcomeEmailSent.add(userEmailKey);
 
         const createdAt = new Date(user.created_at);
@@ -205,13 +233,24 @@ function setupAuthListener(callback) {
             if (typeof window.sendEmail === 'function') {
                 try {
                     await window.sendEmail('welcome', user.email, userName);
-                    // Mark as sent (update to 'sent' with timestamp)
-                    sessionStorage.setItem(userWelcomeKey, 'sent_' + Date.now());
+                    // Mark as sent (update to 'sent' with timestamp) in BOTH storages
+                    const sentTimestamp = 'sent_' + Date.now();
+                    try {
+                        sessionStorage.setItem(userWelcomeKey, sentTimestamp);
+                        localStorage.setItem(userWelcomeKey, sentTimestamp);
+                    } catch (e) {
+                        console.warn('Could not update storage flags:', e);
+                    }
                     console.log('📧 Welcome email sent for new user:', user.email);
                     return true;
                 } catch (err) {
-                    // On error, remove from both places
-                    sessionStorage.removeItem(userWelcomeKey);
+                    // On error, remove from all places
+                    try {
+                        sessionStorage.removeItem(userWelcomeKey);
+                        localStorage.removeItem(userWelcomeKey);
+                    } catch (e) {
+                        // Ignore storage errors
+                    }
                     window._welcomeEmailSent.delete(userEmailKey);
                     console.warn('Failed to send welcome email (non-critical):', err);
                     return false;
@@ -219,7 +258,12 @@ function setupAuthListener(callback) {
             }
         } else {
             // Not a new user, remove the flags
-            sessionStorage.removeItem(userWelcomeKey);
+            try {
+                sessionStorage.removeItem(userWelcomeKey);
+                localStorage.removeItem(userWelcomeKey);
+            } catch (e) {
+                // Ignore storage errors
+            }
             window._welcomeEmailSent.delete(userEmailKey);
             return false;
         }
