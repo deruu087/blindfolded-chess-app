@@ -31,30 +31,43 @@ async function signUpWithEmail(email, password, name) {
         return { success: false, error: 'Supabase not initialized' };
     }
 
-    const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-            data: {
-                name: name
+    try {
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    name: name
+                }
             }
+        });
+
+        // Supabase may return a warning/error even when signup succeeds
+        // (e.g., email confirmation required, database trigger warnings)
+        // CRITICAL: If user was created, ignore any error messages completely
+        if (data?.user) {
+            // User was created successfully - ignore any error/warning messages
+            console.log('✅ User created successfully:', data.user.email);
+            if (error) {
+                // Log the warning for debugging but don't pass it to the UI
+                console.warn('⚠️ Supabase returned warning (ignored):', error.message);
+            }
+            return { success: true, user: data.user, session: data.session };
         }
-    });
 
-    // Supabase may return a warning/error even when signup succeeds
-    // (e.g., email confirmation required, database trigger warnings)
-    // Only treat as failure if user was NOT created
-    if (error && !data?.user) {
-        return { success: false, error: error.message };
+        // Only treat as failure if user was NOT created
+        if (error) {
+            console.error('❌ Registration failed:', error.message);
+            return { success: false, error: error.message };
+        }
+
+        // Fallback: no user and no error (shouldn't happen)
+        return { success: false, error: 'Registration failed - no user created' };
+    } catch (err) {
+        // Catch any unexpected errors
+        console.error('❌ Unexpected error during registration:', err);
+        return { success: false, error: 'Registration failed - please try again' };
     }
-
-    // If user was created, signup succeeded (even if there's a warning)
-    if (data?.user) {
-        return { success: true, user: data.user, session: data.session };
-    }
-
-    // Fallback: no user and no error (shouldn't happen)
-    return { success: false, error: 'Registration failed - no user created' };
 }
 
 /**
