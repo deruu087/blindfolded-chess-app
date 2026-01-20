@@ -141,8 +141,33 @@ function setupAuthListener(callback) {
     }
 
     // Check for existing session on initial load (handles OAuth redirect)
-    supabase.auth.getSession().then(({ data, error }) => {
+    supabase.auth.getSession().then(async ({ data, error }) => {
         if (!error && data.session && data.session.user) {
+            const user = data.session.user;
+            
+            // Check if this is a new user and send welcome email (same logic as SIGNED_IN event)
+            if (user.created_at) {
+                const createdAt = new Date(user.created_at);
+                const now = new Date();
+                const minutesSinceCreation = (now - createdAt) / (1000 * 60);
+                
+                // If user was created within last 5 minutes, it's likely a new sign-up
+                if (minutesSinceCreation < 5) {
+                    const userName = user.user_metadata?.name || 
+                                   user.user_metadata?.full_name || 
+                                   user.email?.split('@')[0] || 
+                                   'Chess Player';
+                    
+                    // Send welcome email (non-blocking, fire and forget)
+                    if (typeof window.sendEmail === 'function' && user.email) {
+                        window.sendEmail('welcome', user.email, userName).catch(err => {
+                            console.warn('Failed to send welcome email (non-critical):', err);
+                        });
+                        console.log('📧 Welcome email queued for new user (initial session):', user.email);
+                    }
+                }
+            }
+            
             // Only redirect if user is on root path (/) or has empty hash (#)
             // This handles OAuth landing after Google login, but not normal navigation
             const isRootPath = window.location.pathname === '/';
