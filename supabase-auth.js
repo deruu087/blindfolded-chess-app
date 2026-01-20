@@ -130,9 +130,14 @@ async function isSignedIn() {
     return session !== null;
 }
 
+// Global flag to prevent multiple auth listeners
+let authListenerSetup = false;
+let authStateChangeSubscription = null;
+
 /**
  * Setup auth state change listener
  * Updates UI when auth state changes
+ * Only sets up once to prevent duplicate listeners
  */
 function setupAuthListener(callback) {
     const supabase = getSupabase();
@@ -140,9 +145,22 @@ function setupAuthListener(callback) {
         return;
     }
 
+    // Prevent multiple listeners from being set up
+    if (authListenerSetup && authStateChangeSubscription) {
+        console.log('⚠️ Auth listener already set up, skipping duplicate setup');
+        if (callback) {
+            // Still call the callback for existing session
+            supabase.auth.getSession().then(({ data }) => {
+                if (data.session) {
+                    callback('SIGNED_IN', data.session);
+                }
+            });
+        }
+        return;
+    }
+
     // Track if we've already sent welcome email for this user to prevent duplicates
     const welcomeEmailSentKey = 'welcome_email_sent_';
-    let welcomeEmailSentForUser = null;
 
     // Helper function to send welcome email (with duplicate prevention)
     async function sendWelcomeEmailIfNew(user) {
@@ -153,15 +171,16 @@ function setupAuthListener(callback) {
         // Check if we've already sent welcome email for this user ID
         const userWelcomeKey = welcomeEmailSentKey + user.id;
         
-        // Set flag IMMEDIATELY to prevent race conditions (before async operations)
-        if (sessionStorage.getItem(userWelcomeKey)) {
-            console.log('📧 Welcome email already sent for user:', user.email);
+        // Check sessionStorage FIRST - if it exists (even if 'sending'), skip
+        const existingFlag = sessionStorage.getItem(userWelcomeKey);
+        if (existingFlag) {
+            console.log('📧 Welcome email already sent/sending for user:', user.email, '(flag:', existingFlag + ')');
             return false;
         }
         
-        // Mark as "sending" immediately to prevent race conditions
-        sessionStorage.setItem(userWelcomeKey, 'sending');
-        welcomeEmailSentForUser = user.id;
+        // Mark as "sending" IMMEDIATELY (synchronously) to prevent race conditions
+        // Use a timestamp to track when we started sending
+        sessionStorage.setItem(userWelcomeKey, Date.now().toString());
 
         const createdAt = new Date(user.created_at);
         const now = new Date();
@@ -178,14 +197,19 @@ function setupAuthListener(callback) {
             if (typeof window.sendEmail === 'function') {
                 try {
                     await window.sendEmail('welcome', user.email, userName);
-                    // Mark as sent (update from 'sending' to 'sent')
-                    sessionStorage.setItem(userWelcomeKey, 'sent');
+                    // Mark as sent (update to 'sent' with timestamp)
+                    sessionStorage.setItem(userWelcomeKey, 'sent_' + Date.now());
                     console.log('📧 Welcome email sent for new user:', user.email);
                     return true;
                 } catch (err) {
-                    // On error, remove the flag so it can be retried
-                    sessionStorage.removeItem(userWelcomeKey);
-                    welcomeEmailSentForUser = null;
+                    // On error, remove the flag so it can be retried (but only after a delay)
+                    setTimeout(() => {
+                        const currentFlag = sessionStorage.getItem(userWelcomeKey);
+                        // Only remove if it's still the same timestamp (wasn't updated by another call)
+                        if (currentFlag && currentFlag.startsWith(Date.now().toString().substring(0, 10))) {
+                            sessionStorage.removeItem(userWelcomeKey);
+                        }
+                    }, 1000);
                     console.warn('Failed to send welcome email (non-critical):', err);
                     return false;
                 }
@@ -193,7 +217,6 @@ function setupAuthListener(callback) {
         } else {
             // Not a new user, remove the flag
             sessionStorage.removeItem(userWelcomeKey);
-            welcomeEmailSentForUser = null;
             return false;
         }
         
@@ -220,15 +243,14 @@ function setupAuthListener(callback) {
         }
     });
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    // Store the subscription so we can check if it exists
+    authStateChangeSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
         // Redirect to profile on SIGNED_IN event (for email login or future logins)
         if (event === 'SIGNED_IN' && session && session.user) {
             const user = session.user;
             
-            // Send welcome email if new user (only if not already sent)
-            if (welcomeEmailSentForUser !== user.id) {
-                await sendWelcomeEmailIfNew(user);
-            }
+            // Send welcome email if new user (duplicate prevention is inside the function)
+            await sendWelcomeEmailIfNew(user);
             
             // Only redirect if we're not already on profile page
             if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
@@ -241,6 +263,9 @@ function setupAuthListener(callback) {
             callback(event, session);
         }
     });
+    
+    // Mark as set up
+    authListenerSetup = true;
 }
 
 // Make functions available globally

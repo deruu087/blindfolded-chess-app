@@ -127,7 +127,7 @@ function getWelcomeEmail(name) {
                     <tr>
                         <td style="padding: 30px 40px;">
                             <p style="font-size: 18px; color: #2c3e50; margin-bottom: 20px;">Hi ${name},</p>
-                            <p style="font-size: 16px; color: #4b5563; margin-bottom: 30px; line-height: 1.7;">Welcome to Memo Chess! We're excited to have you join our community of blindfold chess players. This website is designed to help you memorize chess openings, learn famous historical games, and develop strong visualization skills.</p>
+                            <p style="font-size: 16px; color: #4b5563; margin-bottom: 30px; line-height: 1.7;">Welcome to Memo Chess! We're excited to have you join our community of blindfold chess players.</p>
                             
                             <div style="background-color: #f5f5f5; padding: 25px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #e5e7eb;">
                                 <h2 style="font-size: 1.25rem; font-weight: 400; color: #1e3a8a; margin-bottom: 20px; margin-top: 0;">What's Next?</h2>
