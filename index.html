@@ -1908,12 +1908,12 @@
             submitButton.disabled = true;
             submitButton.textContent = 'Signing In...';
             
-            const result = await signInWithEmail(email, password);
-            
+                    const result = await signInWithEmail(email, password);
+                    
             if (result.success) {
                 closeModal();
                 window.location.href = 'profile.html';
-            } else {
+                    } else {
                 showError(signInForm, result.error || 'Invalid email or password');
                 submitButton.disabled = false;
                 submitButton.textContent = originalButtonText;
@@ -1949,9 +1949,9 @@
             submitButton.disabled = true;
             submitButton.textContent = 'Creating Account...';
             
-            const result = await signUpWithEmail(email, password, name);
-            
-            if (result.success) {
+                    const result = await signUpWithEmail(email, password, name);
+                    
+                    if (result.success) {
                 // Welcome email will be sent by setupAuthListener when it detects the new user
                 // No need to send here to avoid duplicates
                 
@@ -1959,9 +1959,9 @@
                 window.location.href = 'profile.html';
             } else {
                 showError(registerForm, result.error || 'Registration failed');
-                submitButton.disabled = false;
-                submitButton.textContent = originalButtonText;
-            }
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
         }
 
         // Google OAuth handler (for sign in)
@@ -1969,7 +1969,7 @@
             const result = await signInWithGoogle();
             if (!result.success) {
                 alert(result.error || 'Google sign-in failed');
-            }
+                }
         }
 
         // Google OAuth handler (for registration - same as sign in)
@@ -2195,7 +2195,7 @@
                 setupAuthListener((event, session) => {
                     if (typeof updateNavigation === 'function') {
                         updateNavigation();
-                    }
+                                            }
                 });
             }
             
@@ -2207,10 +2207,10 @@
                     // User is signed in, update UI
                     if (typeof updateNavigation === 'function') {
                         updateNavigation();
-                    }
                 }
             }
-            
+        }
+
             // Load page content
             loadStatistics();
             initFAQ();

@@ -6,13 +6,6 @@
     <title>Memo Chess - My Profile</title>
     <link rel="icon" type="image/png" href="images/chess-board.png">
     
-    <!-- Hide main content by default - only show after session validation -->
-    <style>
-        .main-content { 
-            display: none !important; 
-        }
-    </style>
-    
     <!-- Supabase JavaScript Library - Load in head for early availability -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -1964,13 +1957,28 @@
     
     <!-- Early auth check - runs after scripts load to prevent redirecting logged-in users -->
     <script>
+        // Hide main content by default - only show after session validation
+        (function() {
+            const style = document.createElement('style');
+            style.id = 'profile-content-hide';
+            style.textContent = `
+                .main-content { 
+                    display: none !important; 
+                }
+            `;
+            document.head.appendChild(style);
+        })();
+        
         // Function to show profile content after successful authentication
-        // Content is already hidden via CSS in head - just need to show it
         function showProfileContent() {
             const mainContent = document.querySelector('.main-content');
             if (mainContent) {
-                // Remove the inline style override to show content
                 mainContent.style.display = '';
+                // Remove the hiding style
+                const hideStyle = document.getElementById('profile-content-hide');
+                if (hideStyle) {
+                    hideStyle.remove();
+                }
                 console.log('✅ [AUTH CHECK] Profile content is now visible');
             }
         }
