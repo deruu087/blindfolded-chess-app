@@ -163,6 +163,11 @@ function setupAuthListener(callback) {
     const welcomeEmailSentKey = 'welcome_email_sent_';
 
     // Helper function to send welcome email (with duplicate prevention)
+    // Uses both sessionStorage AND a global Set for immediate duplicate prevention
+    if (!window._welcomeEmailSent) {
+        window._welcomeEmailSent = new Set(); // Global Set to track sent emails immediately
+    }
+    
     async function sendWelcomeEmailIfNew(user) {
         if (!user || !user.email || !user.created_at) {
             return false; // Return false if not sent
@@ -170,17 +175,20 @@ function setupAuthListener(callback) {
 
         // Check if we've already sent welcome email for this user ID
         const userWelcomeKey = welcomeEmailSentKey + user.id;
+        const userEmailKey = user.email.toLowerCase();
         
-        // Check sessionStorage FIRST - if it exists (even if 'sending'), skip
+        // Check BOTH sessionStorage AND global Set for immediate duplicate prevention
         const existingFlag = sessionStorage.getItem(userWelcomeKey);
-        if (existingFlag) {
-            console.log('📧 Welcome email already sent/sending for user:', user.email, '(flag:', existingFlag + ')');
+        const alreadyInSet = window._welcomeEmailSent.has(userEmailKey);
+        
+        if (existingFlag || alreadyInSet) {
+            console.log('📧 Welcome email already sent/sending for user:', user.email, '(flag:', existingFlag || 'in set', ')');
             return false;
         }
         
-        // Mark as "sending" IMMEDIATELY (synchronously) to prevent race conditions
-        // Use a timestamp to track when we started sending
+        // Mark as "sending" IMMEDIATELY in BOTH places (synchronously) to prevent race conditions
         sessionStorage.setItem(userWelcomeKey, Date.now().toString());
+        window._welcomeEmailSent.add(userEmailKey);
 
         const createdAt = new Date(user.created_at);
         const now = new Date();
@@ -202,21 +210,17 @@ function setupAuthListener(callback) {
                     console.log('📧 Welcome email sent for new user:', user.email);
                     return true;
                 } catch (err) {
-                    // On error, remove the flag so it can be retried (but only after a delay)
-                    setTimeout(() => {
-                        const currentFlag = sessionStorage.getItem(userWelcomeKey);
-                        // Only remove if it's still the same timestamp (wasn't updated by another call)
-                        if (currentFlag && currentFlag.startsWith(Date.now().toString().substring(0, 10))) {
-                            sessionStorage.removeItem(userWelcomeKey);
-                        }
-                    }, 1000);
+                    // On error, remove from both places
+                    sessionStorage.removeItem(userWelcomeKey);
+                    window._welcomeEmailSent.delete(userEmailKey);
                     console.warn('Failed to send welcome email (non-critical):', err);
                     return false;
                 }
             }
         } else {
-            // Not a new user, remove the flag
+            // Not a new user, remove the flags
             sessionStorage.removeItem(userWelcomeKey);
+            window._welcomeEmailSent.delete(userEmailKey);
             return false;
         }
         
