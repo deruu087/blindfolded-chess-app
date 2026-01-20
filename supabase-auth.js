@@ -155,9 +155,41 @@ function setupAuthListener(callback) {
         }
     });
 
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
         // Redirect to profile on SIGNED_IN event (for email login or future logins)
         if (event === 'SIGNED_IN' && session && session.user) {
+            const user = session.user;
+            
+            // Check if this is a new user (created within last 5 minutes) and send welcome email
+            // This handles both email sign-up and Google OAuth sign-up
+            if (user.created_at) {
+                const createdAt = new Date(user.created_at);
+                const now = new Date();
+                const minutesSinceCreation = (now - createdAt) / (1000 * 60);
+                
+                // If user was created within last 5 minutes, it's likely a new sign-up
+                if (minutesSinceCreation < 5) {
+                    // Check if user signed up with OAuth (Google) or email
+                    const isOAuthUser = user.app_metadata?.provider === 'google' || 
+                                       user.identities?.some(identity => identity.provider === 'google');
+                    const isEmailUser = user.email && !isOAuthUser;
+                    
+                    // Get user name from metadata
+                    const userName = user.user_metadata?.name || 
+                                   user.user_metadata?.full_name || 
+                                   user.email?.split('@')[0] || 
+                                   'Chess Player';
+                    
+                    // Send welcome email (non-blocking, fire and forget)
+                    if (typeof window.sendEmail === 'function' && user.email) {
+                        window.sendEmail('welcome', user.email, userName).catch(err => {
+                            console.warn('Failed to send welcome email (non-critical):', err);
+                        });
+                        console.log('📧 Welcome email queued for new user:', user.email);
+                    }
+                }
+            }
+            
             // Only redirect if we're not already on profile page
             if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
                 window.location.replace('profile.html');
