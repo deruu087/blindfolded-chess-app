@@ -140,33 +140,56 @@ function setupAuthListener(callback) {
         return;
     }
 
+    // Track if we've already sent welcome email for this user to prevent duplicates
+    const welcomeEmailSentKey = 'welcome_email_sent_';
+    let welcomeEmailSentForUser = null;
+
+    // Helper function to send welcome email (with duplicate prevention)
+    async function sendWelcomeEmailIfNew(user) {
+        if (!user || !user.email || !user.created_at) {
+            return;
+        }
+
+        // Check if we've already sent welcome email for this user ID
+        const userWelcomeKey = welcomeEmailSentKey + user.id;
+        if (sessionStorage.getItem(userWelcomeKey)) {
+            console.log('📧 Welcome email already sent for user:', user.email);
+            return;
+        }
+
+        const createdAt = new Date(user.created_at);
+        const now = new Date();
+        const minutesSinceCreation = (now - createdAt) / (1000 * 60);
+        
+        // If user was created within last 5 minutes, it's likely a new sign-up
+        if (minutesSinceCreation < 5) {
+            const userName = user.user_metadata?.name || 
+                           user.user_metadata?.full_name || 
+                           user.email?.split('@')[0] || 
+                           'Chess Player';
+            
+            // Send welcome email (non-blocking, fire and forget)
+            if (typeof window.sendEmail === 'function') {
+                try {
+                    await window.sendEmail('welcome', user.email, userName);
+                    // Mark as sent to prevent duplicates
+                    sessionStorage.setItem(userWelcomeKey, 'true');
+                    welcomeEmailSentForUser = user.id;
+                    console.log('📧 Welcome email sent for new user:', user.email);
+                } catch (err) {
+                    console.warn('Failed to send welcome email (non-critical):', err);
+                }
+            }
+        }
+    }
+
     // Check for existing session on initial load (handles OAuth redirect)
     supabase.auth.getSession().then(async ({ data, error }) => {
         if (!error && data.session && data.session.user) {
             const user = data.session.user;
             
-            // Check if this is a new user and send welcome email (same logic as SIGNED_IN event)
-            if (user.created_at) {
-                const createdAt = new Date(user.created_at);
-                const now = new Date();
-                const minutesSinceCreation = (now - createdAt) / (1000 * 60);
-                
-                // If user was created within last 5 minutes, it's likely a new sign-up
-                if (minutesSinceCreation < 5) {
-                    const userName = user.user_metadata?.name || 
-                                   user.user_metadata?.full_name || 
-                                   user.email?.split('@')[0] || 
-                                   'Chess Player';
-                    
-                    // Send welcome email (non-blocking, fire and forget)
-                    if (typeof window.sendEmail === 'function' && user.email) {
-                        window.sendEmail('welcome', user.email, userName).catch(err => {
-                            console.warn('Failed to send welcome email (non-critical):', err);
-                        });
-                        console.log('📧 Welcome email queued for new user (initial session):', user.email);
-                    }
-                }
-            }
+            // Send welcome email if new user
+            await sendWelcomeEmailIfNew(user);
             
             // Only redirect if user is on root path (/) or has empty hash (#)
             // This handles OAuth landing after Google login, but not normal navigation
@@ -185,34 +208,9 @@ function setupAuthListener(callback) {
         if (event === 'SIGNED_IN' && session && session.user) {
             const user = session.user;
             
-            // Check if this is a new user (created within last 5 minutes) and send welcome email
-            // This handles both email sign-up and Google OAuth sign-up
-            if (user.created_at) {
-                const createdAt = new Date(user.created_at);
-                const now = new Date();
-                const minutesSinceCreation = (now - createdAt) / (1000 * 60);
-                
-                // If user was created within last 5 minutes, it's likely a new sign-up
-                if (minutesSinceCreation < 5) {
-                    // Check if user signed up with OAuth (Google) or email
-                    const isOAuthUser = user.app_metadata?.provider === 'google' || 
-                                       user.identities?.some(identity => identity.provider === 'google');
-                    const isEmailUser = user.email && !isOAuthUser;
-                    
-                    // Get user name from metadata
-                    const userName = user.user_metadata?.name || 
-                                   user.user_metadata?.full_name || 
-                                   user.email?.split('@')[0] || 
-                                   'Chess Player';
-                    
-                    // Send welcome email (non-blocking, fire and forget)
-                    if (typeof window.sendEmail === 'function' && user.email) {
-                        window.sendEmail('welcome', user.email, userName).catch(err => {
-                            console.warn('Failed to send welcome email (non-critical):', err);
-                        });
-                        console.log('📧 Welcome email queued for new user:', user.email);
-                    }
-                }
+            // Send welcome email if new user (only if not already sent)
+            if (welcomeEmailSentForUser !== user.id) {
+                await sendWelcomeEmailIfNew(user);
             }
             
             // Only redirect if we're not already on profile page
