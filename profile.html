@@ -1973,12 +1973,15 @@
         function showProfileContent() {
             const mainContent = document.querySelector('.main-content');
             if (mainContent) {
-                mainContent.style.display = '';
-                // Remove the hiding style
+                // Remove the hiding style element first
                 const hideStyle = document.getElementById('profile-content-hide');
                 if (hideStyle) {
                     hideStyle.remove();
                 }
+                
+                // Use setProperty with important flag to override any !important rules
+                // Check the computed style to see what display value should be (flex from CSS)
+                mainContent.style.setProperty('display', 'flex', 'important');
                 console.log('✅ [AUTH CHECK] Profile content is now visible');
             }
         }
