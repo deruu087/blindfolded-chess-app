@@ -3188,6 +3188,13 @@
             const result = await signUpWithEmail(email, password, name);
             
             if (result.success) {
+                // Send welcome email (non-blocking, fire and forget)
+                if (typeof window.sendEmail === 'function') {
+                    window.sendEmail('welcome', email, name).catch(err => {
+                        console.warn('Failed to send welcome email (non-critical):', err);
+                    });
+                }
+                
                 closeModal();
                 window.location.href = 'profile.html';
             } else {
