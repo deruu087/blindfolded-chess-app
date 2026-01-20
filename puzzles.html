@@ -3210,6 +3210,54 @@
         // The loadMyGamesContent and loadGMGamesContent functions are no longer needed
         // since all tabs display the same game categories
 
+        // Profile link click handler - checks auth before navigation
+        // Set up immediately (not waiting for DOMContentLoaded) to catch early clicks
+        (function() {
+            const setupProfileLinkHandler = () => {
+                const profileLink = document.getElementById('profileLink');
+                if (profileLink) {
+                    profileLink.addEventListener('click', async function(e) {
+                        e.preventDefault();
+                        
+                        // Check auth state using getSupabase() and getSession()
+                        if (typeof window.getSupabase === 'function') {
+                            const supabase = window.getSupabase();
+                            if (supabase && supabase.auth) {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (session && session.user) {
+                                    // User is authenticated - navigate to profile
+                                    window.location.href = 'profile.html';
+                                } else {
+                                    // User is NOT authenticated - show login modal
+                                    if (typeof showSignInModal === 'function') {
+                                        showSignInModal();
+                                    }
+                                }
+                            } else {
+                                // Supabase not ready - show login modal
+                                if (typeof showSignInModal === 'function') {
+                                    showSignInModal();
+                                }
+                            }
+                        } else {
+                            // getSupabase not available - show login modal
+                            if (typeof showSignInModal === 'function') {
+                                showSignInModal();
+                            }
+                        }
+                    });
+                    return true; // Handler attached successfully
+                }
+                return false; // Element not found yet
+            };
+            
+            // Try to set up immediately
+            if (!setupProfileLinkHandler()) {
+                // If element doesn't exist yet, wait for DOMContentLoaded
+                document.addEventListener('DOMContentLoaded', setupProfileLinkHandler);
+            }
+        })();
+        
         // Initialize puzzles data on page load
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('DOM loaded, loading puzzles...');
@@ -3241,45 +3289,6 @@
             }
             if (registerForm) {
                 registerForm.addEventListener('submit', handleRegister);
-            }
-            
-            // Profile link click handler - checks auth before navigation
-            const profileLink = document.getElementById('profileLink');
-            if (profileLink) {
-                // Remove any existing click handlers by cloning
-                const newProfileLink = profileLink.cloneNode(true);
-                profileLink.parentNode.replaceChild(newProfileLink, profileLink);
-                
-                newProfileLink.addEventListener('click', async function(e) {
-                    e.preventDefault();
-                    
-                    // Check auth state using getSupabase() and getSession()
-                    if (typeof window.getSupabase === 'function') {
-                        const supabase = window.getSupabase();
-                        if (supabase && supabase.auth) {
-                            const { data: { session } } = await supabase.auth.getSession();
-                            if (session && session.user) {
-                                // User is authenticated - navigate to profile
-                                window.location.href = 'profile.html';
-                            } else {
-                                // User is NOT authenticated - show login modal
-                                if (typeof showSignInModal === 'function') {
-                                    showSignInModal();
-                                }
-                            }
-                        } else {
-                            // Supabase not ready - show login modal
-                            if (typeof showSignInModal === 'function') {
-                                showSignInModal();
-                            }
-                        }
-                    } else {
-                        // getSupabase not available - show login modal
-                        if (typeof showSignInModal === 'function') {
-                            showSignInModal();
-                        }
-                    }
-                });
             }
             
             // Initialize tabs
