@@ -1952,12 +1952,8 @@
             const result = await signUpWithEmail(email, password, name);
             
             if (result.success) {
-                // Send welcome email (non-blocking, fire and forget)
-                if (typeof window.sendEmail === 'function') {
-                    window.sendEmail('welcome', email, name).catch(err => {
-                        console.warn('Failed to send welcome email (non-critical):', err);
-                    });
-                }
+                // Welcome email will be sent by setupAuthListener when it detects the new user
+                // No need to send here to avoid duplicates
                 
                 closeModal();
                 window.location.href = 'profile.html';

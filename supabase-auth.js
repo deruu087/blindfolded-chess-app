@@ -147,15 +147,21 @@ function setupAuthListener(callback) {
     // Helper function to send welcome email (with duplicate prevention)
     async function sendWelcomeEmailIfNew(user) {
         if (!user || !user.email || !user.created_at) {
-            return;
+            return false; // Return false if not sent
         }
 
         // Check if we've already sent welcome email for this user ID
         const userWelcomeKey = welcomeEmailSentKey + user.id;
+        
+        // Set flag IMMEDIATELY to prevent race conditions (before async operations)
         if (sessionStorage.getItem(userWelcomeKey)) {
             console.log('📧 Welcome email already sent for user:', user.email);
-            return;
+            return false;
         }
+        
+        // Mark as "sending" immediately to prevent race conditions
+        sessionStorage.setItem(userWelcomeKey, 'sending');
+        welcomeEmailSentForUser = user.id;
 
         const createdAt = new Date(user.created_at);
         const now = new Date();
@@ -172,15 +178,26 @@ function setupAuthListener(callback) {
             if (typeof window.sendEmail === 'function') {
                 try {
                     await window.sendEmail('welcome', user.email, userName);
-                    // Mark as sent to prevent duplicates
-                    sessionStorage.setItem(userWelcomeKey, 'true');
-                    welcomeEmailSentForUser = user.id;
+                    // Mark as sent (update from 'sending' to 'sent')
+                    sessionStorage.setItem(userWelcomeKey, 'sent');
                     console.log('📧 Welcome email sent for new user:', user.email);
+                    return true;
                 } catch (err) {
+                    // On error, remove the flag so it can be retried
+                    sessionStorage.removeItem(userWelcomeKey);
+                    welcomeEmailSentForUser = null;
                     console.warn('Failed to send welcome email (non-critical):', err);
+                    return false;
                 }
             }
+        } else {
+            // Not a new user, remove the flag
+            sessionStorage.removeItem(userWelcomeKey);
+            welcomeEmailSentForUser = null;
+            return false;
         }
+        
+        return false;
     }
 
     // Check for existing session on initial load (handles OAuth redirect)
