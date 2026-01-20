@@ -6,6 +6,13 @@
     <title>Memo Chess - My Profile</title>
     <link rel="icon" type="image/png" href="images/chess-board.png">
     
+    <!-- Hide main content initially to prevent flash - will be shown after auth check -->
+    <style id="profile-content-hide">
+        .main-content { 
+            display: none !important; 
+        }
+    </style>
+    
     <!-- Supabase JavaScript Library - Load in head for early availability -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -1957,20 +1964,15 @@
     
     <!-- Early auth check - runs after scripts load to prevent redirecting logged-in users -->
     <script>
-        // Hide main content by default - only show after session validation
-        (function() {
-            const style = document.createElement('style');
-            style.id = 'profile-content-hide';
-            style.textContent = `
-                .main-content { 
-                    display: none !important; 
-                }
-            `;
-            document.head.appendChild(style);
-        })();
-        
         // Function to show profile content after successful authentication
+        // This function ensures content stays visible and is only called once
+        let profileContentShown = false;
         function showProfileContent() {
+            if (profileContentShown) {
+                // Already shown, don't do anything
+                return;
+            }
+            
             const mainContent = document.querySelector('.main-content');
             if (mainContent) {
                 // Remove the hiding style element first
@@ -1980,9 +1982,12 @@
                 }
                 
                 // Use setProperty with important flag to override any !important rules
-                // Check the computed style to see what display value should be (flex from CSS)
+                // Set to flex to match the original CSS
                 mainContent.style.setProperty('display', 'flex', 'important');
-                console.log('✅ [AUTH CHECK] Profile content is now visible');
+                
+                // Mark as shown to prevent re-hiding
+                profileContentShown = true;
+                console.log('✅ [AUTH CHECK] Profile content is now visible and will stay visible');
             }
         }
         
