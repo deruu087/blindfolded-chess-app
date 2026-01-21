@@ -3049,24 +3049,13 @@
             submitButton.disabled = true;
             submitButton.textContent = 'Creating Account...';
             
-            try {
-                const result = await signUpWithEmail(email, password, name);
-                
-                // CRITICAL: Only show error if registration actually failed
-                // If result.success is true, user was created successfully - ignore any error messages
-                if (result.success) {
-                    closeModal();
-                    window.location.href = 'profile.html';
-                } else {
-                    // Only show error if registration actually failed
-                    showError(registerForm, result.error || 'Registration failed');
-                    submitButton.disabled = false;
-                    submitButton.textContent = originalButtonText;
-                }
-            } catch (err) {
-                // Catch any unexpected errors during registration
-                console.error('Unexpected error during registration:', err);
-                showError(registerForm, 'Registration failed - please try again');
+            const result = await signUpWithEmail(email, password, name);
+            
+            if (result.success) {
+                closeModal();
+                window.location.href = 'profile.html';
+            } else {
+                showError(registerForm, result.error || 'Registration failed');
                 submitButton.disabled = false;
                 submitButton.textContent = originalButtonText;
             }

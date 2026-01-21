@@ -3185,27 +3185,16 @@
             submitButton.disabled = true;
             submitButton.textContent = 'Creating Account...';
             
-            try {
-                const result = await signUpWithEmail(email, password, name);
+            const result = await signUpWithEmail(email, password, name);
+            
+            if (result.success) {
+                // Welcome email will be sent by setupAuthListener when it detects the new user
+                // No need to send here to avoid duplicates
                 
-                // CRITICAL: Only show error if registration actually failed
-                // If result.success is true, user was created successfully - ignore any error messages
-                if (result.success) {
-                    // Welcome email will be sent by setupAuthListener when it detects the new user
-                    // No need to send here to avoid duplicates
-                    
-                    closeModal();
-                    window.location.href = 'profile.html';
-                } else {
-                    // Only show error if registration actually failed
-                    showError(registerForm, result.error || 'Registration failed');
-                    submitButton.disabled = false;
-                    submitButton.textContent = originalButtonText;
-                }
-            } catch (err) {
-                // Catch any unexpected errors during registration
-                console.error('Unexpected error during registration:', err);
-                showError(registerForm, 'Registration failed - please try again');
+                closeModal();
+                window.location.href = 'profile.html';
+            } else {
+                showError(registerForm, result.error || 'Registration failed');
                 submitButton.disabled = false;
                 submitButton.textContent = originalButtonText;
             }
