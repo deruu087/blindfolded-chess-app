@@ -291,7 +291,17 @@ export default async function handler(req, res) {
                 };
                 
                 try {
-                    const { data: subscription, error: subError } = await supabase
+                    // CRITICAL: Create both subscription and payment records
+                    // Don't return early - ensure both are created
+                    
+                    let subscription = null;
+                    let payment = null;
+                    let subscriptionError = null;
+                    let paymentError = null;
+                    
+                    // Step 1: Create/update subscription
+                    console.log('📝 [WEBHOOK] Creating subscription record...');
+                    const { data: subData, error: subError } = await supabase
                         .from('subscriptions')
                         .upsert(subscriptionData, {
                             onConflict: 'user_id'
@@ -301,14 +311,15 @@ export default async function handler(req, res) {
                     
                     if (subError) {
                         console.error('❌ Error creating/updating subscription:', subError);
-                        return res.status(500).json({ 
-                            error: 'Failed to create subscription',
-                            message: subError.message 
-                        });
+                        console.error('❌ Subscription data attempted:', JSON.stringify(subscriptionData, null, 2));
+                        subscriptionError = subError;
+                    } else {
+                        subscription = subData;
+                        console.log('✅ Subscription created/updated successfully:', subscription);
                     }
                     
-                    // Insert payment record into payments table
-                    // Use subscription_id as order_id and transaction_id
+                    // Step 2: Create payment record (always try, even if subscription failed)
+                    console.log('📝 [WEBHOOK] Creating payment record...');
                     const subscriptionId = data.subscription_id || orderId;
                     const paymentData = {
                         user_id: userId,
@@ -324,24 +335,64 @@ export default async function handler(req, res) {
                         description: `${planType} subscription payment`
                     };
                     
-                    const { data: payment, error: paymentError } = await supabase
+                    const { data: payData, error: payError } = await supabase
                         .from('payments')
                         .insert(paymentData)
                         .select()
                         .single();
                     
-                    if (paymentError) {
-                        // Log error but don't fail the webhook - payment was successful
-                        console.error('⚠️ Error creating payment record:', paymentError);
-                        console.error('⚠️ Payment data attempted:', JSON.stringify(paymentData, null, 2));
+                    if (payError) {
+                        console.error('❌ Error creating payment record:', payError);
+                        console.error('❌ Payment data attempted:', JSON.stringify(paymentData, null, 2));
+                        paymentError = payError;
                     } else {
+                        payment = payData;
                         console.log('✅ Payment record created successfully:', payment);
                     }
                     
-                    console.log('✅ Subscription created/updated:', subscription);
-                    console.log('✅ Payment successful for:', customerEmail);
-                    console.log('💰 Amount:', amount, currency);
-                    console.log('📦 Plan:', planType);
+                    // Step 3: Report results - both should be created
+                    if (subscriptionError && paymentError) {
+                        // Both failed - return error
+                        console.error('❌ Both subscription and payment creation failed!');
+                        return res.status(500).json({ 
+                            error: 'Failed to create subscription and payment',
+                            subscriptionError: subscriptionError.message,
+                            paymentError: paymentError.message
+                        });
+                    } else if (subscriptionError) {
+                        // Subscription failed but payment succeeded - still return error
+                        console.error('❌ Subscription creation failed, but payment was recorded');
+                        return res.status(500).json({ 
+                            error: 'Failed to create subscription',
+                            message: subscriptionError.message,
+                            payment: payment // Payment was created
+                        });
+                    } else if (paymentError) {
+                        // Subscription succeeded but payment failed - retry payment creation
+                        console.warn('⚠️ Payment creation failed, retrying...');
+                        const { data: retryPayment, error: retryError } = await supabase
+                            .from('payments')
+                            .insert(paymentData)
+                            .select()
+                            .single();
+                        
+                        if (retryError) {
+                            console.error('❌ Payment retry also failed:', retryError);
+                            // Subscription was created, payment failed - log but don't fail webhook
+                            console.error('⚠️ WARNING: Subscription created but payment record failed');
+                        } else {
+                            payment = retryPayment;
+                            console.log('✅ Payment record created on retry:', payment);
+                        }
+                    }
+                    
+                    // Success - both records created (or at least subscription)
+                    console.log('✅ [WEBHOOK] Success summary:');
+                    console.log('  - Subscription:', subscription ? '✅ Created' : '❌ Failed');
+                    console.log('  - Payment:', payment ? '✅ Created' : '❌ Failed');
+                    console.log('  - Customer:', customerEmail);
+                    console.log('  - Amount:', amount, currency);
+                    console.log('  - Plan:', planType);
                     
                     // Send subscription confirmation email (NON-BLOCKING - wrapped in try-catch)
                     try {
@@ -375,11 +426,17 @@ export default async function handler(req, res) {
                         console.log('Note: Could not send subscription email (non-critical)');
                     }
                     
+                    // Return success with both records
                     return res.status(200).json({ 
                         success: true, 
                         message: 'Webhook processed successfully',
                         orderId: orderId,
-                        subscription: subscription
+                        subscription: subscription,
+                        payment: payment,
+                        recordsCreated: {
+                            subscription: !!subscription,
+                            payment: !!payment
+                        }
                     });
                 } catch (error) {
                     console.error('❌ Error saving subscription:', error);

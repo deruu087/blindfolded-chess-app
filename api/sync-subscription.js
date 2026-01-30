@@ -156,14 +156,42 @@ export default async function handler(req, res) {
             .single();
         
         if (paymentError) {
-            console.error('⚠️ Error creating payment record:', paymentError);
-            // Don't fail - subscription was created successfully
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Subscription created but payment record failed',
-                subscription: subscription,
-                paymentError: paymentError.message
-            });
+            console.error('⚠️ Error creating payment record, retrying...', paymentError);
+            console.error('⚠️ Payment data attempted:', JSON.stringify(paymentData, null, 2));
+            
+            // Retry payment creation
+            const { data: retryPayment, error: retryError } = await supabase
+                .from('payments')
+                .insert(paymentData)
+                .select()
+                .single();
+            
+            if (retryError) {
+                console.error('❌ Payment retry also failed:', retryError);
+                // Subscription was created, payment failed - return partial success
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Subscription created but payment record failed (retried)',
+                    subscription: subscription,
+                    paymentError: retryError.message,
+                    recordsCreated: {
+                        subscription: true,
+                        payment: false
+                    }
+                });
+            } else {
+                console.log('✅ Payment record created on retry:', retryPayment);
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Subscription and payment synced successfully (payment on retry)',
+                    subscription: subscription,
+                    payment: retryPayment,
+                    recordsCreated: {
+                        subscription: true,
+                        payment: true
+                    }
+                });
+            }
         }
         
         console.log('✅ [SYNC] Payment record created:', payment);
