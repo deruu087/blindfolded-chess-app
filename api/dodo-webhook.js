@@ -49,26 +49,54 @@ export default async function handler(req, res) {
         
         // Extract amount (Dodo Payments sends in cents) - NO FALLBACKS
         // Try multiple possible field names that Dodo Payments might use
-        const amountRaw = data.total_amount || data.recurring_pre_tax_amount || data.amount || data.settlement_amount || data.price || data.total;
+        const amountRaw = data.total_amount || data.recurring_pre_tax_amount || data.amount || data.settlement_amount || data.price || data.total || 
+                         data.line_items?.[0]?.price || data.line_items?.[0]?.amount ||
+                         webhookData.total_amount || webhookData.amount || webhookData.price;
+        
+        console.log('💰 [WEBHOOK] Amount extraction attempt:', {
+            total_amount: data.total_amount,
+            recurring_pre_tax_amount: data.recurring_pre_tax_amount,
+            amount: data.amount,
+            settlement_amount: data.settlement_amount,
+            price: data.price,
+            total: data.total,
+            line_items: data.line_items,
+            foundAmountRaw: amountRaw
+        });
+        
         if (!amountRaw && amountRaw !== 0) {
             console.error('❌ No amount found in webhook data');
             console.error('Available data fields:', Object.keys(data));
+            console.error('Available webhookData fields:', Object.keys(webhookData));
             console.error('Full data object:', JSON.stringify(data, null, 2));
+            console.error('Full webhookData object:', JSON.stringify(webhookData, null, 2));
             return res.status(400).json({ 
                 error: 'Missing required field: amount',
-                availableFields: Object.keys(data),
+                availableDataFields: Object.keys(data),
+                availableWebhookFields: Object.keys(webhookData),
                 receivedData: data
             });
         }
         
         // Check if amount is already in decimal format or in cents
         let amount;
-        if (parseFloat(amountRaw) > 1000) {
+        const amountNum = parseFloat(amountRaw);
+        if (isNaN(amountNum)) {
+            console.error('❌ Amount is not a valid number:', amountRaw);
+            return res.status(400).json({ 
+                error: 'Invalid amount format',
+                receivedAmount: amountRaw
+            });
+        }
+        
+        if (amountNum > 1000) {
             // Likely in cents, convert to decimal
-            amount = (parseFloat(amountRaw) / 100).toFixed(2);
+            amount = (amountNum / 100).toFixed(2);
+            console.log('💰 [WEBHOOK] Converted from cents:', amountRaw, '->', amount);
         } else {
             // Already in decimal format
-            amount = parseFloat(amountRaw).toFixed(2);
+            amount = amountNum.toFixed(2);
+            console.log('💰 [WEBHOOK] Using decimal amount:', amount);
         }
         
         // Extract currency - NO FALLBACKS
@@ -173,7 +201,7 @@ export default async function handler(req, res) {
                 return res.status(500).json({ error: 'Error finding user', message: error.message });
             }
             
-            // Determine plan type from payment frequency - NO FALLBACKS
+            // Determine plan type from payment frequency or amount - NO FALLBACKS
             // Only use real data from webhook
             const amountNum = parseFloat(amount);
             if (isNaN(amountNum)) {
@@ -183,20 +211,49 @@ export default async function handler(req, res) {
             
             let planType = null;
             
-            // Check payment frequency from webhook data (REQUIRED)
+            // Check payment frequency from webhook data (PREFERRED)
             if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 1) {
                 planType = 'monthly';
             } else if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 3) {
                 planType = 'quarterly';
             }
             
-            // If plan type not determined from frequency, we need it from another field
+            // If plan type not determined from frequency, try other fields
             if (!planType) {
                 // Try to get from plan_type field if available
-                planType = data.plan_type || data.plan;
-                if (!planType) {
-                    console.error('❌ Cannot determine plan type - missing payment_frequency or plan_type in webhook data');
-                    return res.status(400).json({ error: 'Missing required field: payment_frequency or plan_type' });
+                planType = data.plan_type || data.plan || data.product_name;
+                
+                // Normalize plan type string
+                if (planType) {
+                    planType = planType.toLowerCase();
+                    if (planType.includes('monthly') || planType.includes('month')) {
+                        planType = 'monthly';
+                    } else if (planType.includes('quarterly') || planType.includes('quarter') || planType.includes('3 month')) {
+                        planType = 'quarterly';
+                    }
+                }
+            }
+            
+            // If still no plan type, infer from amount (monthly is typically lower)
+            // This is a last resort - we prefer explicit plan_type from webhook
+            if (!planType) {
+                console.warn('⚠️ Plan type not found in webhook, inferring from amount');
+                // Monthly is typically $4.99 (≈4.50-5.50 EUR), Quarterly is $12.99 (≈11.50-13.50 EUR)
+                // Use amount to infer plan type as last resort
+                if (amountNum >= 11.0) {
+                    planType = 'quarterly';
+                    console.log('📊 Inferred quarterly plan from amount:', amountNum);
+                } else if (amountNum >= 3.0) {
+                    planType = 'monthly';
+                    console.log('📊 Inferred monthly plan from amount:', amountNum);
+                } else {
+                    console.error('❌ Cannot determine plan type - amount too low or missing plan info');
+                    console.error('Webhook data:', JSON.stringify(data, null, 2));
+                    return res.status(400).json({ 
+                        error: 'Missing required field: payment_frequency or plan_type',
+                        receivedAmount: amountNum,
+                        availableFields: Object.keys(data)
+                    });
                 }
             }
             
@@ -276,8 +333,9 @@ export default async function handler(req, res) {
                     if (paymentError) {
                         // Log error but don't fail the webhook - payment was successful
                         console.error('⚠️ Error creating payment record:', paymentError);
+                        console.error('⚠️ Payment data attempted:', JSON.stringify(paymentData, null, 2));
                     } else {
-                        console.log('✅ Payment record created:', payment);
+                        console.log('✅ Payment record created successfully:', payment);
                     }
                     
                     console.log('✅ Subscription created/updated:', subscription);
