@@ -3591,25 +3591,63 @@
                         console.log('✅ Loaded completed challenges from Supabase:', completedChallenges);
                         console.log('Completed challenges array:', Array.from(completedChallenges));
                         
-                        // Update Supabase data table
-                        updateSupabaseDataTable(supabaseProgress);
+                        // Fetch subscription and payment data
+                        let subscriptionData = null;
+                        let lastPayment = null;
+                        
+                        // Fetch subscription data
+                        if (typeof window.getUserSubscription === 'function') {
+                            try {
+                                subscriptionData = await window.getUserSubscription();
+                                console.log('📦 Subscription data:', subscriptionData);
+                            } catch (subError) {
+                                console.error('❌ Error fetching subscription:', subError);
+                            }
+                        }
+                        
+                        // Fetch last payment
+                        if (window.getSupabase && window.getSupabase()) {
+                            try {
+                                const supabase = window.getSupabase();
+                                const { data: { user } } = await supabase.auth.getUser();
+                                if (user) {
+                                    const { data: payments, error: paymentError } = await supabase
+                                        .from('payments')
+                                        .select('*')
+                                        .eq('user_id', user.id)
+                                        .eq('status', 'paid')
+                                        .order('payment_date', { ascending: false })
+                                        .limit(1);
+                                    
+                                    if (!paymentError && payments && payments.length > 0) {
+                                        lastPayment = payments[0];
+                                        console.log('💳 Last payment:', lastPayment);
+                                    }
+                                }
+                            } catch (paymentError) {
+                                console.error('❌ Error fetching last payment:', paymentError);
+                            }
+                        }
+                        
+                        // Update Supabase data table with progress, subscription, and payment data
+                        updateSupabaseDataTable(supabaseProgress, subscriptionData, lastPayment);
                     } else {
                         // No data in Supabase - clear completed challenges (show 0 badges)
                         console.log('📊 No Supabase data - clearing completed challenges (no badges)');
                         completedChallenges = new Set();
-                        updateSupabaseDataTable(null);
+                        updateSupabaseDataTable(null, null, null);
                     }
                 } catch (error) {
                     console.error('❌ Error loading progress from Supabase:', error);
                     // On error, clear completed challenges (no fallback to cache)
                     completedChallenges = new Set();
-                    updateSupabaseDataTable(null);
+                    updateSupabaseDataTable(null, null, null);
                 }
             } else {
                 // getUserProgress not available - clear completed challenges
                 console.log('⚠️ getUserProgress not available - clearing completed challenges');
                 completedChallenges = new Set();
-                updateSupabaseDataTable(null);
+                updateSupabaseDataTable(null, null, null);
             }
             
             // Update the game buttons display (already called after games load, but call again to refresh badges)
@@ -3620,7 +3658,7 @@
             }
             
             // Function to update the Supabase data table
-            function updateSupabaseDataTable(supabaseData) {
+            function updateSupabaseDataTable(supabaseData, subscriptionData, lastPayment) {
                 const tbody = document.getElementById('supabaseDataTableBody');
                 if (!tbody) {
                     console.warn('⚠️ supabaseDataTableBody not found in games.html');
@@ -3677,6 +3715,87 @@
                     field: 'current_streak',
                     value: supabaseData.current_streak !== null && supabaseData.current_streak !== undefined
                         ? String(supabaseData.current_streak)
+                        : 'null'
+                });
+                
+                // Add subscription and payment information
+                rows.push({
+                    field: '--- Payment Information ---',
+                    value: '---'
+                });
+                
+                // Subscription Status
+                if (subscriptionData) {
+                    rows.push({
+                        field: 'subscribed',
+                        value: 'Yes'
+                    });
+                    
+                    // Plan Type (Monthly or Quarterly)
+                    rows.push({
+                        field: 'plan_type',
+                        value: subscriptionData.plan_type ? subscriptionData.plan_type.charAt(0).toUpperCase() + subscriptionData.plan_type.slice(1) : 'null'
+                    });
+                    
+                    // Amount Paid
+                    rows.push({
+                        field: 'amount_paid',
+                        value: subscriptionData.amount_paid !== null && subscriptionData.amount_paid !== undefined
+                            ? `${subscriptionData.amount_paid} ${subscriptionData.currency || 'EUR'}`
+                            : 'null'
+                    });
+                    
+                    // Billing Period
+                    rows.push({
+                        field: 'billing_period',
+                        value: subscriptionData.plan_type === 'monthly' ? 'Monthly' : subscriptionData.plan_type === 'quarterly' ? 'Quarterly' : 'null'
+                    });
+                    
+                    // Next Payment Date
+                    rows.push({
+                        field: 'next_payment',
+                        value: subscriptionData.next_billing_date 
+                            ? new Date(subscriptionData.next_billing_date).toLocaleDateString()
+                            : 'null'
+                    });
+                    
+                    // Cancelled Status
+                    rows.push({
+                        field: 'cancelled',
+                        value: subscriptionData.status === 'cancelled' ? 'Yes' : 'No'
+                    });
+                } else {
+                    rows.push({
+                        field: 'subscribed',
+                        value: 'No'
+                    });
+                    rows.push({
+                        field: 'plan_type',
+                        value: 'Free'
+                    });
+                    rows.push({
+                        field: 'amount_paid',
+                        value: 'null'
+                    });
+                    rows.push({
+                        field: 'billing_period',
+                        value: 'null'
+                    });
+                    rows.push({
+                        field: 'next_payment',
+                        value: 'null'
+                    });
+                    rows.push({
+                        field: 'cancelled',
+                        value: 'N/A'
+                    });
+                }
+                
+                // Last Payment
+                rows.push({
+                    field: 'last_payment',
+                    value: lastPayment 
+                        ? `${lastPayment.amount} ${lastPayment.currency || 'EUR'} on ${new Date(lastPayment.payment_date).toLocaleDateString()}`
                         : 'null'
                 });
                 
