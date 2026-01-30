@@ -564,11 +564,6 @@ async function getUserSubscription() {
             if (!multiError && multiData && multiData.length > 0) {
                 console.log('✅ Found subscription from multiple records:', multiData[0]);
                 const sub = multiData[0];
-                // REJECT 3.52 even from multiple records
-                if (sub.amount_paid == 3.52 || parseFloat(sub.amount_paid) == 3.52) {
-                    console.error('❌❌❌ REJECTING SUBSCRIPTION WITH 3.52 FROM MULTIPLE RECORDS');
-                    return null;
-                }
                 return sub;
             }
         }
@@ -583,17 +578,7 @@ async function getUserSubscription() {
     console.log('💰 Amount paid:', data?.amount_paid);
     console.log('💰 Amount paid type:', typeof data?.amount_paid);
     console.log('💰 Amount paid value:', data?.amount_paid);
-    console.log('💰 Amount paid equals 3.52?', data?.amount_paid == 3.52);
     console.log('💰 Amount paid parseFloat:', parseFloat(data?.amount_paid));
-    
-    // CRITICAL: If amount_paid is 3.52, REJECT IT IMMEDIATELY
-    if (data && (data.amount_paid == 3.52 || parseFloat(data.amount_paid) == 3.52)) {
-        console.error('❌❌❌ REJECTING SUBSCRIPTION WITH 3.52 - THIS IS HARDCODED TEST DATA');
-        console.error('❌ Subscription ID:', data.id);
-        console.error('❌ Full subscription:', data);
-        console.error('❌ Returning NULL instead of this subscription');
-        return null; // REJECT IT - DON'T RETURN IT
-    }
     
     console.log('✅ Returning valid subscription:', data);
     return data;
@@ -811,15 +796,7 @@ async function getPaymentHistory() {
                 status: payment.status || 'paid',
                 date: payment.payment_date || payment.created_at,
                 invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
-            }))
-            .filter(payment => {
-                // CRITICAL: Reject any payment with amount 3.52 (mock/test data)
-                if (payment.amount == 3.52 || parseFloat(payment.amount) == 3.52) {
-                    console.error('❌ Rejecting payment with amount 3.52 (mock data):', payment);
-                    return false;
-                }
-                return true;
-            });
+            }));
     }
 
     // NO FALLBACK - if no payments, return empty array

@@ -2079,12 +2079,27 @@
             // Check if we're in test mode (you can set this to true/false or detect automatically)
             const isTestMode = true; // Set to false for production
             
-            // Dodo Payments product IDs
-            const testProductId = 'pdt_pvTND4gU6MdigzfFWNppx'; // Test monthly product
-            const productionProductId = 'pdt_VIAqmDBox37hRlUhkU7AP'; // Production monthly product
+            // Dodo Payments product IDs - DIFFERENT for monthly and quarterly
+            const testProductIds = {
+                monthly: 'pdt_pvTND4gU6MdigzfFWNppx',      // Test monthly product ($3.49)
+                quarterly: 'pdt_0NXNQRhJ751DnTYKQMoED'      // Test quarterly product ($8.90)
+            };
+            const productionProductIds = {
+                monthly: 'pdt_VIAqmDBox37hRlUhkU7AP',       // Production monthly product (UPDATE WHEN READY)
+                quarterly: 'pdt_QUARTERLY_PRODUCTION_ID'    // Production quarterly product (UPDATE WHEN READY)
+            };
             
-            // Select product ID based on mode
-            const productId = isTestMode ? testProductId : productionProductId;
+            // Select product IDs based on mode
+            const productIds = isTestMode ? testProductIds : productionProductIds;
+            
+            // Get the correct product ID for the selected plan
+            const productId = productIds[plan];
+            
+            if (!productId) {
+                console.error('❌ No product ID found for plan:', plan);
+                alert('Error: Invalid subscription plan. Please try again.');
+                return;
+            }
             
             // Select checkout URL based on mode
             const checkoutBaseUrl = isTestMode 

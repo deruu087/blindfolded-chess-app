@@ -61,15 +61,10 @@ export default async function handler(req, res) {
             });
         }
         
-        // Check if amount is already in decimal format or in cents
+        // Dodo Payments always sends amounts in cents, so always convert
         let amount;
-        if (parseFloat(amountRaw) > 1000) {
-            // Likely in cents, convert to decimal
-            amount = (parseFloat(amountRaw) / 100).toFixed(2);
-        } else {
-            // Already in decimal format
-            amount = parseFloat(amountRaw).toFixed(2);
-        }
+        const amountNum = parseFloat(amountRaw);
+        amount = (amountNum / 100).toFixed(2); // Always convert cents to decimal
         
         // Extract currency - NO FALLBACKS
         const currency = data.currency || data.settlement_currency || data.currency_code;
@@ -190,13 +185,37 @@ export default async function handler(req, res) {
                 planType = 'quarterly';
             }
             
-            // If plan type not determined from frequency, we need it from another field
+            // If plan type not determined from frequency, determine from amount
             if (!planType) {
                 // Try to get from plan_type field if available
                 planType = data.plan_type || data.plan;
+                
+                // If still not found, determine from amount (now in decimal format)
                 if (!planType) {
-                    console.error('❌ Cannot determine plan type - missing payment_frequency or plan_type in webhook data');
-                    return res.status(400).json({ error: 'Missing required field: payment_frequency or plan_type' });
+                    // Hardcoded amounts for monthly and quarterly subscriptions (USD, in decimal)
+                    const MONTHLY_AMOUNT = 3.49;
+                    const QUARTERLY_AMOUNT = 8.90;
+                    
+                    // Allow small variance (0.01) for rounding
+                    if (Math.abs(amountNum - MONTHLY_AMOUNT) < 0.02) {
+                        planType = 'monthly';
+                        console.log('✅ Plan type determined from amount (monthly):', amountNum);
+                    } else if (Math.abs(amountNum - QUARTERLY_AMOUNT) < 0.02) {
+                        planType = 'quarterly';
+                        console.log('✅ Plan type determined from amount (quarterly):', amountNum);
+                    } else {
+                        console.error('❌ Cannot determine plan type - amount does not match monthly or quarterly');
+                        console.error('Amount received:', amountNum, currency);
+                        console.error('Expected monthly:', MONTHLY_AMOUNT, 'USD');
+                        console.error('Expected quarterly:', QUARTERLY_AMOUNT, 'USD');
+                        return res.status(400).json({ 
+                            error: 'Cannot determine plan type from amount',
+                            amount: amountNum,
+                            currency: currency,
+                            expectedMonthly: MONTHLY_AMOUNT,
+                            expectedQuarterly: QUARTERLY_AMOUNT
+                        });
+                    }
                 }
             }
             
