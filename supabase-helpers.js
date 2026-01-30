@@ -805,21 +805,26 @@ async function getPaymentHistory() {
 
     if (!paymentsError && paymentsData) {
         payments = paymentsData
-            .map(payment => ({
-                amount: payment.amount || 0,
-                currency: payment.currency || 'EUR',
-                status: payment.status || 'paid',
-                date: payment.payment_date || payment.created_at,
-                invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
-            }))
             .filter(payment => {
+                // CRITICAL: Reject payments without amount - NO FALLBACKS
+                if (!payment.amount && payment.amount !== 0) {
+                    console.error('❌ Rejecting payment without amount (no fallback):', payment);
+                    return false;
+                }
                 // CRITICAL: Reject any payment with amount 3.52 (mock/test data)
                 if (payment.amount == 3.52 || parseFloat(payment.amount) == 3.52) {
                     console.error('❌ Rejecting payment with amount 3.52 (mock data):', payment);
                     return false;
                 }
                 return true;
-            });
+            })
+            .map(payment => ({
+                amount: payment.amount, // NO FALLBACK - must exist after filter
+                currency: payment.currency || 'EUR',
+                status: payment.status || 'paid',
+                date: payment.payment_date || payment.created_at,
+                invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
+            }));
     }
 
     // NO FALLBACK - if no payments, return empty array
@@ -904,11 +909,17 @@ async function createPaymentRecord(paymentData) {
         return { success: false, error: 'User not logged in' };
     }
 
+    // CRITICAL: Require amount - NO FALLBACKS
+    if (!paymentData.amount && paymentData.amount !== 0) {
+        console.error('❌ Cannot save payment: amount is required (no fallbacks)');
+        return { success: false, error: 'Payment amount is required' };
+    }
+
     // Prepare payment data
     const dataToSave = {
         user_id: user.id,
         email: user.email,
-        amount: paymentData.amount || 0,
+        amount: paymentData.amount, // NO FALLBACK - must be provided
         currency: paymentData.currency || 'EUR',
         status: paymentData.status || 'paid',
         payment_date: new Date().toISOString(),
