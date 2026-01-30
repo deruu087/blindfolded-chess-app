@@ -1,0 +1,79 @@
+{
+  "puzzles": [
+    {
+      "id": "puzzle-001",
+      "name": "Mate in 1 - Queen Takes Pawn",
+      "difficulty": "easy",
+      "moves": 1,
+      "description": "White to move and mate in 1. The queen takes the pawn, and the black king on h8 is checkmated — it can't move anywhere, and no piece can block or capture.",
+      "fen": "7k/6p1/6K1/8/8/8/1Q6/8 w - - 0 1",
+      "solution": ["Qxg7#"],
+      "moves_detailed": [
+        {
+          "move_number": 1,
+          "white": "Qxg7#",
+          "black": null,
+          "white_from": "b2",
+          "white_to": "g7",
+          "annotation": "",
+          "description": "The queen takes the pawn, and the black king on h8 is checkmated — it can't move anywhere, and no piece can block or capture"
+        }
+      ],
+      "type": "puzzle",
+      "category": "checkmate",
+      "rating": 1200,
+      "initial_move_index": 0,
+      "turn": "white"
+    },
+    {
+      "id": "puzzle-002",
+      "name": "Mate in 1 - Rook Checkmate",
+      "difficulty": "easy",
+      "moves": 1,
+      "description": "Black to move and mate in 1. The black rook moves from b2 to b1 to deliver checkmate to the white king on g1.",
+      "fen": "8/8/8/8/8/6k1/1r5/6K b - - 0 1",
+      "solution": ["Rb1#"],
+      "moves_detailed": [
+        {
+          "move_number": 1,
+          "white": null,
+          "black": "Rb1#",
+          "black_from": "b2",
+          "black_to": "b1",
+          "annotation": "",
+          "description": "The black rook moves from b2 to b1 to deliver checkmate to the white king on g1"
+        }
+      ],
+      "type": "puzzle",
+      "category": "checkmate",
+      "rating": 1200,
+      "initial_move_index": 0,
+      "turn": "black"
+    },
+    {
+      "id": "puzzle-003",
+      "name": "Mate in 1 - Rook Checkmate",
+      "difficulty": "easy",
+      "moves": 1,
+      "description": "White to move and mate in 1. The white rook moves from f1 to h1 to deliver checkmate to the black king on h4.",
+      "fen": "8/8/8/8/7k/3K4/6R1/5R2 w - - 0 1",
+      "solution": ["Rh1#"],
+      "moves_detailed": [
+        {
+          "move_number": 1,
+          "white": "Rh1#",
+          "black": null,
+          "white_from": "f1",
+          "white_to": "h1",
+          "annotation": "",
+          "description": "The white rook moves from f1 to h1 to deliver checkmate to the black king on h4"
+        }
+      ],
+      "type": "puzzle",
+      "category": "checkmate",
+      "rating": 1200,
+      "initial_move_index": 0,
+      "turn": "white"
+    }
+  ]
+}

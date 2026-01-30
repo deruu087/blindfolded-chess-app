@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "blindfold-chess",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
