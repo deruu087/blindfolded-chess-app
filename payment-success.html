@@ -157,17 +157,23 @@
                         // This uses the sync-subscription API endpoint which creates both subscription and payment records
                         console.log('🔄 Attempting to sync subscription via API...');
                         
-                        // Get payment data from URL or use plan-based amounts (actual Dodo Payments prices)
+                        // Get payment data from URL - amount must come from URL or webhook, not hardcoded
                         const urlParams = new URLSearchParams(window.location.search);
                         const amount = urlParams.get('amount');
                         const currency = urlParams.get('currency') || 'EUR';
                         
-                        // Use plan-based amounts if not in URL (these are the actual Dodo Payments prices)
-                        let finalAmount = amount;
-                        if (!finalAmount) {
-                            finalAmount = planType === 'monthly' ? '3.52' : '8.90';
-                            console.log('💰 Using plan-based amount:', finalAmount, currency);
+                        // Don't sync if amount is missing - webhook will handle it with correct amount
+                        if (!amount) {
+                            console.log('⏳ Amount not in URL - waiting for webhook to process payment with correct amount...');
+                            console.log('💡 Webhook will create subscription with accurate payment data from Dodo Payments');
+                            document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated by webhook shortly.';
+                            document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+                            return; // Exit early, don't try to sync without amount
                         }
+                        
+                        // Only sync if we have the amount from URL
+                        const finalAmount = amount;
+                        console.log('💰 Using amount from URL:', finalAmount, currency);
                         
                         // Call sync API endpoint
                         const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
