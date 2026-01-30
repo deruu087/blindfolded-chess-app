@@ -155,19 +155,45 @@
                         
                         // Try to sync subscription via API (if webhook didn't fire)
                         // This uses the sync-subscription API endpoint which creates both subscription and payment records
-                        // CRITICAL: Only sync if we have the actual payment amount - NO FALLBACKS
                         console.log('🔄 Attempting to sync subscription via API...');
                         
-                        // Get payment data from URL - REQUIRED, NO FALLBACKS
+                        // Get payment data from URL
                         const urlParams = new URLSearchParams(window.location.search);
-                        const amount = urlParams.get('amount');
+                        let amount = urlParams.get('amount');
                         const currency = urlParams.get('currency') || 'EUR';
                         
-                        // If amount is missing, skip sync and rely on webhook
+                        // If amount is missing from URL, try to get it from existing subscription
+                        if (!amount && existingSubscription && existingSubscription.amount_paid) {
+                            amount = existingSubscription.amount_paid.toString();
+                            console.log('💰 Using amount from existing subscription:', amount);
+                        }
+                        
+                        // If still no amount, we can't sync (need actual payment amount)
                         if (!amount) {
-                            console.warn('⚠️ Payment amount not found in URL - skipping sync, will rely on webhook');
-                            document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated by webhook shortly.';
-                            document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+                            console.warn('⚠️ Payment amount not found in URL or subscription - cannot sync');
+                            console.warn('⚠️ This usually means webhook should have created records');
+                            console.warn('⚠️ Check Vercel logs for webhook activity');
+                            document.getElementById('loadingMessage').textContent = 'Payment successful! Checking subscription status...';
+                            
+                            // Wait a bit and check again if subscription was created
+                            setTimeout(async () => {
+                                if (typeof window.getUserSubscription === 'function') {
+                                    const checkSub = await window.getUserSubscription();
+                                    if (checkSub && checkSub.status === 'active') {
+                                        console.log('✅ Subscription found after delay - webhook worked!');
+                                        document.getElementById('loadingMessage').textContent = 'Subscription activated! Redirecting...';
+                                        localStorage.setItem('cachedSubscriptionStatus', 'true');
+                                        localStorage.setItem('cachedSubscriptionPlan', checkSub.plan_type || planType);
+                                        localStorage.removeItem('pendingSubscriptionPlan');
+                                        setTimeout(() => {
+                                            window.location.href = 'profile.html';
+                                        }, 1500);
+                                    } else {
+                                        document.getElementById('loadingMessage').textContent = 'Payment successful! If subscription is not activated, please contact support.';
+                                        document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+                                    }
+                                }
+                            }, 3000);
                             return;
                         }
                         
