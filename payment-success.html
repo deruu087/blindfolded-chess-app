@@ -102,6 +102,7 @@
 
     <script>
         // Activate subscription after successful payment
+        // WEBHOOK IS THE SINGLE SOURCE OF TRUTH - This function only checks if webhook has processed the payment
         async function activateSubscription() {
             try {
                 // Get payment details from URL parameters
@@ -118,112 +119,88 @@
                 console.log('💰 [PAYMENT SUCCESS] Payment ID:', paymentId);
                 console.log('💰 [PAYMENT SUCCESS] Payment Status:', paymentStatus);
                 console.log('💰 [PAYMENT SUCCESS] Email:', email);
-                console.log('💰 [PAYMENT SUCCESS] All URL params:', urlParams.toString());
+                console.log('💰 [PAYMENT SUCCESS] WEBHOOK IS SINGLE SOURCE OF TRUTH - Only checking if subscription exists');
                 console.log('='.repeat(80));
-                
-                // Get the pending plan from localStorage
-                const planType = localStorage.getItem('pendingSubscriptionPlan') || 'monthly';
                 
                 // Check if user is logged in
                 if (typeof getCurrentUser === 'function') {
                     const user = await getCurrentUser();
                     
                     if (user) {
-                        // First, check if subscription already exists (webhook may have already created it)
+                        // WEBHOOK IS THE SINGLE SOURCE OF TRUTH
+                        // Only check if subscription exists - do NOT create it here
+                        // The webhook handler will create the subscription with correct data
+                        
                         let existingSubscription = null;
-                        if (typeof window.getUserSubscription === 'function') {
-                            try {
-                                existingSubscription = await window.getUserSubscription();
-                                console.log('Existing subscription check:', existingSubscription);
-                            } catch (e) {
-                                console.log('Could not check existing subscription:', e);
+                        let checkAttempts = 0;
+                        const maxAttempts = 10; // Check for up to 10 seconds
+                        
+                        // Poll for subscription (webhook may be processing)
+                        const checkSubscription = async () => {
+                            if (typeof window.getUserSubscription === 'function') {
+                                try {
+                                    existingSubscription = await window.getUserSubscription();
+                                    console.log(`🔍 [Attempt ${checkAttempts + 1}] Subscription check:`, existingSubscription);
+                                    
+                                    if (existingSubscription && existingSubscription.status === 'active') {
+                                        // Webhook has processed the payment!
+                                        console.log('✅ Subscription found - webhook processed payment successfully!');
+                                        document.getElementById('loadingMessage').textContent = 'Subscription activated! Redirecting...';
+                                        localStorage.setItem('cachedSubscriptionStatus', 'true');
+                                        localStorage.setItem('cachedSubscriptionPlan', existingSubscription.plan_type);
+                                        localStorage.removeItem('pendingSubscriptionPlan');
+                                        
+                                        setTimeout(() => {
+                                            window.location.href = 'profile.html';
+                                        }, 1500);
+                                        return true; // Found subscription
+                                    }
+                                } catch (e) {
+                                    console.log('Could not check subscription:', e);
+                                }
                             }
-                        }
+                            return false; // Subscription not found yet
+                        };
                         
-                        // If subscription already exists and is active, skip creation
-                        if (existingSubscription && existingSubscription.status === 'active') {
-                            console.log('✅ Subscription already exists and is active - webhook worked!');
-                            document.getElementById('loadingMessage').textContent = 'Subscription already active! Redirecting...';
-                            localStorage.setItem('cachedSubscriptionStatus', 'true');
-                            localStorage.setItem('cachedSubscriptionPlan', existingSubscription.plan_type || planType);
-                            localStorage.removeItem('pendingSubscriptionPlan');
-                            setTimeout(() => {
-                                window.location.href = 'profile.html';
-                            }, 1500);
-                            return;
-                        }
+                        // Check immediately
+                        const found = await checkSubscription();
+                        if (found) return;
                         
-                        // Try to sync subscription via API (if webhook didn't fire)
-                        // This uses the sync-subscription API endpoint which creates both subscription and payment records
-                        console.log('🔄 Attempting to sync subscription via API...');
-                        
-                        // Get payment data from URL - NO FALLBACKS, only use real data
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const amount = urlParams.get('amount');
-                        const currency = urlParams.get('currency') || 'EUR';
-                        
-                        // Only sync if we have the amount from URL - webhook will handle it otherwise
-                        if (!amount) {
-                            console.log('⏳ Amount not in URL - webhook will process payment with correct amount');
-                            console.log('💡 Waiting for webhook to create subscription record...');
-                            document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated by webhook shortly.';
-                            document.getElementById('manualRedirectBtn').style.display = 'inline-block';
-                            return; // Exit early - webhook will handle it
-                        }
-                        
-                        // Only sync if we have real amount data from URL
-                        console.log('💰 Syncing with amount from URL:', amount, currency);
-                        
-                        // Call sync API endpoint
-                        const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                            ? 'http://localhost:3000/api/sync-subscription'
-                            : `${window.location.origin}/api/sync-subscription`;
-                        
-                        try {
-                            const syncResponse = await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    userEmail: user.email,
-                                    subscriptionId: paymentId,
-                                    amount: amount, // Only use real amount from URL
-                                    currency: currency,
-                                    planType: planType,
-                                    paymentDate: new Date().toISOString()
-                                })
-                            });
+                        // If not found, poll every second for up to 10 seconds
+                        // This handles cases where webhook is slightly delayed
+                        const pollInterval = setInterval(async () => {
+                            checkAttempts++;
+                            const found = await checkSubscription();
                             
-                            const syncResult = await syncResponse.json();
-                            
-                            if (syncResponse.ok && syncResult.success) {
-                                console.log('✅ Subscription synced successfully:', syncResult);
-                                
-                                // Update cache
-                                localStorage.setItem('cachedSubscriptionStatus', 'true');
-                                localStorage.setItem('cachedSubscriptionPlan', planType);
-                                
-                                // Clear pending subscription
-                                localStorage.removeItem('pendingSubscriptionPlan');
-                                
-                                // Update loading message
-                                document.getElementById('loadingMessage').textContent = 'Subscription activated! Redirecting...';
-                                
-                                // Redirect to profile after 2 seconds
-                                setTimeout(() => {
-                                    window.location.href = 'profile.html';
-                                }, 2000);
-                            } else {
-                                console.error('❌ Sync failed:', syncResult);
-                                document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated by webhook shortly.';
+                            if (found) {
+                                clearInterval(pollInterval);
+                            } else if (checkAttempts >= maxAttempts) {
+                                // Webhook hasn't processed yet - show message to wait
+                                clearInterval(pollInterval);
+                                console.log('⏳ Webhook not processed yet - showing wait message');
+                                document.getElementById('loadingMessage').textContent = 
+                                    'Payment successful! Your subscription is being processed by our system. ' +
+                                    'This usually takes a few seconds. Please wait...';
                                 document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+                                
+                                // Continue checking in background (user can manually refresh)
+                                // Check every 5 seconds for up to 2 minutes
+                                let backgroundChecks = 0;
+                                const backgroundInterval = setInterval(async () => {
+                                    backgroundChecks++;
+                                    const found = await checkSubscription();
+                                    if (found) {
+                                        clearInterval(backgroundInterval);
+                                        // Redirect if found
+                                        window.location.href = 'profile.html';
+                                    } else if (backgroundChecks >= 24) { // 2 minutes (24 * 5 seconds)
+                                        clearInterval(backgroundInterval);
+                                        console.log('⚠️ Webhook still not processed after 2 minutes');
+                                    }
+                                }, 5000);
                             }
-                        } catch (syncError) {
-                            console.error('❌ Error calling sync API:', syncError);
-                            document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated by webhook shortly.';
-                            document.getElementById('manualRedirectBtn').style.display = 'inline-block';
-                        }
+                        }, 1000); // Check every second
+                        
                     } else {
                         // User not logged in - redirect to sign in
                         document.getElementById('loadingMessage').textContent = 'Please sign in to activate your subscription.';
@@ -235,8 +212,10 @@
                     document.getElementById('loadingMessage').textContent = 'Error: Supabase not initialized. Please refresh the page.';
                 }
             } catch (error) {
-                console.error('Error activating subscription:', error);
-                document.getElementById('loadingMessage').textContent = 'Subscription will be activated shortly. The webhook is processing your payment.';
+                console.error('Error checking subscription:', error);
+                document.getElementById('loadingMessage').textContent = 
+                    'Payment successful! Your subscription is being processed. ' +
+                    'The webhook will activate it shortly. You can check your profile in a moment.';
                 document.getElementById('manualRedirectBtn').style.display = 'inline-block';
             }
         }
