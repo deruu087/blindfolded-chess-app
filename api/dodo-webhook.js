@@ -49,76 +49,48 @@ export default async function handler(req, res) {
         
         // Extract amount (Dodo Payments sends in cents) - NO FALLBACKS
         // Try multiple possible field names that Dodo Payments might use
-        const amountRaw = data.total_amount || data.recurring_pre_tax_amount || data.amount || data.settlement_amount || data.price || data.total || 
-                         data.line_items?.[0]?.price || data.line_items?.[0]?.amount ||
-                         webhookData.total_amount || webhookData.amount || webhookData.price;
-        
-        console.log('💰 [WEBHOOK] Amount extraction attempt:', {
-            total_amount: data.total_amount,
-            recurring_pre_tax_amount: data.recurring_pre_tax_amount,
-            amount: data.amount,
-            settlement_amount: data.settlement_amount,
-            price: data.price,
-            total: data.total,
-            line_items: data.line_items,
-            foundAmountRaw: amountRaw
-        });
-        
+        const amountRaw = data.total_amount || data.recurring_pre_tax_amount || data.amount || data.settlement_amount || data.price || data.total;
         if (!amountRaw && amountRaw !== 0) {
             console.error('❌ No amount found in webhook data');
             console.error('Available data fields:', Object.keys(data));
-            console.error('Available webhookData fields:', Object.keys(webhookData));
             console.error('Full data object:', JSON.stringify(data, null, 2));
-            console.error('Full webhookData object:', JSON.stringify(webhookData, null, 2));
             return res.status(400).json({ 
                 error: 'Missing required field: amount',
-                availableDataFields: Object.keys(data),
-                availableWebhookFields: Object.keys(webhookData),
+                availableFields: Object.keys(data),
                 receivedData: data
             });
         }
         
         // Check if amount is already in decimal format or in cents
         let amount;
-        const amountNum = parseFloat(amountRaw);
-        if (isNaN(amountNum)) {
-            console.error('❌ Amount is not a valid number:', amountRaw);
+        if (parseFloat(amountRaw) > 1000) {
+            // Likely in cents, convert to decimal
+            amount = (parseFloat(amountRaw) / 100).toFixed(2);
+        } else {
+            // Already in decimal format
+            amount = parseFloat(amountRaw).toFixed(2);
+        }
+        
+        // Extract currency - NO FALLBACKS
+        const currency = data.currency || data.settlement_currency || data.currency_code;
+        if (!currency) {
+            console.error('❌ No currency found in webhook data');
+            console.error('Available data fields:', Object.keys(data));
             return res.status(400).json({ 
-                error: 'Invalid amount format',
-                receivedAmount: amountRaw
+                error: 'Missing required field: currency',
+                availableFields: Object.keys(data)
             });
         }
         
-        if (amountNum > 1000) {
-            // Likely in cents, convert to decimal
-            amount = (amountNum / 100).toFixed(2);
-            console.log('💰 [WEBHOOK] Converted from cents:', amountRaw, '->', amount);
-        } else {
-            // Already in decimal format
-            amount = amountNum.toFixed(2);
-            console.log('💰 [WEBHOOK] Using decimal amount:', amount);
-        }
-        
-        // Extract currency - try multiple fields, default to EUR if not found
-        const currency = data.currency || data.settlement_currency || data.currency_code || 'EUR';
-        if (!currency) {
-            console.warn('⚠️ No currency found, defaulting to EUR');
-        }
-        
-        // Extract status - try multiple fields, infer from event type if needed
-        let status = data.status || data.payment_status || data.state;
+        // Extract status - NO FALLBACKS
+        const status = data.status || data.payment_status || data.state;
         if (!status) {
-            // Try to infer status from event type
-            if (eventType && (eventType.includes('completed') || eventType.includes('succeeded') || eventType.includes('active'))) {
-                status = 'completed';
-                console.log('📋 Inferred status from event type:', status);
-            } else if (eventType && eventType.includes('cancelled')) {
-                status = 'cancelled';
-                console.log('📋 Inferred status from event type:', status);
-            } else {
-                console.warn('⚠️ No status found, defaulting to completed');
-                status = 'completed'; // Default to completed for payment webhooks
-            }
+            console.error('❌ No status found in webhook data');
+            console.error('Available data fields:', Object.keys(data));
+            return res.status(400).json({ 
+                error: 'Missing required field: status',
+                availableFields: Object.keys(data)
+            });
         }
         
         console.log('📋 [WEBHOOK] Parsed data:', {
@@ -201,7 +173,7 @@ export default async function handler(req, res) {
                 return res.status(500).json({ error: 'Error finding user', message: error.message });
             }
             
-            // Determine plan type from payment frequency or amount - NO FALLBACKS
+            // Determine plan type from payment frequency - NO FALLBACKS
             // Only use real data from webhook
             const amountNum = parseFloat(amount);
             if (isNaN(amountNum)) {
@@ -211,49 +183,20 @@ export default async function handler(req, res) {
             
             let planType = null;
             
-            // Check payment frequency from webhook data (PREFERRED)
+            // Check payment frequency from webhook data (REQUIRED)
             if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 1) {
                 planType = 'monthly';
             } else if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 3) {
                 planType = 'quarterly';
             }
             
-            // If plan type not determined from frequency, try other fields
+            // If plan type not determined from frequency, we need it from another field
             if (!planType) {
                 // Try to get from plan_type field if available
-                planType = data.plan_type || data.plan || data.product_name;
-                
-                // Normalize plan type string
-                if (planType) {
-                    planType = planType.toLowerCase();
-                    if (planType.includes('monthly') || planType.includes('month')) {
-                        planType = 'monthly';
-                    } else if (planType.includes('quarterly') || planType.includes('quarter') || planType.includes('3 month')) {
-                        planType = 'quarterly';
-                    }
-                }
-            }
-            
-            // If still no plan type, infer from amount (monthly is typically lower)
-            // This is a last resort - we prefer explicit plan_type from webhook
-            if (!planType) {
-                console.warn('⚠️ Plan type not found in webhook, inferring from amount');
-                // Monthly is typically $4.99 (≈4.50-5.50 EUR), Quarterly is $12.99 (≈11.50-13.50 EUR)
-                // Use amount to infer plan type as last resort
-                if (amountNum >= 11.0) {
-                    planType = 'quarterly';
-                    console.log('📊 Inferred quarterly plan from amount:', amountNum);
-                } else if (amountNum >= 3.0) {
-                    planType = 'monthly';
-                    console.log('📊 Inferred monthly plan from amount:', amountNum);
-                } else {
-                    console.error('❌ Cannot determine plan type - amount too low or missing plan info');
-                    console.error('Webhook data:', JSON.stringify(data, null, 2));
-                    return res.status(400).json({ 
-                        error: 'Missing required field: payment_frequency or plan_type',
-                        receivedAmount: amountNum,
-                        availableFields: Object.keys(data)
-                    });
+                planType = data.plan_type || data.plan;
+                if (!planType) {
+                    console.error('❌ Cannot determine plan type - missing payment_frequency or plan_type in webhook data');
+                    return res.status(400).json({ error: 'Missing required field: payment_frequency or plan_type' });
                 }
             }
             
@@ -291,17 +234,7 @@ export default async function handler(req, res) {
                 };
                 
                 try {
-                    // CRITICAL: Create both subscription and payment records
-                    // Don't return early - ensure both are created
-                    
-                    let subscription = null;
-                    let payment = null;
-                    let subscriptionError = null;
-                    let paymentError = null;
-                    
-                    // Step 1: Create/update subscription
-                    console.log('📝 [WEBHOOK] Creating subscription record...');
-                    const { data: subData, error: subError } = await supabase
+                    const { data: subscription, error: subError } = await supabase
                         .from('subscriptions')
                         .upsert(subscriptionData, {
                             onConflict: 'user_id'
@@ -311,15 +244,14 @@ export default async function handler(req, res) {
                     
                     if (subError) {
                         console.error('❌ Error creating/updating subscription:', subError);
-                        console.error('❌ Subscription data attempted:', JSON.stringify(subscriptionData, null, 2));
-                        subscriptionError = subError;
-                    } else {
-                        subscription = subData;
-                        console.log('✅ Subscription created/updated successfully:', subscription);
+                        return res.status(500).json({ 
+                            error: 'Failed to create subscription',
+                            message: subError.message 
+                        });
                     }
                     
-                    // Step 2: Create payment record (always try, even if subscription failed)
-                    console.log('📝 [WEBHOOK] Creating payment record...');
+                    // Insert payment record into payments table
+                    // Use subscription_id as order_id and transaction_id
                     const subscriptionId = data.subscription_id || orderId;
                     const paymentData = {
                         user_id: userId,
@@ -335,64 +267,23 @@ export default async function handler(req, res) {
                         description: `${planType} subscription payment`
                     };
                     
-                    const { data: payData, error: payError } = await supabase
+                    const { data: payment, error: paymentError } = await supabase
                         .from('payments')
                         .insert(paymentData)
                         .select()
                         .single();
                     
-                    if (payError) {
-                        console.error('❌ Error creating payment record:', payError);
-                        console.error('❌ Payment data attempted:', JSON.stringify(paymentData, null, 2));
-                        paymentError = payError;
+                    if (paymentError) {
+                        // Log error but don't fail the webhook - payment was successful
+                        console.error('⚠️ Error creating payment record:', paymentError);
                     } else {
-                        payment = payData;
-                        console.log('✅ Payment record created successfully:', payment);
+                        console.log('✅ Payment record created:', payment);
                     }
                     
-                    // Step 3: Report results - both should be created
-                    if (subscriptionError && paymentError) {
-                        // Both failed - return error
-                        console.error('❌ Both subscription and payment creation failed!');
-                        return res.status(500).json({ 
-                            error: 'Failed to create subscription and payment',
-                            subscriptionError: subscriptionError.message,
-                            paymentError: paymentError.message
-                        });
-                    } else if (subscriptionError) {
-                        // Subscription failed but payment succeeded - still return error
-                        console.error('❌ Subscription creation failed, but payment was recorded');
-                        return res.status(500).json({ 
-                            error: 'Failed to create subscription',
-                            message: subscriptionError.message,
-                            payment: payment // Payment was created
-                        });
-                    } else if (paymentError) {
-                        // Subscription succeeded but payment failed - retry payment creation
-                        console.warn('⚠️ Payment creation failed, retrying...');
-                        const { data: retryPayment, error: retryError } = await supabase
-                            .from('payments')
-                            .insert(paymentData)
-                            .select()
-                            .single();
-                        
-                        if (retryError) {
-                            console.error('❌ Payment retry also failed:', retryError);
-                            // Subscription was created, payment failed - log but don't fail webhook
-                            console.error('⚠️ WARNING: Subscription created but payment record failed');
-                        } else {
-                            payment = retryPayment;
-                            console.log('✅ Payment record created on retry:', payment);
-                        }
-                    }
-                    
-                    // Success - both records created (or at least subscription)
-                    console.log('✅ [WEBHOOK] Success summary:');
-                    console.log('  - Subscription:', subscription ? '✅ Created' : '❌ Failed');
-                    console.log('  - Payment:', payment ? '✅ Created' : '❌ Failed');
-                    console.log('  - Customer:', customerEmail);
-                    console.log('  - Amount:', amount, currency);
-                    console.log('  - Plan:', planType);
+                    console.log('✅ Subscription created/updated:', subscription);
+                    console.log('✅ Payment successful for:', customerEmail);
+                    console.log('💰 Amount:', amount, currency);
+                    console.log('📦 Plan:', planType);
                     
                     // Send subscription confirmation email (NON-BLOCKING - wrapped in try-catch)
                     try {
@@ -426,17 +317,11 @@ export default async function handler(req, res) {
                         console.log('Note: Could not send subscription email (non-critical)');
                     }
                     
-                    // Return success with both records
                     return res.status(200).json({ 
                         success: true, 
                         message: 'Webhook processed successfully',
                         orderId: orderId,
-                        subscription: subscription,
-                        payment: payment,
-                        recordsCreated: {
-                            subscription: !!subscription,
-                            payment: !!payment
-                        }
+                        subscription: subscription
                     });
                 } catch (error) {
                     console.error('❌ Error saving subscription:', error);

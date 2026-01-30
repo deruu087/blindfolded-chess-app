@@ -157,47 +157,19 @@
                         // This uses the sync-subscription API endpoint which creates both subscription and payment records
                         console.log('🔄 Attempting to sync subscription via API...');
                         
-                        // Get payment data from URL
+                        // Get payment data from URL or use plan-based amounts (actual Dodo Payments prices)
                         const urlParams = new URLSearchParams(window.location.search);
-                        let amount = urlParams.get('amount');
+                        const amount = urlParams.get('amount');
                         const currency = urlParams.get('currency') || 'EUR';
                         
-                        // If amount is missing from URL, try to get it from existing subscription
-                        if (!amount && existingSubscription && existingSubscription.amount_paid) {
-                            amount = existingSubscription.amount_paid.toString();
-                            console.log('💰 Using amount from existing subscription:', amount);
+                        // Use plan-based amounts if not in URL (these are the actual Dodo Payments prices)
+                        let finalAmount = amount;
+                        if (!finalAmount) {
+                            finalAmount = planType === 'monthly' ? '3.52' : '8.90';
+                            console.log('💰 Using plan-based amount:', finalAmount, currency);
                         }
                         
-                        // If still no amount, we can't sync (need actual payment amount)
-                        if (!amount) {
-                            console.warn('⚠️ Payment amount not found in URL or subscription - cannot sync');
-                            console.warn('⚠️ This usually means webhook should have created records');
-                            console.warn('⚠️ Check Vercel logs for webhook activity');
-                            document.getElementById('loadingMessage').textContent = 'Payment successful! Checking subscription status...';
-                            
-                            // Wait a bit and check again if subscription was created
-                            setTimeout(async () => {
-                                if (typeof window.getUserSubscription === 'function') {
-                                    const checkSub = await window.getUserSubscription();
-                                    if (checkSub && checkSub.status === 'active') {
-                                        console.log('✅ Subscription found after delay - webhook worked!');
-                                        document.getElementById('loadingMessage').textContent = 'Subscription activated! Redirecting...';
-                                        localStorage.setItem('cachedSubscriptionStatus', 'true');
-                                        localStorage.setItem('cachedSubscriptionPlan', checkSub.plan_type || planType);
-                                        localStorage.removeItem('pendingSubscriptionPlan');
-                                        setTimeout(() => {
-                                            window.location.href = 'profile.html';
-                                        }, 1500);
-                                    } else {
-                                        document.getElementById('loadingMessage').textContent = 'Payment successful! If subscription is not activated, please contact support.';
-                                        document.getElementById('manualRedirectBtn').style.display = 'inline-block';
-                                    }
-                                }
-                            }, 3000);
-                            return;
-                        }
-                        
-                        // Call sync API endpoint only if we have the actual amount
+                        // Call sync API endpoint
                         const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
                             ? 'http://localhost:3000/api/sync-subscription'
                             : `${window.location.origin}/api/sync-subscription`;
@@ -211,7 +183,7 @@
                                 body: JSON.stringify({
                                     userEmail: user.email,
                                     subscriptionId: paymentId,
-                                    amount: amount, // Use actual amount from URL, no fallback
+                                    amount: finalAmount,
                                     currency: currency,
                                     planType: planType,
                                     paymentDate: new Date().toISOString()
