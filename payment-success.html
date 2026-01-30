@@ -163,10 +163,12 @@
                         const currency = urlParams.get('currency') || 'EUR';
                         
                         // Use plan-based amounts if not in URL (these are the actual Dodo Payments prices)
+                        // Monthly: $3.49, Quarterly: $8.90 (as shown on the pricing page)
                         let finalAmount = amount;
                         if (!finalAmount) {
-                            finalAmount = planType === 'monthly' ? '3.52' : '8.90';
-                            console.log('💰 Using plan-based amount:', finalAmount, currency);
+                            finalAmount = planType === 'monthly' ? '3.49' : '8.90';
+                            console.log('💰 Using plan-based amount (fallback):', finalAmount, currency);
+                            console.log('💡 Note: Webhook should provide the exact amount. This is a fallback.');
                         }
                         
                         // Call sync API endpoint
