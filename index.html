@@ -1,0 +1,2399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Memo Chess - Master chess visualization and memory training. Practice blindfold chess, solve puzzles, and improve your chess skills with interactive training games.">
+    <meta name="keywords" content="chess training, blindfold chess, chess visualization, chess memory, chess puzzles, chess tactics, chess practice">
+    <meta name="author" content="Memo Chess">
+    <title>Memo Chess - Master Chess Visualization & Memory Training</title>
+    <link rel="icon" type="image/png" href="images/chess-board.png">
+    
+    <!-- Preload video sources for better performance -->
+    <link rel="preload" href="sounds/demo.webm" as="video" type="video/webm">
+    <link rel="preload" href="sounds/recording.mp4" as="video" type="video/mp4">
+    <link rel="preload" href="sounds/demo.mp4" as="video" type="video/mp4">
+    
+    <!-- Hide page immediately if OAuth callback detected -->
+    <script>
+        // Check if this is an OAuth callback and hide page immediately
+        (function() {
+            const hash = window.location.hash;
+            const isOAuthCallback = hash && hash.includes('access_token');
+            if (isOAuthCallback) {
+                // Inject CSS to hide body immediately (before body renders)
+                const style = document.createElement('style');
+                style.textContent = 'body { display: none !important; }';
+                document.head.appendChild(style);
+                
+                // Also hide body when it loads
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (document.body) {
+                        document.body.style.display = 'none';
+                    }
+                });
+                // Try to hide immediately if body exists
+                if (document.body) {
+                    document.body.style.display = 'none';
+                }
+            }
+        })();
+    </script>
+    
+    <script>
+        // Subscription tab removed - content is now on home page
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+
+        .navbar {
+            background-color: #f5f5f5;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            width: 100%;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            color: #1e3a8a;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .logo:hover {
+            color: #1e3a8a;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #1e3a8a;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-links a:hover {
+            background-color: #e5e7eb;
+        }
+
+        /* Profile Button Styles */
+        .profile-button {
+            color: #1e3a8a;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .profile-button:hover {
+            background-color: #e5e7eb;
+        }
+
+
+        .profile-icon {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+            position: relative;
+        }
+
+
+        .profile-icon:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .profile-avatar {
+            font-size: 1.2rem;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .profile-avatar img {
+            border-radius: 50%;
+            background: white;
+        }
+
+
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            border: 1px solid #e9ecef;
+        }
+
+
+        .profile-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* Only show dropdown when user is logged in */
+        .profile-dropdown:not(.logged-in):hover .dropdown-menu {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: translateY(-10px) !important;
+            pointer-events: none !important;
+        }
+        
+        /* Also hide dropdown by default when not logged in */
+        .profile-dropdown:not(.logged-in) .dropdown-menu {
+            display: none !important;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f8f9fa;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: transparent !important;
+            color: #1a1a1a !important;
+            transform: translateX(2px);
+        }
+        
+
+        .dropdown-icon {
+            font-size: 1rem;
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .dropdown-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .nav-links a.active {
+            background-color: #1e3a8a;
+            color: #ffffff;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3rem 2rem;
+            min-height: calc(100vh - 60px);
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+            margin: 70px auto 0 auto; /* Add top margin to account for fixed navbar */
+        }
+
+        .hero-section {
+            margin-bottom: 3rem;
+            padding: 3rem 0;
+        }
+
+        .hero-content {
+            display: flex;
+            align-items: center;
+            gap: 8rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .hero-text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .hero-video {
+            flex: 1;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 400;
+            color: #1e3a8a;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: #4b5563;
+            margin-bottom: 0;
+            line-height: 1.7;
+        }
+
+        .demo-title {
+            font-size: 1.5rem;
+            color: #1e3a8a;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+        }
+
+        .video-container {
+            max-width: 100%;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            transform: scale(1.2);
+        }
+
+        .demo-video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .hero-content {
+                flex-direction: column;
+                gap: 2rem;
+                text-align: center;
+            }
+
+            .hero-text {
+                text-align: center;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 4rem;
+            max-width: 1000px;
+            width: 100%;
+            padding: 3rem 1rem 1rem 1rem;
+        }
+
+        .feature-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2.5rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #e0e0e0;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: #1e3a8a;
+            margin-bottom: 1.25rem;
+        }
+
+        .feature-description {
+            color: #4b5563;
+            line-height: 1.7;
+            margin-bottom: 2rem;
+        }
+
+        .feature-button {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .feature-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .stats-section {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            margin-top: 4rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Subscription Styles */
+        .subscription-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            margin-top: 6rem;
+        }
+
+        .subscription-title {
+            font-size: 2.5rem;
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+            font-weight: normal;
+        }
+
+        .subscription-subtitle {
+            font-size: 1.15rem;
+            color: #4b5563;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .pricing-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 3rem;
+        }
+
+        .pricing-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .pricing-card.featured {
+            border: 2px solid #1e3a8a;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured::before {
+            content: "Best Deal";
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e3a8a;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-price {
+            font-size: 3rem;
+            font-weight: normal;
+            color: #1e3a8a;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-period {
+            color: #4b5563;
+            margin-bottom: 2rem;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 2rem;
+            padding: 0;
+        }
+
+        .plan-features li {
+            padding: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .plan-features li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: normal;
+            margin-right: 0.5rem;
+        }
+
+        .plan-features li:empty::before {
+            content: "";
+        }
+
+        .subscribe-btn {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: normal;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+
+        .subscribe-btn:hover {
+            background: #1e40af;
+        }
+
+        .subscribe-btn.secondary {
+            background: #95a5a6;
+        }
+
+        .subscribe-btn.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .free-features {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 1.5rem auto 3rem;
+            max-width: 600px;
+        }
+
+        .free-features h3 {
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: normal;
+        }
+
+        .free-features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .free-features li {
+            padding: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .free-features li::before {
+            content: "✓";
+            color: #27ae60;
+            font-weight: normal;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .pricing-card.featured {
+                transform: none;
+            }
+            
+            .subscription-title {
+                font-size: 2rem;
+            }
+        }
+
+        /* FAQ Styles */
+        .faq-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-top: 5rem;
+        }
+
+        .faq-title {
+            font-size: 2.5rem;
+            font-weight: 400;
+            color: #1e3a8a;
+            margin-bottom: 1.5rem;
+        }
+
+        .faq-subtitle {
+            font-size: 1.15rem;
+            color: #4b5563;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        .faq-container {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 3rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 3rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .faq-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: #1e3a8a;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #1e3a8a;
+        }
+
+        .faq-item {
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .faq-question {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            cursor: pointer;
+            font-weight: 400;
+            color: #4b5563;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: #e9ecef;
+        }
+
+        .faq-question.active {
+            background: #f8f9fa;
+            color: #4b5563;
+        }
+
+        .faq-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-question.active .faq-icon {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .faq-answer.active {
+            padding: 1.5rem;
+            max-height: 500px;
+        }
+
+        .faq-answer p {
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+
+        .faq-answer p:last-child {
+            margin-bottom: 0;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .code {
+            background: #f8f9fa;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+        }
+
+        .contact-section {
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .contact-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-text {
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
+        }
+
+        .contact-button {
+            display: inline-block;
+            background: white;
+            color: #1e3a8a;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .contact-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stats-title {
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: #1e3a8a;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .stat-item {
+            color: #2c3e50;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 400;
+            color: #1e3a8a;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin-top: 0.5rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.25rem;
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #1e3a8a;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #1e3a8a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1e3a8a;
+        }
+
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+
+        .account-info {
+            padding: 1rem 0;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item label {
+            font-weight: 400;
+            color: #1e3a8a !important;
+            min-width: 100px;
+        }
+
+        .info-item span {
+            color: #4b5563 !important;
+            text-align: right;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .register-link a {
+            color: #1e3a8a;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        .google-signup {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .close {
+            color: #6b7280;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .btn-google {
+            background-color: #ffffff;
+            color: #333;
+            border: 1px solid #dadce0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn-google:hover {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+            background: url('images/google.png') no-repeat center;
+            background-size: contain;
+        }
+
+        .google-signup {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        /* Logout Confirmation Modal */
+        .logout-confirm-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .logout-confirm-content {
+            background-color: #ffffff;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+            text-align: center;
+        }
+
+        .logout-confirm-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .logout-confirm-header h2 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.25rem;
+            font-weight: 400;
+        }
+
+        .logout-confirm-message {
+            color: #4b5563;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .logout-confirm-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-logout-confirm {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .btn-logout-yes {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-logout-yes:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-logout-no {
+            background-color: #6b7280;
+            color: white;
+        }
+
+        .btn-logout-no:hover {
+            background-color: #4b5563;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .navbar {
+                padding: 0.5rem 1rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .nav-links {
+                gap: 1rem;
+            }
+            
+            .main-content {
+                padding: 2rem 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+            
+            .stats-section {
+                max-width: 100%;
+                padding: 1.5rem;
+            }
+
+            .modal-content {
+                margin: 10% auto;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <img src="images/chess-board.png" alt="Memo Chess" class="logo-icon">
+            <span>Memo Chess</span>
+        </a>
+                <ul class="nav-links">
+                    <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="games.html">Games</a></li>
+            <li><a href="puzzles.html">Puzzles</a></li>
+            <li><a href="profile.html" id="profileLink" class="profile-button">Profile</a></li>
+                </ul>
+    </nav>
+
+    <main class="main-content">
+        <section class="hero-section">
+            <div class="hero-content">
+                <div class="hero-text">
+                     <h1 class="hero-title">Welcome to Memo Chess</h1>
+            <p class="hero-subtitle">
+                         This website is designed to help you memorize chess openings, learn famous historical games, and develop strong visualization skills so you can play games and solve puzzles without relying on a physical board. This training method was created to help you improve your chess rating as quickly and efficiently as possible.
+                     </p>
+                </div>
+                
+                <div class="hero-video">
+                    <div class="video-container">
+                        <video autoplay muted loop playsinline class="demo-video" preload="auto">
+                            <source src="sounds/demo.webm" type="video/webm">
+                            <source src="sounds/recording.mp4" type="video/mp4">
+                            <source src="sounds/demo.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features-grid">
+            <div class="feature-card">
+                <img src="images/chess-board.png" alt="Memo Chess Games" class="feature-icon">
+                <h3 class="feature-title">Memo Chess Games</h3>
+                <p class="feature-description">
+                    Study master games without seeing the board. Develop your visualization skills 
+                    and learn to calculate complex positions in your mind.
+                </p>
+                <a href="games.html" class="feature-button">Start Training</a>
+            </div>
+
+            <div class="feature-card">
+                <img src="images/puzzle.png" alt="Puzzle Training" class="feature-icon">
+                <h3 class="feature-title">Puzzle Training</h3>
+                <p class="feature-description">
+                    Solve tactical puzzles without visual aids. Train your pattern recognition and 
+                    calculation skills by solving puzzles entirely in your mind's eye.
+                </p>
+                <a href="puzzles.html" class="feature-button">Solve Puzzles</a>
+            </div>
+
+
+        </section>
+
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number" id="total-games">5</span>
+                    <div class="stat-label">Classic Games</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">4</span>
+                    <div class="stat-label">Tactical Puzzles</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">4</span>
+                    <div class="stat-label">Difficulty Levels</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">∞</span>
+                    <div class="stat-label">Learning Possibilities</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Subscription Section -->
+        <div class="subscription-header">
+            <h1 class="subscription-title">Unlock All Chess Content</h1>
+            <p class="subscription-subtitle">
+                Get unlimited access to our complete library of chess games, puzzles, and training materials. 
+                Perfect your blindfold chess skills with premium content.
+            </p>
+        </div>
+
+        <div class="pricing-container">
+            <div class="pricing-card">
+                <h3 class="plan-name">Monthly</h3>
+                <div class="plan-price">$3.49</div>
+                <div class="plan-period">per month</div>
+                <ul class="plan-features">
+                    <li>Unlimited access to all games</li>
+                    <li>Unlimited access to all puzzles</li>
+                    <li>Advanced training modes</li>
+                    <li>Progress tracking</li>
+                    <li>Priority support</li>
+                </ul>
+                <button class="subscribe-btn" onclick="subscribe('monthly')" data-plan="monthly">
+                    Subscribe Monthly
+                </button>
+            </div>
+
+            <div class="pricing-card featured">
+                <h3 class="plan-name">3 Months</h3>
+                <div class="plan-price">$8.90</div>
+                <div class="plan-period">per 3 months (Save 15%)</div>
+                <ul class="plan-features">
+                    <li>Everything in Monthly</li>
+                    <li>Save 15% vs monthly billing</li>
+                    <li>Priority feature requests</li>
+                    <li></li>
+                    <li></li>
+                </ul>
+                <button class="subscribe-btn" onclick="subscribe('quarterly')" data-plan="quarterly">
+                    Subscribe 3 Months
+                </button>
+            </div>
+        </div>
+
+        <div class="free-features">
+            <h3>Free Tier Includes</h3>
+            <ul>
+                <li>3 Classic Chess Games (Fool's Mate, Scholar's Mate, Légal Trap)</li>
+                <li>2 Tactical Puzzles</li>
+                <li>Basic training modes</li>
+                <li>Community access</li>
+            </ul>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="faq-header">
+            <h1 class="faq-title">Frequently Asked Questions</h1>
+            <p class="faq-subtitle">Find answers to common questions about our blindfold chess training platform</p>
+        </div>
+
+        <div class="faq-container">
+            <div class="faq-section">
+                <h2 class="section-title">Getting Started</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What is blindfold chess training?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Blindfold chess training is a method of practicing chess without looking at the board. You visualize the position in your mind and make moves based on chess notation (like e4, Nf3, etc.). This improves your spatial reasoning, memory, and calculation skills, making you a stronger chess player.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How do I use the coordinate system on the board?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>The chess board uses standard algebraic notation. Files are labeled <span class="highlight">a-h</span> (left to right) and ranks are numbered <span class="highlight">1-8</span> (bottom to top). Each square has a unique coordinate like <span class="code">e4</span> or <span class="code">d7</span>. The letters below the board and numbers to the right help you identify any square quickly.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Visual Modes</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What are the different visual modes?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p><strong>Normal:</strong> Standard chess board with all pieces visible and colored normally.</p>
+                        <p><strong>Black:</strong> All pieces appear in black, reducing visual cues and forcing you to rely more on piece shapes and positions.</p>
+                        <p><strong>Checkers:</strong> Pieces are simplified to basic shapes, making it harder to distinguish piece types at a glance.</p>
+                        <p><strong>Empty:</strong> Pieces become completely invisible, forcing pure mental visualization - the ultimate blindfold training.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Navigation & Controls</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How do I navigate through moves in a game?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Use the control buttons below the board:</p>
+                        <p>• <span class="highlight">⏮</span> Go to initial position</p>
+                        <p>• <span class="highlight">◀</span> Previous move</p>
+                        <p>• <span class="highlight">▶</span> Next move</p>
+                        <p>• <span class="highlight">⏭</span> Go to final position</p>
+                        <p>You can also click on any move in the moves list to jump directly to that position.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How do I flip the board perspective?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Click the <span class="highlight">🔄</span> flip button in the move controls. This rotates the board 180 degrees so you can practice from Black's perspective. The coordinate notation (letters and numbers) will also flip to match the new perspective.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Puzzle Training</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What are tactical puzzles and how do they help?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Tactical puzzles are positions where you need to find the best move or sequence of moves to gain an advantage. They help improve:</p>
+                        <p>• <span class="highlight">Pattern recognition</span> - spotting common tactical motifs</p>
+                        <p>• <span class="highlight">Calculation skills</span> - working out move sequences in your head</p>
+                        <p>• <span class="highlight">Visualization</span> - seeing positions without looking at the board</p>
+                        <p>• <span class="highlight">Speed</span> - making quick tactical decisions</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How do I solve puzzles without seeing the board?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Solving puzzles blindfold requires strong visualization skills:</p>
+                        <p>• <span class="highlight">Read the position</span> carefully using algebraic notation</p>
+                        <p>• <span class="highlight">Visualize the board</span> in your mind's eye</p>
+                        <p>• <span class="highlight">Calculate variations</span> mentally before making moves</p>
+                        <p>• <span class="highlight">Use coordinates</span> to track piece movements</p>
+                        <p>Start with simpler puzzles and gradually work up to more complex positions.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What types of tactical patterns should I focus on?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Focus on these fundamental tactical patterns:</p>
+                        <p>• <span class="highlight">Forks</span> - attacking two pieces simultaneously</p>
+                        <p>• <span class="highlight">Pins</span> - restricting piece movement</p>
+                        <p>• <span class="highlight">Skewers</span> - attacking a valuable piece through a less valuable one</p>
+                        <p>• <span class="highlight">Discovered attacks</span> - moving a piece to reveal an attack</p>
+                        <p>• <span class="highlight">Double attacks</span> - creating multiple threats</p>
+                        <p>• <span class="highlight">Deflection</span> - forcing pieces away from key squares</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How often should I practice puzzles?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>For optimal improvement:</p>
+                        <p>• <span class="highlight">Daily practice</span> - even 10-15 minutes daily is better than long sessions</p>
+                        <p>• <span class="highlight">Quality over quantity</span> - focus on understanding rather than speed</p>
+                        <p>• <span class="highlight">Mix difficulty levels</span> - combine easy puzzles for confidence with challenging ones for growth</p>
+                        <p>• <span class="highlight">Review mistakes</span> - understand why certain moves don't work</p>
+                        <p>Consistency is key to building strong tactical intuition.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Technical Issues</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Why can't I see the board or pieces?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>This could be due to several reasons:</p>
+                        <p>• Check if you're in <span class="highlight">Empty</span> visual mode - pieces are intentionally invisible</p>
+                        <p>• Try refreshing the page (Ctrl+F5 or Cmd+Shift+R)</p>
+                        <p>• Make sure JavaScript is enabled in your browser</p>
+                        <p>• Check your internet connection if games aren't loading</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Why aren't the games loading?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>If games aren't loading:</p>
+                        <p>• Check your internet connection</p>
+                        <p>• Try refreshing the page</p>
+                        <p>• Make sure the server is running (if running locally)</p>
+                        <p>• Check the browser console for error messages (F12 → Console tab)</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Can I use this app on mobile devices?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! The app is fully responsive and works on mobile devices. The board and controls will automatically adjust to smaller screens. Touch controls work for piece movement and navigation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-section">
+                <h2 class="section-title">Training Tips</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How should I start with blindfold chess training?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Start with these steps:</p>
+                        <p>1. Begin with <span class="highlight">Normal</span> mode to get familiar with the interface</p>
+                        <p>2. Progress to <span class="highlight">Black</span> mode to reduce visual dependency</p>
+                        <p>3. Try <span class="highlight">Checkers</span> mode for more challenge</p>
+                        <p>4. Eventually work up to <span class="highlight">Empty</span> mode for true blindfold practice</p>
+                        <p>5. Use the coordinate system to help visualize positions</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What's the best way to improve my blindfold skills?</span>
+                        <span class="faq-icon">▼</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>• Practice regularly, even just 10-15 minutes daily</p>
+                        <p>• Start with simple positions and gradually increase complexity</p>
+                        <p>• Use the coordinate system to build spatial awareness</p>
+                        <p>• Practice games for pattern recognition</p>
+                        <p>• Don't rush - accuracy is more important than speed initially</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-section">
+                <h3 class="contact-title">Still have questions?</h3>
+                <p class="contact-text">Can't find what you're looking for? We're here to help!</p>
+                <a href="mailto:support@blindchess.com" class="contact-button">Contact Support</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Sign In Modal -->
+    <div id="signInModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Sign In</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="signInForm" onsubmit="handleSignIn(event)">
+                <div class="form-group">
+                    <label class="form-label" for="signInEmail">Email</label>
+                    <input type="email" id="signInEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="signInPassword">Password</label>
+                    <input type="password" id="signInPassword" class="form-input" placeholder="Enter your password" required>
+                </div>
+            <div class="modal-buttons">
+                <button type="submit" class="btn-modal btn-primary">Sign In</button>
+                <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+        <div class="google-signup">
+            <button type="button" class="btn-modal btn-google" onclick="handleGoogleSignIn()">
+                <div class="google-icon"></div>
+                Sign in with Google
+            </button>
+        </div>
+        <div class="register-link">
+            <p>Don't have an account yet? <a href="#" onclick="showRegisterModal()">Register here</a></p>
+        </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Account</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label" for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" class="form-input" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" class="form-input" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerName">Full Name</label>
+                    <input type="text" id="registerName" class="form-input" placeholder="Enter your full name" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-modal btn-primary">Create Account</button>
+                    <button type="button" class="btn-modal btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+            <div class="google-signup">
+                <button type="button" class="btn-modal btn-google" onclick="registerWithGoogle()">
+                    <div class="google-icon"></div>
+                    Register with Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load and display statistics
+        async function loadStatistics() {
+            try {
+                // Load games data
+                const gamesResponse = await fetch('games/games.json');
+                const gamesData = await gamesResponse.json();
+                
+                // Count games
+                const totalGames = gamesData.games.filter(game => game.type === 'game').length;
+                
+                // Update the display
+                document.getElementById('total-games').textContent = totalGames;
+                
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+                // Fallback values
+                document.getElementById('total-games').textContent = '10+';
+            }
+        }
+
+        // Helper function to wait for Supabase client
+        async function getSupabase() {
+            let attempts = 0;
+            const maxAttempts = 10; // Wait up to 1 second
+            while (attempts < maxAttempts) {
+                if (typeof window.getSupabase === 'function') {
+                    const client = window.getSupabase();
+                    if (client && client.auth) {
+                        return client;
+                    }
+                }
+                if (attempts < maxAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                attempts++;
+            }
+            return null;
+        }
+
+        // Update navigation and handle Profile button click safely
+        async function updateNavigation() {
+            // Select the single Profile button
+            const profileLink = document.getElementById('profileLink');
+            if (!profileLink) return;
+
+            // Wait for Supabase client to be ready
+            const supabase = await getSupabase();
+            if (!supabase) {
+                console.warn("Supabase client not ready, showing login modal as fallback");
+                profileLink.onclick = (e) => { 
+                    e.preventDefault(); 
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    }
+                };
+                return;
+            }
+
+            // Remove any old click handlers
+            profileLink.onclick = null;
+
+            // Attach a new click handler
+            profileLink.addEventListener("click", async (e) => {
+                e.preventDefault();
+
+                let session = null;
+                let attempts = 0;
+
+                // Retry loop to wait for session (production timing issue)
+                while (attempts < 5 && !session) {
+                    try {
+                        const { data, error } = await supabase.auth.getSession();
+                        if (error) console.warn("Supabase session fetch error:", error);
+                        session = data?.session ?? null;
+                    } catch (err) {
+                        console.error("Error fetching session:", err);
+                    }
+
+                    if (session) break;
+                    await new Promise(r => setTimeout(r, 200)); // wait 200ms
+                    attempts++;
+                }
+
+                // Decide what to do based on session
+                if (session && session.user) {
+                    // User logged in → navigate to profile page
+                    window.location.href = "profile.html";
+                } else {
+                    // User not logged in → show modal
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    }
+                }
+            });
+        }
+
+        // Helper function to wait for session
+        async function waitForSession() {
+            console.log('🔍 [waitForSession] Starting session check...');
+            
+            // Wait for window.getSupabase() to return a valid client
+            let supabase = null;
+            let waitAttempts = 0;
+            const maxWaitAttempts = 10; // Wait up to 1 second for getSupabase
+            
+            while (waitAttempts < maxWaitAttempts) {
+                if (typeof window.getSupabase === 'function') {
+                    supabase = window.getSupabase();
+                    if (supabase && supabase.auth) {
+                        console.log('✅ [waitForSession] Supabase client ready');
+                        break;
+                    }
+                }
+                if (waitAttempts < maxWaitAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                waitAttempts++;
+            }
+            
+            if (!supabase || !supabase.auth) {
+                console.warn('⚠️ [waitForSession] Supabase client not available');
+                return null;
+            }
+            
+            // Retry up to 5 times (200ms delay) to get supabase.auth.getSession()
+            let session = null;
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            while (attempts < maxAttempts) {
+                console.log(`🔍 [waitForSession] Attempt ${attempts + 1}/${maxAttempts} to get session...`);
+                try {
+                    const { data, error } = await supabase.auth.getSession();
+                    if (error) {
+                        console.warn(`⚠️ [waitForSession] Session fetch error on attempt ${attempts + 1}:`, error);
+                    }
+                    session = data?.session ?? null;
+                    if (session) {
+                        console.log('✅ [waitForSession] Session found:', session.user?.email || 'unknown');
+                        break;
+                    } else {
+                        console.log(`ℹ️ [waitForSession] No session on attempt ${attempts + 1}`);
+                    }
+                } catch (err) {
+                    console.error(`❌ [waitForSession] Error on attempt ${attempts + 1}:`, err);
+                }
+                
+                if (attempts < maxAttempts - 1) {
+                    await new Promise(r => setTimeout(r, 200)); // wait 200ms
+                }
+                attempts++;
+            }
+            
+            if (!session) {
+                console.log('ℹ️ [waitForSession] No session found after all attempts');
+            }
+            
+            return session;
+        }
+
+        // Setup Profile button click handler
+        (async () => {
+            const profileLink = document.getElementById("profileLink");
+            if (!profileLink) return console.error("[Profile Setup] No profile link found");
+
+            profileLink.addEventListener("click", async (e) => {
+                e.preventDefault();
+                console.log("[Profile Click] Button clicked");
+
+                // Wait for Supabase client
+                let supabase = null;
+                if (typeof window.getSupabase === 'function') {
+                    supabase = window.getSupabase();
+                }
+                if (!supabase || !supabase.auth) {
+                    console.error("[Profile Click] Supabase client not available, showing modal");
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    }
+                    return;
+                }
+                console.log("[Profile Click] Supabase client ready:", supabase);
+
+                // Try to get session with timeout fallback
+                let session = null;
+                try {
+                    const timeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Session check timeout")), 300)
+                    );
+                    const { data } = await Promise.race([
+                        supabase.auth.getSession(),
+                        timeout
+                    ]);
+                    session = data?.session ?? null;
+                    console.log("[Profile Click] Supabase session:", session);
+                } catch (err) {
+                    console.warn("[Profile Click] Supabase session unavailable:", err);
+                }
+
+                // Fallback to localStorage
+                const fallbackLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+                console.log("[Profile Click] Fallback localStorage isLoggedIn:", fallbackLoggedIn);
+
+                // Decide action
+                if (session || fallbackLoggedIn) {
+                    console.log("[Profile Click] User logged in → navigating to profile.html");
+                    window.location.href = "profile.html";
+                } else {
+                    console.log("[Profile Click] No session → showing login modal");
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    }
+                }
+            });
+
+            console.log("[Profile Setup] Click handler attached");
+        })();
+
+        // Show account information modal
+        async function showAccountInfoModal() {
+            const userName = localStorage.getItem('userName') || 'User';
+            const userEmail = localStorage.getItem('userEmail') || 'No email provided';
+            
+            // Get subscription from Supabase first, fallback to localStorage
+            let subscription = null;
+            let subscriptionPlan = 'free';
+            let hasActiveSubscription = false;
+            
+            if (typeof window.getUserSubscription === 'function') {
+                try {
+                    subscription = await window.getUserSubscription();
+                    if (subscription) {
+                        subscriptionPlan = subscription.plan_type;
+                        hasActiveSubscription = subscription.status === 'active';
+                    }
+                } catch (e) {
+                    console.log('Error fetching subscription from Supabase:', e);
+                    // Fallback to localStorage
+                    subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+                }
+            } else {
+                // Fallback to localStorage if Supabase not available
+                subscriptionPlan = localStorage.getItem('subscriptionPlan') || 'free';
+            }
+            
+            // Format subscription display with details
+            let subscriptionDisplay = '';
+            if (subscription && hasActiveSubscription) {
+                // Show detailed subscription info from Supabase
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const price = subscription.amount_paid ? 
+                             `${subscription.currency || 'USD'} ${subscription.amount_paid}` : 
+                             (subscription.plan_type === 'monthly' ? '$3.49/month' : '$8.90/quarter');
+                const startDate = subscription.start_date ? 
+                                new Date(subscription.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                                'N/A';
+                
+                subscriptionDisplay = `
+                    <div style="margin-top: 0.5rem;">
+                        <div style="color: #27ae60; font-weight: normal; margin-bottom: 0.25rem;">${planName} - Active</div>
+                        <div style="font-size: 0.9rem; color: #4b5563;">
+                            <div>Amount: ${price}</div>
+                            <div>Start: ${startDate}</div>
+                            <div>Method: ${subscription.payment_method || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (subscription && subscription.status === 'cancelled') {
+                const planName = subscription.plan_type === 'monthly' ? 'Premium Monthly' : 
+                               subscription.plan_type === 'quarterly' ? 'Premium Quarterly' : 
+                               subscription.plan_type;
+                const endDate = subscription.end_date ? 
+                               new Date(subscription.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                               'N/A';
+                subscriptionDisplay = `${planName} (Cancelled) - Access until ${endDate}`;
+            } else if (subscriptionPlan === 'monthly') {
+                subscriptionDisplay = 'Premium Monthly - $3.49/month';
+            } else if (subscriptionPlan === 'quarterly') {
+                subscriptionDisplay = 'Premium Quarterly - $8.90/quarter';
+            } else if (subscriptionPlan === 'monthly_cancelled') {
+                subscriptionDisplay = 'Premium Monthly (Cancelled)';
+            } else if (subscriptionPlan === 'quarterly_cancelled') {
+                subscriptionDisplay = 'Premium Quarterly (Cancelled)';
+            } else {
+                subscriptionDisplay = 'Free Account';
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Account Information</h2>
+                        <span class="close" onclick="closeModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="account-info">
+                            <div class="info-item">
+                                <label>Name:</label>
+                                <span>${userName}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Email:</label>
+                                <span>${userEmail}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Subscription:</label>
+                                <span>${subscriptionDisplay}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        }
+
+
+        // Modal functions
+        function showSignInModal() {
+            document.getElementById('signInModal').style.display = 'block';
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        function showRegisterModal() {
+            document.getElementById('registerModal').style.display = 'block';
+            document.getElementById('signInModal').style.display = 'none';
+        }
+
+        function closeModal() {
+            // Close static modals
+            const signInModal = document.getElementById('signInModal');
+            const registerModal = document.getElementById('registerModal');
+            const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+            if (signInModal) signInModal.style.display = 'none';
+            if (registerModal) registerModal.style.display = 'none';
+            if (logoutConfirmModal) logoutConfirmModal.style.display = 'none';
+            
+            // Close dynamically created modals
+            const dynamicModals = document.querySelectorAll('.modal');
+            dynamicModals.forEach(modal => {
+                if (modal.id !== 'signInModal' && modal.id !== 'registerModal') {
+                    modal.remove();
+                }
+            });
+        }
+
+
+        // Sign in form handler
+        async function handleSignIn(event) {
+            event.preventDefault();
+            const email = document.getElementById('signInEmail').value.trim();
+            const password = document.getElementById('signInPassword').value;
+            
+            const signInForm = document.getElementById('signInForm');
+            const errorMessage = signInForm.querySelector('.error-message');
+            
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            if (!email || !password) {
+                showError(signInForm, 'Please enter both email and password');
+                return;
+            }
+            
+            const submitButton = signInForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Signing In...';
+            
+                    const result = await signInWithEmail(email, password);
+                    
+            if (result.success) {
+                closeModal();
+                window.location.href = 'profile.html';
+                    } else {
+                showError(signInForm, result.error || 'Invalid email or password');
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+            }
+        }
+
+        // Register form handler
+        async function handleRegister(event) {
+            event.preventDefault();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const name = document.getElementById('registerName').value.trim();
+            
+            const registerForm = document.getElementById('registerForm');
+            const errorMessage = registerForm.querySelector('.error-message');
+            
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            if (!email || !password || !name) {
+                showError(registerForm, 'Please fill in all fields');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showError(registerForm, 'Password must be at least 6 characters');
+                return;
+            }
+            
+            const submitButton = registerForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Creating Account...';
+            
+                    const result = await signUpWithEmail(email, password, name);
+                    
+                    if (result.success) {
+                // Welcome email will be sent by setupAuthListener when it detects the new user
+                // No need to send here to avoid duplicates
+                
+                closeModal();
+                window.location.href = 'profile.html';
+            } else {
+                showError(registerForm, result.error || 'Registration failed');
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                    }
+        }
+
+        // Google OAuth handler (for sign in)
+        async function handleGoogleSignIn() {
+            const result = await signInWithGoogle();
+            if (!result.success) {
+                alert(result.error || 'Google sign-in failed');
+                }
+        }
+
+        // Google OAuth handler (for registration - same as sign in)
+        async function registerWithGoogle() {
+            await handleGoogleSignIn();
+        }
+        
+        // Helper function to show error messages
+        function showError(form, message) {
+            // Remove existing error
+            const existingError = form.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Create error element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.color = '#e74c3c';
+            errorDiv.style.marginTop = '0.5rem';
+            errorDiv.style.fontSize = '0.9rem';
+            errorDiv.textContent = message;
+            
+            // Insert before submit button
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.parentElement.insertBefore(errorDiv, submitButton);
+        }
+
+
+        // Subscription functions
+        async function subscribe(plan) {
+            console.log('Subscribe function called with plan:', plan);
+            
+            // Prevent double-clicking
+            if (window.subscribing) {
+                console.log('Subscribe already in progress, ignoring...');
+                return;
+            }
+            window.subscribing = true;
+            
+            try {
+                // Check authentication using Supabase session (source of truth)
+                let isAuthenticated = false;
+                
+                // First, try using isSignedIn() from supabase-auth.js
+                if (typeof window.isSignedIn === 'function') {
+                    try {
+                        isAuthenticated = await window.isSignedIn();
+                        console.log('Supabase auth check - isSignedIn:', isAuthenticated);
+                    } catch (err) {
+                        console.warn('Error checking Supabase auth:', err);
+                    }
+                }
+                
+                // Fallback: Check Supabase session directly
+                if (!isAuthenticated && typeof window.getSession === 'function') {
+                    try {
+                        const session = await window.getSession();
+                        isAuthenticated = session !== null;
+                        console.log('Supabase session check - hasSession:', isAuthenticated);
+                    } catch (err) {
+                        console.warn('Error getting Supabase session:', err);
+                    }
+                }
+                
+                // Final fallback: Check localStorage (may be stale, but better than nothing)
+                if (!isAuthenticated) {
+                    const localStorageCheck = localStorage.getItem('isLoggedIn') === 'true';
+                    console.log('Fallback localStorage check - isLoggedIn:', localStorageCheck);
+                    isAuthenticated = localStorageCheck;
+                }
+                
+                if (!isAuthenticated) {
+                    // User is not logged in - show sign-in modal
+                    console.log('User not logged in. Showing sign-in modal.');
+                    window.subscribing = false;
+                    
+                    // Store the selected plan and show sign-in modal
+                    localStorage.setItem('pendingSubscription', plan);
+                    if (typeof showSignInModal === 'function') {
+                        showSignInModal();
+                    } else {
+                        console.error('showSignInModal function not found!');
+                        alert('Please sign in first to subscribe.');
+                    }
+                    return;
+                }
+                
+                // User is authenticated - proceed to payment
+                console.log('User is authenticated, redirecting to Dodo Payments');
+                redirectToDodoPayments(plan);
+                window.subscribing = false;
+            } catch (error) {
+                console.error('Error in subscribe function:', error);
+                alert('Error: ' + error.message);
+                window.subscribing = false;
+            }
+        }
+        
+        // Make subscribe function globally accessible
+        window.subscribe = subscribe;
+
+        // Redirect to Dodo Payments checkout
+        function redirectToDodoPayments(plan) {
+            console.log('redirectToDodoPayments called with plan:', plan);
+            
+            // Check if we're in test mode (you can set this to true/false or detect automatically)
+            const isTestMode = true; // Set to false for production
+            
+            // Dodo Payments product IDs - DIFFERENT for monthly and quarterly
+            const testProductIds = {
+                monthly: 'pdt_pvTND4gU6MdigzfFWNppx',      // Test monthly product ($3.49)
+                quarterly: 'pdt_0NXNQRhJ751DnTYKQMoED'      // Test quarterly product ($8.90)
+            };
+            const productionProductIds = {
+                monthly: 'pdt_VIAqmDBox37hRlUhkU7AP',       // Production monthly product (UPDATE WHEN READY)
+                quarterly: 'pdt_QUARTERLY_PRODUCTION_ID'    // Production quarterly product (UPDATE WHEN READY)
+            };
+            
+            // Select product IDs based on mode
+            const productIds = isTestMode ? testProductIds : productionProductIds;
+            
+            // Get the correct product ID for the selected plan
+            const productId = productIds[plan];
+            
+            if (!productId) {
+                console.error('❌ No product ID found for plan:', plan);
+                alert('Error: Invalid subscription plan. Please try again.');
+                return;
+            }
+            
+            // Select checkout URL based on mode
+            const checkoutBaseUrl = isTestMode 
+                ? 'https://test.checkout.dodopayments.com/buy/'
+                : 'https://checkout.dodopayments.com/buy/';
+            
+            // Get user email for pre-filling checkout (optional)
+            const userEmail = localStorage.getItem('userEmail') || '';
+            
+            // Build checkout URL with redirect_url parameter
+            // According to Dodo Payments docs: https://docs.dodopayments.com/api-reference/integration-guide
+            // Use redirect_url parameter for static payment links
+            const redirectUrl = encodeURIComponent('https://memo-chess.com/payment-success.html');
+            
+            let checkoutUrl = `${checkoutBaseUrl}${productId}?quantity=1&redirect_url=${redirectUrl}`;
+            
+            // Add user email if available (helps with order tracking)
+            if (userEmail) {
+                checkoutUrl += `&email=${encodeURIComponent(userEmail)}`;
+            }
+            
+            // Store the plan type for when we get the webhook callback
+            localStorage.setItem('pendingSubscriptionPlan', plan);
+            
+            console.log('Redirecting to Dodo Payments:', checkoutUrl);
+            console.log('Plan:', plan);
+            console.log('Product ID:', productId);
+            console.log('User email:', userEmail);
+            console.log('Checkout URL:', checkoutUrl);
+            
+            // Redirect to Dodo Payments checkout
+            try {
+                window.location.href = checkoutUrl;
+                console.log('Redirect initiated');
+            } catch (error) {
+                console.error('Error redirecting:', error);
+                alert('Error redirecting to payment: ' + error.message);
+            }
+        }
+        
+        // Make redirectToDodoPayments globally accessible
+        window.redirectToDodoPayments = redirectToDodoPayments;
+        
+        // Add event listeners as backup for subscribe buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Setting up subscribe button event listeners...');
+            
+            // Find all subscribe buttons
+            const subscribeButtons = document.querySelectorAll('.subscribe-btn');
+            console.log('Found subscribe buttons:', subscribeButtons.length);
+            
+            subscribeButtons.forEach(button => {
+                // Check if button has onclick attribute
+                const onclickAttr = button.getAttribute('onclick');
+                console.log('Button onclick:', onclickAttr);
+                
+                // Add click event listener as backup
+                button.addEventListener('click', function(e) {
+                    console.log('Subscribe button clicked via event listener');
+                    const plan = this.getAttribute('data-plan') || 
+                                (onclickAttr && onclickAttr.includes('monthly') ? 'monthly' : 'quarterly');
+                    console.log('Plan detected:', plan);
+                    
+                    // Call subscribe function
+                    if (typeof window.subscribe === 'function') {
+                        console.log('Calling window.subscribe...');
+                        window.subscribe(plan).catch(error => {
+                            console.error('Error in subscribe:', error);
+                            alert('Error: ' + error.message);
+                        });
+                    } else {
+                        console.error('window.subscribe function not found!');
+                        alert('Subscribe function not available. Please refresh the page.');
+                    }
+                });
+            });
+        });
+
+        // FAQ Accordion functionality
+        function initFAQ() {
+            const faqQuestions = document.querySelectorAll('.faq-question');
+            
+            console.log('Initializing FAQ, found', faqQuestions.length, 'questions');
+            
+            faqQuestions.forEach(question => {
+                question.addEventListener('click', (e) => {
+                    console.log('FAQ clicked');
+                    const faqItem = question.parentElement;
+                    const faqAnswer = faqItem.querySelector('.faq-answer');
+                    const faqIcon = question.querySelector('.faq-icon');
+                    
+                    // Close all other FAQ items
+                    faqQuestions.forEach(otherQuestion => {
+                        if (otherQuestion !== question) {
+                            const otherItem = otherQuestion.parentElement;
+                            const otherAnswer = otherItem.querySelector('.faq-answer');
+                            const otherIcon = otherQuestion.querySelector('.faq-icon');
+                            
+                            otherQuestion.classList.remove('active');
+                            otherAnswer.classList.remove('active');
+                            otherIcon.style.transform = 'rotate(0deg)';
+                        }
+                    });
+                    
+                    // Toggle current FAQ item
+                    question.classList.toggle('active');
+                    faqAnswer.classList.toggle('active');
+                    faqIcon.style.transform = question.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+                });
+            });
+        }
+
+
+        // Load statistics when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Supabase if not already initialized
+            if (typeof initSupabase === 'function' && !getSupabase()) {
+                await initSupabase();
+            }
+            
+            // Setup auth state listener (redirect is handled inside setupAuthListener)
+            if (typeof setupAuthListener === 'function') {
+                setupAuthListener((event, session) => {
+                    if (typeof updateNavigation === 'function') {
+                        updateNavigation();
+                                            }
+                });
+            }
+            
+            // Check session and update UI
+            const supabase = getSupabase();
+            if (supabase) {
+                const { data } = await supabase.auth.getSession();
+                if (data.session) {
+                    // User is signed in, update UI
+                    if (typeof updateNavigation === 'function') {
+                        updateNavigation();
+                }
+            }
+        }
+
+            // Load page content
+            loadStatistics();
+            initFAQ();
+            
+            // Add event listeners for forms
+            document.getElementById('signInForm').addEventListener('submit', handleSignIn);
+            document.getElementById('registerForm').addEventListener('submit', handleRegister);
+            
+            // Add event listeners for close buttons
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', closeModal);
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                const signInModal = document.getElementById('signInModal');
+                const registerModal = document.getElementById('registerModal');
+                const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+                if (event.target === signInModal) {
+                    closeModal();
+                }
+                if (event.target === registerModal) {
+                    closeModal();
+                }
+                if (event.target === logoutConfirmModal) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="logout-confirm-modal">
+        <div class="logout-confirm-content">
+            <div class="logout-confirm-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="logout-confirm-message">
+                Are you sure you want to log out? You'll need to sign in again to access your account.
+            </div>
+            <div class="logout-confirm-buttons">
+                <button class="btn-logout-confirm btn-logout-yes">Yes, Logout</button>
+                <button class="btn-logout-confirm btn-logout-no">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Supabase JavaScript Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Supabase Configuration -->
+    <script src="supabase-config.js"></script>
+    
+    <!-- Supabase Helper Functions -->
+    <script src="supabase-helpers.js"></script>
+    
+    <!-- Supabase Authentication Functions -->
+    <script src="supabase-auth.js"></script>
+    
+    <!-- Initialize Supabase when page loads -->
+    <script>
+        // Profile link click handler - checks auth before navigation
+        (function() {
+            const profileLink = document.getElementById('profileLink');
+            if (profileLink) {
+                profileLink.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    
+                    // Check auth state using getSupabase() and getSession()
+                    if (typeof window.getSupabase === 'function') {
+                        const supabase = window.getSupabase();
+                        if (supabase && supabase.auth) {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            if (session && session.user) {
+                                // User is authenticated - navigate to profile
+                                window.location.href = 'profile.html';
+                            } else {
+                                // User is NOT authenticated - show login modal
+                                if (typeof showSignInModal === 'function') {
+                                    showSignInModal();
+                                }
+                            }
+                        } else {
+                            // Supabase not ready - show login modal
+                            if (typeof showSignInModal === 'function') {
+                                showSignInModal();
+                            }
+                        }
+                    } else {
+                        // getSupabase not available - show login modal
+                        if (typeof showSignInModal === 'function') {
+                            showSignInModal();
+                        }
+                    }
+                });
+            }
+        })();
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Supabase client
+            await initSupabase();
+            
+            // Test connection (check if Supabase is working)
+            const client = getSupabase();
+            if (client) {
+                console.log('✅ Supabase is ready to use!');
+                
+                // Set up auth state listener (handles OAuth redirect on SIGNED_IN event)
+                setupAuthListener((event, session) => {
+                    if (typeof updateNavigation === 'function') {
+                        updateNavigation();
+                    }
+                });
+                
+                // Ensure body is visible
+                if (document.body) {
+                    document.body.style.display = '';
+                }
+                
+                // Check if we just logged out
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('loggedout') === 'true') {
+                    console.log('User just logged out, clearing any remaining session...');
+                    // Force clear session
+                    if (typeof window.signOut === 'function') {
+                        window.signOut().catch(() => {});
+                    }
+                    // Clear URL parameter
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Update navigation to show logged out state
+                    updateNavigation();
+                } else {
+                    // Check if user is already signed in
+                    getCurrentUser().then(user => {
+                        if (user) {
+                            console.log('✅ User is already signed in:', user.email);
+                            // Update navigation with Supabase subscription status
+                            updateNavigation();
+                        } else {
+                            console.log('ℹ️ No user signed in');
+                            updateNavigation();
+                        }
+                    });
+                }
+                
+                // Test database connection (after a short delay to ensure everything is loaded)
+                setTimeout(() => {
+                    testDatabaseConnection();
+                }, 500);
+            } else {
+                console.error('❌ Supabase failed to initialize');
+            }
+        });
+    </script>
+</body>
+</html>

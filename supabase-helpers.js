@@ -1,0 +1,930 @@
+// Helper functions to interact with Supabase database
+
+/**
+ * Wait for Supabase to be initialized (defensive fallback)
+ */
+async function waitForSupabase(maxWaitMs = 5000) {
+    const startTime = Date.now();
+    while (!window.getSupabase || !window.getSupabase()) {
+        if (Date.now() - startTime > maxWaitMs) {
+            console.error('❌ waitForSupabase: Timeout waiting for Supabase');
+            return false;
+        }
+        await new Promise(r => setTimeout(r, 25));
+    }
+    return true;
+}
+
+// Export globally
+window.waitForSupabase = waitForSupabase;
+
+/**
+ * Get the current user's progress from the database
+ */
+async function getUserProgress() {
+    console.log('🔍 getUserProgress() called');
+    
+    // Wait for Supabase if not ready
+    if (!window.getSupabase || !window.getSupabase()) {
+        console.log('⏳ Supabase not ready, waiting...');
+        const ready = await waitForSupabase();
+        if (!ready) {
+            console.error('❌ Supabase not initialized after wait');
+            return null;
+        }
+    }
+    
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('❌ Supabase not initialized');
+        return null;
+    }
+    console.log('✅ Supabase client available');
+
+    // Get the current user - use getSession() first as it's faster and more reliable
+    console.log('🔍 Getting current user from session...');
+    let user = null;
+    
+    try {
+        // Try session first (faster and more reliable)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+            console.error('❌ Error getting session:', sessionError);
+        } else if (session?.user) {
+            user = session.user;
+            console.log('✅ User found in session:', user.id, user.email);
+        } else {
+            console.log('⚠️ No user in session, trying getUser()...');
+            // Fallback to getUser() if session doesn't have user
+            const result = await Promise.race([
+                supabase.auth.getUser(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('getUser() timeout')), 3000))
+            ]);
+            if (result?.data?.user) {
+                user = result.data.user;
+                console.log('✅ User found via getUser():', user.id, user.email);
+            } else if (result?.error) {
+                console.error('❌ Error getting user:', result.error);
+            }
+        }
+    } catch (e) {
+        console.error('❌ Exception getting user:', e);
+        if (e.message === 'getUser() timeout') {
+            console.log('⚠️ getUser() timed out, checking session again...');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                user = session.user;
+                console.log('✅ User found in session after timeout:', user.id, user.email);
+            }
+        }
+    }
+    
+    if (!user) {
+        console.log('⚠️ No user found - cannot fetch progress');
+        return null;
+    }
+    
+    console.log('✅ User confirmed:', user.id, user.email);
+
+    // Fetch user's progress from database
+    console.log('🔍 Fetching progress from user_progress table for user_id:', user.id);
+    console.log('🔍 User email:', user.email);
+    
+    const { data, error } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+    console.log('🔍 Query result:', { hasData: !!data, hasError: !!error, error: error });
+
+    if (error) {
+        // Check if it's a "no rows" error (user has no progress record yet)
+        if (error.code === 'PGRST116') {
+            console.log('⚠️ No progress record found for user (this is normal for new users)');
+            return null; // Return null to indicate no record exists
+        }
+        
+        // Check if table doesn't exist (relation does not exist)
+        if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+            console.log('⚠️ user_progress table does not exist - returning null (no progress data)');
+            return null; // Return null - table doesn't exist, so no progress
+        }
+        
+        console.error('❌ Error fetching progress:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        return null;
+    }
+
+    console.log('✅ Successfully fetched progress from Supabase:', data);
+    console.log('📊 Progress data:', {
+        completed_games: data.completed_games,
+        completed_puzzles: data.completed_puzzles,
+        training_hours: data.training_hours,
+        current_streak: data.current_streak,
+        user_id: data.user_id
+    });
+    
+    // Verify the data structure
+    if (data.completed_games && Array.isArray(data.completed_games)) {
+        console.log('✅ completed_games is an array with', data.completed_games.length, 'items:', data.completed_games);
+    } else {
+        console.warn('⚠️ completed_games is not an array or is missing:', data.completed_games);
+    }
+    
+    return data;
+}
+
+/**
+ * Save or update user's progress in the database
+ */
+async function saveUserProgress(progressData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return false;
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return false;
+    }
+
+    // Get user's name and email for display in table
+    const userName = user.user_metadata?.name || 
+                     user.user_metadata?.full_name || 
+                     user.email?.split('@')[0] || 
+                     'User';
+    const userEmail = user.email || '';
+
+    // Prepare data to save
+    console.log('💾 saveUserProgress called with:', {
+        completedGames: progressData.completedGames?.length || 0,
+        completedPuzzles: progressData.completedPuzzles?.length || 0,
+        completedPuzzlesList: progressData.completedPuzzles || []
+    });
+    
+    // CRITICAL: Fetch existing data first to merge, not replace
+    // This prevents overwriting completed_games when saving puzzles, and vice versa
+    let existingData = null;
+    const { data: existing, error: fetchError } = await supabase
+        .from('user_progress')
+        .select('completed_games, completed_puzzles, training_hours, current_streak')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 means no row found, which is fine for new users
+        console.warn('⚠️ Could not fetch existing data (will create new):', fetchError);
+    } else if (existing) {
+        existingData = existing;
+        console.log('📥 Fetched existing data:', existingData);
+    }
+    
+    // Merge new data with existing data (don't overwrite arrays, merge them)
+    const existingGames = existingData?.completed_games || [];
+    const existingPuzzles = existingData?.completed_puzzles || [];
+    
+    // Merge arrays - add new items that don't already exist
+    const mergedGames = [...new Set([...existingGames, ...(progressData.completedGames || [])])];
+    const mergedPuzzles = [...new Set([...existingPuzzles, ...(progressData.completedPuzzles || [])])];
+    
+    // For training_hours: Always use the higher value (it should only increase)
+    // progressData.trainingHours is the TOTAL accumulated hours from progress tracker
+    // existingData.training_hours is the TOTAL from Supabase
+    // If progressData is higher, it means new training was added locally
+    // If existingData is higher, it means Supabase has the most up-to-date total
+    const existingHours = existingData?.training_hours || 0;
+    const newHours = progressData.trainingHours || 0;
+    const mergedTrainingHours = Math.max(existingHours, newHours);
+    
+    // For streak: Use the higher value (it should only increase)
+    const mergedStreak = Math.max(
+        existingData?.current_streak || 0,
+        progressData.currentStreak || 0
+    );
+    
+    console.log('🕐 Training hours merge:', {
+        existingFromSupabase: existingHours,
+        newFromProgressTracker: newHours,
+        merged: mergedTrainingHours,
+        note: newHours > existingHours ? 'Using progress tracker value (new training added)' : 'Using Supabase value (source of truth)'
+    });
+    
+    // Only save to columns that exist in your Supabase table:
+    // completed_games, completed_puzzles, training_hours, current_streak
+    const dataToSave = {
+        user_id: user.id,
+        completed_games: mergedGames,
+        completed_puzzles: mergedPuzzles,
+        training_hours: mergedTrainingHours,
+        current_streak: mergedStreak
+    };
+    
+    // Note: Removed columns that don't exist:
+    // - total_games_played
+    // - user_name, user_email (if not needed)
+    // - last_activity_date
+    // - updated_at
+    
+    // CRITICAL: Make absolutely sure challenge_mode_completions is NOT in dataToSave
+    // Remove it explicitly if it somehow got added
+    delete dataToSave.challenge_mode_completions;
+    
+    console.log('💾 Merged data to save to Supabase:', {
+        existingGames: existingGames.length,
+        newGames: progressData.completedGames?.length || 0,
+        mergedGames: mergedGames.length,
+        existingPuzzles: existingPuzzles.length,
+        newPuzzles: progressData.completedPuzzles?.length || 0,
+        mergedPuzzles: mergedPuzzles.length,
+        training_hours: mergedTrainingHours,
+        current_streak: mergedStreak,
+        keys: Object.keys(dataToSave)
+    });
+
+    // Save to Supabase - merging with existing data
+    const { data, error } = await supabase
+        .from('user_progress')
+        .upsert(dataToSave, {
+            onConflict: 'user_id'
+        });
+
+    if (error) {
+        console.error('Error saving progress:', error);
+        console.error('Data that was sent:', JSON.stringify(dataToSave, null, 2));
+        return false;
+    }
+
+    console.log('✅ Progress saved successfully!');
+    return true;
+}
+
+/**
+ * Test function to check if we can connect to the database
+ */
+async function testDatabaseConnection() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return;
+    }
+
+    console.log('Testing database connection...');
+    
+    // Try to query the table (this will work even without auth)
+    const { data, error } = await supabase
+        .from('user_progress')
+        .select('count');
+
+    if (error) {
+        console.error('❌ Database connection failed:', error);
+    } else {
+        console.log('✅ Database connection successful!');
+    }
+}
+
+/**
+ * Save a custom game to the database
+ */
+async function saveCustomGame(gameData) {
+    console.log('📥 saveCustomGame called with gameData:', gameData);
+    console.log('📥 gameData type:', typeof gameData);
+    console.log('📥 gameData is null?', gameData === null);
+    console.log('📥 gameData is undefined?', gameData === undefined);
+    
+    // Validate gameData
+    if (!gameData) {
+        console.error('❌ gameData is null or undefined!');
+        return { success: false, error: 'Game data is required' };
+    }
+    
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Validate gameData before proceeding
+    if (!gameData || typeof gameData !== 'object') {
+        console.error('❌ Invalid gameData:', gameData);
+        return { success: false, error: 'Invalid game data provided' };
+    }
+    
+    // Prepare data to save
+    // Note: Supabase will auto-set created_at and updated_at if they have triggers
+    const dataToSave = {
+        user_id: user.id,
+        game_data: gameData // Store all game data as JSONB
+    };
+    
+    // Only add updated_at if the column exists and doesn't have a default/trigger
+    // Most Supabase tables auto-update this field
+    
+    console.log('📤 Data to save:', JSON.stringify(dataToSave, null, 2));
+    console.log('📤 game_data in dataToSave:', dataToSave.game_data);
+    console.log('📤 game_data type check:', typeof dataToSave.game_data);
+    console.log('📤 game_data value:', gameData);
+    console.log('📤 game_data type:', typeof gameData);
+    
+    // Insert the new custom game
+    const { data, error } = await supabase
+        .from('custom_games')
+        .insert(dataToSave)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('❌ Error saving custom game:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error hint:', error.hint);
+        return { success: false, error: error.message || 'Failed to save game' };
+    }
+
+    console.log('✅ Custom game saved successfully!', data);
+    return { success: true, game: data };
+}
+
+/**
+ * Get all custom games for the current user
+ */
+async function getUserCustomGames() {
+    console.log('🔍 getUserCustomGames() called');
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('❌ Supabase not initialized');
+        return null;
+    }
+    console.log('✅ Supabase client available');
+
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+        console.error('❌ Error getting user:', userError);
+        return null;
+    }
+    
+    if (!user) {
+        console.log('⚠️ No user logged in');
+        return null;
+    }
+    
+    console.log('✅ User found:', user.id, user.email);
+
+    // Fetch user's custom games from database
+    console.log('📥 Fetching custom games from custom_games table for user:', user.id);
+    const { data, error } = await supabase
+        .from('custom_games')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('❌ Error fetching custom games:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        return null;
+    }
+
+    console.log('✅ Custom games fetched:', data ? data.length : 0, 'records');
+    if (data && data.length > 0) {
+        console.log('📦 First custom game sample:', {
+            id: data[0].id,
+            user_id: data[0].user_id,
+            has_game_data: !!data[0].game_data,
+            game_data_type: typeof data[0].game_data,
+            game_data_keys: data[0].game_data ? Object.keys(data[0].game_data) : 'N/A'
+        });
+    }
+
+    return data;
+}
+
+/**
+ * Delete a custom game by ID
+ */
+async function deleteCustomGame(gameId) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Delete the game (RLS will ensure user can only delete their own games)
+    const { error } = await supabase
+        .from('custom_games')
+        .delete()
+        .eq('id', gameId)
+        .eq('user_id', user.id);
+
+    if (error) {
+        console.error('Error deleting custom game:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Custom game deleted successfully!');
+    return { success: true };
+}
+
+/**
+ * Update a custom game
+ */
+async function updateCustomGame(gameId, gameData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Update the game (RLS will ensure user can only update their own games)
+    const { data, error } = await supabase
+        .from('custom_games')
+        .update({
+            game_data: gameData,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', gameId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating custom game:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Custom game updated successfully!', data);
+    return { success: true, game: data };
+}
+
+/**
+ * Get the current user's subscription from the database
+ */
+async function getUserSubscription() {
+    console.log('🔍 getUserSubscription() CALLED');
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('❌ Supabase not initialized');
+        return null;
+    }
+
+    // Get the current user - CRITICAL: Must have user before querying
+    console.log('🔍 Checking user authentication...');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+        console.error('❌ Auth error:', authError);
+        return null;
+    }
+    
+    if (!user) {
+        console.log('❌ No user logged in - returning null');
+        return null;
+    }
+    
+    console.log('✅ User authenticated:', user.id, user.email);
+
+    // Fetch user's subscription from database - FORCE FRESH FETCH (no cache)
+    // IMPORTANT: Order by updated_at DESC to get the most recent subscription
+    // This prevents old test data from being returned
+    console.log('🔍 getUserSubscription: Fetching from Supabase for user:', user.id);
+    
+    // First, check if there are multiple subscriptions (this should not happen, but let's check)
+    const { data: allSubs, error: countError } = await supabase
+        .from('subscriptions')
+        .select('id, amount_paid, created_at, updated_at')
+        .eq('user_id', user.id);
+    
+    if (!countError && allSubs && allSubs.length > 1) {
+        console.warn('⚠️ WARNING: Multiple subscriptions found for user!', allSubs);
+        console.warn('⚠️ This should not happen - there should be only one subscription per user');
+    }
+    
+    // Fetch the most recent subscription (ordered by updated_at DESC)
+    // Add cache-busting timestamp to ensure fresh fetch
+    const cacheBuster = Date.now();
+    const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+    
+    console.log('🔍 Query timestamp (cache buster):', cacheBuster);
+
+    if (error) {
+        // If no subscription found, that's okay - user is on free plan
+        if (error.code === 'PGRST116') {
+            console.log('✅ No subscription found - user is on free plan');
+            return null;
+        }
+        // If multiple rows found, try fetching without .single()
+        if (error.code === 'PGRST116' || error.message?.includes('multiple') || error.message?.includes('More than one')) {
+            console.warn('⚠️ Multiple subscriptions detected, fetching most recent one...');
+            const { data: multiData, error: multiError } = await supabase
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false })
+                .limit(1);
+            
+            if (!multiError && multiData && multiData.length > 0) {
+                console.log('✅ Found subscription from multiple records:', multiData[0]);
+                const sub = multiData[0];
+                return sub;
+            }
+        }
+        console.error('❌ Error fetching subscription:', error);
+        console.error('❌ Error code:', error.code);
+        console.error('❌ Error message:', error.message);
+        return null;
+    }
+
+    // Log what we're returning - CRITICAL DEBUG INFO
+    console.log('📦 getUserSubscription RAW DATA FROM SUPABASE:', JSON.stringify(data, null, 2));
+    console.log('💰 Amount paid:', data?.amount_paid);
+    console.log('💰 Amount paid type:', typeof data?.amount_paid);
+    console.log('💰 Amount paid value:', data?.amount_paid);
+    console.log('💰 Amount paid parseFloat:', parseFloat(data?.amount_paid));
+    
+    console.log('✅ Returning valid subscription:', data);
+    return data;
+}
+
+/**
+ * Check if the current user has an active subscription
+ * Returns true if subscription exists and:
+ * - Status is 'active', OR
+ * - Status is 'cancelled' but end_date is in the future (user still has access)
+ */
+async function hasActiveSubscription() {
+    const subscription = await getUserSubscription();
+    
+    if (!subscription) {
+        return false;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check if subscription is active
+    if (subscription.status === 'active') {
+        // If there's an end_date, check if it's in the future
+        if (subscription.end_date) {
+            const endDate = new Date(subscription.end_date);
+            return endDate >= today;
+        }
+        // If no end_date (lifetime plan), it's active
+        return true;
+    }
+
+    // Check if subscription is cancelled but user still has access (end_date in future)
+    if (subscription.status === 'cancelled' && subscription.end_date) {
+        const endDate = new Date(subscription.end_date);
+        // User has access until end_date, even though subscription is cancelled
+        return endDate >= today;
+    }
+
+    // Subscription is cancelled and past end_date, or expired
+    return false;
+}
+
+/**
+ * Create or update a subscription (for testing/manual entry)
+ * @param {object} subscriptionData - { plan_type, status, start_date, end_date, amount_paid, currency, payment_method }
+ */
+async function createOrUpdateSubscription(subscriptionData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Prepare data to save
+    const dataToSave = {
+        user_id: user.id,
+        plan_type: subscriptionData.plan_type || 'monthly',
+        status: subscriptionData.status || 'active',
+        start_date: subscriptionData.start_date || new Date().toISOString().split('T')[0],
+        end_date: subscriptionData.end_date || null,
+        amount_paid: subscriptionData.amount_paid || null,
+        currency: subscriptionData.currency || 'EUR',
+        payment_method: subscriptionData.payment_method || 'manual',
+        updated_at: new Date().toISOString()
+    };
+
+    // Try to update existing record, or insert new one
+    const { data, error } = await supabase
+        .from('subscriptions')
+        .upsert(dataToSave, {
+            onConflict: 'user_id'
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error saving subscription:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Subscription saved successfully!', data);
+    return { success: true, subscription: data };
+}
+
+/**
+ * Cancel a subscription via Dodo Payments API and update Supabase
+ * This calls the backend API endpoint which handles Dodo Payments cancellation
+ */
+async function cancelSubscription() {
+    console.log('🚀 cancelSubscription() called');
+    try {
+        const supabase = getSupabase();
+        if (!supabase) {
+            console.error('❌ Supabase not initialized');
+            return { success: false, error: 'Supabase not initialized' };
+        }
+
+        console.log('✅ Supabase initialized');
+
+        // Get the current user
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+            console.log('❌ No user logged in:', authError);
+            return { success: false, error: 'User not logged in' };
+        }
+
+        console.log('✅ User authenticated:', user.id);
+
+        // Get the user's session token for API authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session || !session.access_token) {
+            console.error('❌ No session token available');
+            return { success: false, error: 'No session token available' };
+        }
+
+        console.log('✅ Session token available');
+
+    // Determine API endpoint (production vs local)
+    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+    const apiUrl = isProduction 
+        ? 'https://memo-chess.com/api/cancel-subscription'
+        : 'http://localhost:3000/api/cancel-subscription';
+
+    try {
+        console.log('📞 Calling cancel subscription API:', apiUrl);
+        console.log('📞 Session token exists:', !!session.access_token);
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            }
+        });
+
+        console.log('📞 Response status:', response.status);
+        console.log('📞 Response ok:', response.ok);
+
+        let result;
+        try {
+            result = await response.json();
+            console.log('📞 Response data:', result);
+        } catch (jsonError) {
+            const text = await response.text();
+            console.error('📞 Failed to parse JSON response:', text);
+            return { success: false, error: `Server error: ${response.status} - ${text}` };
+        }
+
+        if (!response.ok) {
+            console.error('❌ API error:', result);
+            return { success: false, error: result.error || result.message || 'Failed to cancel subscription' };
+        }
+
+        console.log('✅ Subscription cancelled successfully!', result);
+        return { success: true, subscription: result.subscription, message: result.message };
+        
+    } catch (error) {
+        console.error('❌ Error calling cancel subscription API:', error);
+        console.error('❌ Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        return { success: false, error: error.message || 'Network error' };
+    }
+    } catch (outerError) {
+        console.error('❌ Outer error in cancelSubscription:', outerError);
+        return { success: false, error: outerError.message || 'Unexpected error' };
+    }
+}
+
+/**
+ * Get payment history for the current user
+ * Returns array of payment objects with amount, status, date, and invoice link
+ */
+async function getPaymentHistory() {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return [];
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return [];
+    }
+
+    // Fetch from payments table ONLY - no fallbacks, no mock data
+    let payments = [];
+    const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('payment_date', { ascending: false });
+
+    if (!paymentsError && paymentsData) {
+        payments = paymentsData
+            .map(payment => ({
+                amount: payment.amount || 0,
+                currency: payment.currency || 'EUR',
+                status: payment.status || 'paid',
+                date: payment.payment_date || payment.created_at,
+                invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
+            }));
+    }
+
+    // NO FALLBACK - if no payments, return empty array
+    // Payment history only comes from payments table in Supabase
+    return payments;
+}
+
+/**
+ * Send an email via the Resend API
+ * SAFE: Non-blocking, wrapped in try-catch, never throws errors
+ * @param {string} type - Email type: 'welcome', 'subscription_confirmed', 'subscription_cancelled'
+ * @param {string} to - Recipient email address
+ * @param {string} name - Recipient name (optional)
+ * @param {object} data - Additional data for the email (optional)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function sendEmail(type, to, name, data = {}) {
+    // SAFETY: Wrap everything in try-catch to prevent any errors from breaking the app
+    try {
+        // Use current origin to avoid CORS issues
+        const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000/api/send-email'
+            : `${window.location.origin}/api/send-email`;
+
+        console.log('📧 [EMAIL DEBUG] sendEmail called:', { type, to, name, apiUrl });
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type,
+                to,
+                name,
+                data
+            })
+        });
+
+        console.log('📧 [EMAIL DEBUG] Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn('❌ [EMAIL DEBUG] Email API error (non-critical):', {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorData
+            });
+            return { success: false, error: errorData.error || `HTTP ${response.status}` };
+        }
+
+        const result = await response.json();
+        console.log('✅ [EMAIL DEBUG] Email sent successfully:', result);
+        return { success: true, messageId: result.messageId };
+    } catch (error) {
+        // SAFETY: Never throw - just log and return failure
+        console.warn('❌ [EMAIL DEBUG] Email sending failed (non-critical):', {
+            message: error.message,
+            stack: error.stack
+        });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Create a payment record in the payments table
+ * @param {object} paymentData - { amount, currency, status, payment_method, order_id, transaction_id, description }
+ * @returns {Promise<{success: boolean, payment?: object, error?: string}>}
+ */
+async function createPaymentRecord(paymentData) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase not initialized');
+        return { success: false, error: 'Supabase not initialized' };
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+        console.log('No user logged in');
+        return { success: false, error: 'User not logged in' };
+    }
+
+    // Prepare payment data
+    const dataToSave = {
+        user_id: user.id,
+        email: user.email,
+        amount: paymentData.amount || 0,
+        currency: paymentData.currency || 'EUR',
+        status: paymentData.status || 'paid',
+        payment_date: new Date().toISOString(),
+        invoice_url: paymentData.invoice_url || `https://checkout.dodopayments.com/account`,
+        order_id: paymentData.order_id || null,
+        transaction_id: paymentData.transaction_id || paymentData.order_id || null,
+        payment_method: paymentData.payment_method || 'dodo_payments',
+        description: paymentData.description || 'Subscription payment'
+    };
+
+    // Insert payment record
+    const { data, error } = await supabase
+        .from('payments')
+        .insert(dataToSave)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating payment record:', error);
+        return { success: false, error: error.message };
+    }
+
+    console.log('✅ Payment record created successfully!', data);
+    return { success: true, payment: data };
+}
+
+// Make functions available globally
+window.getUserProgress = getUserProgress;
+window.saveUserProgress = saveUserProgress;
+window.testDatabaseConnection = testDatabaseConnection;
+window.saveCustomGame = saveCustomGame;
+window.getUserCustomGames = getUserCustomGames;
+window.deleteCustomGame = deleteCustomGame;
+window.updateCustomGame = updateCustomGame;
+window.getUserSubscription = getUserSubscription;
+window.hasActiveSubscription = hasActiveSubscription;
+window.createOrUpdateSubscription = createOrUpdateSubscription;
+window.cancelSubscription = cancelSubscription;
+window.getPaymentHistory = getPaymentHistory;
+window.createPaymentRecord = createPaymentRecord;
+window.sendEmail = sendEmail;
+

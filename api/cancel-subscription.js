@@ -1,0 +1,372 @@
+// Vercel serverless function to cancel a subscription via Dodo Payments API
+// This endpoint is called from the frontend when user cancels subscription
+
+import { createClient } from '@supabase/supabase-js';
+
+export default async function handler(req, res) {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+    
+    if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+    }
+    
+    try {
+        // Get authorization header (Supabase JWT token)
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Unauthorized - No token provided' });
+        }
+        
+        const token = authHeader.replace('Bearer ', '');
+        
+        // Initialize Supabase
+        const supabaseUrl = process.env.SUPABASE_URL;
+        if (!supabaseUrl) {
+            console.error('❌ SUPABASE_URL not configured');
+            return res.status(500).json({ error: 'Server configuration error: SUPABASE_URL missing' });
+        }
+        
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+        if (!supabaseAnonKey) {
+            console.error('❌ SUPABASE_ANON_KEY not configured');
+            return res.status(500).json({ error: 'Server configuration error: SUPABASE_ANON_KEY missing' });
+        }
+        
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        
+        // Verify user token and get user
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        
+        if (authError || !user) {
+            console.error('Auth error:', authError);
+            return res.status(401).json({ error: 'Unauthorized - Invalid token' });
+        }
+        
+        console.log('✅ User authenticated:', user.id, user.email);
+        
+        // Get user's subscription from Supabase
+        // Use service role key to bypass RLS if needed
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseAdmin = supabaseServiceKey 
+            ? createClient(supabaseUrl, supabaseServiceKey, {
+                auth: { autoRefreshToken: false, persistSession: false }
+            })
+            : supabase;
+        
+        const { data: subscription, error: subError } = await supabaseAdmin
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        
+        console.log('🔍 Subscription query result:', { subscription, subError });
+        
+        if (subError) {
+            console.error('❌ Error fetching subscription:', subError);
+            return res.status(500).json({ error: 'Error fetching subscription: ' + subError.message });
+        }
+        
+        if (!subscription) {
+            console.error('❌ No active subscription found for user:', user.id);
+            return res.status(404).json({ error: 'No active subscription found' });
+        }
+        
+        console.log('✅ Found subscription:', subscription.id, subscription.status);
+        
+        // Check if we have Dodo Payments subscription ID
+        // IMPORTANT: Use subscription ID from Subscriptions dashboard, NOT payment ID
+        const dodoSubscriptionId = subscription.dodo_subscription_id;
+        
+        console.log('🔍 Subscription ID from database:', dodoSubscriptionId);
+        console.log('🔍 Full subscription object:', JSON.stringify(subscription, null, 2));
+        
+        if (!dodoSubscriptionId) {
+            console.warn('⚠️ No Dodo Payments subscription ID found, updating Supabase only');
+            // Update Supabase only (fallback for subscriptions created before we stored the ID)
+            const { data: updatedSub, error: updateError } = await supabaseAdmin
+                .from('subscriptions')
+                .update({
+                    status: 'cancelled',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id)
+                .select()
+                .single();
+            
+            if (updateError) {
+                console.error('❌ Error updating subscription:', updateError);
+                return res.status(500).json({ error: 'Failed to update subscription: ' + updateError.message });
+            }
+            
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Subscription cancelled (Supabase only - no Dodo Payments ID)',
+                subscription: updatedSub
+            });
+        }
+        
+        // Get Dodo Payments API key from environment variable
+        // Dodo Payments determines test/live mode by the key itself, not by a separate flag
+        const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+        
+        console.log('🔑 API Key check:');
+        console.log('   Key exists:', !!dodoApiKey);
+        console.log('   Key length:', dodoApiKey ? dodoApiKey.length : 0);
+        if (dodoApiKey) {
+            console.log('   Key starts with:', dodoApiKey.substring(0, 10) + '...');
+            console.log('   Key ends with:', '...' + dodoApiKey.substring(dodoApiKey.length - 10));
+        }
+        console.log('   ⚠️ IMPORTANT: Ensure the API key matches your subscription type (test or live)');
+        
+        if (!dodoApiKey) {
+            console.error('❌ DODO_PAYMENTS_API_KEY not configured');
+            // Still update Supabase
+            const { data: updatedSub, error: updateError } = await supabaseAdmin
+                .from('subscriptions')
+                .update({
+                    status: 'cancelled',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id)
+                .select()
+                .single();
+            
+            if (updateError) {
+                console.error('❌ Error updating subscription:', updateError);
+                return res.status(500).json({ error: 'Failed to update subscription: ' + updateError.message });
+            }
+            
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Subscription cancelled (Supabase only - API key not configured)',
+                subscription: updatedSub
+            });
+        }
+        
+        // Dodo Payments API endpoint
+        // Base URLs from Dodo Payments API Reference:
+        // Test mode: https://test.dodopayments.com
+        // Live mode: https://live.dodopayments.com
+        // Since we're using test subscriptions, use test endpoint
+        const apiBaseUrl = 'https://test.dodopayments.com';
+        
+        console.log('📞 Using API base URL:', apiBaseUrl);
+        console.log('📞 Note: Using test endpoint for test subscriptions');
+        
+        // Call Dodo Payments API to cancel subscription
+        // IMPORTANT: Only update Supabase AFTER successful API call
+        // Endpoint: PATCH https://test.dodopayments.com/subscriptions/{subscription_id}
+        // Body: { "cancel_at_next_billing_date": true }
+        // Headers: Authorization: Bearer {API_KEY}, Content-Type: application/json
+        // Reference: https://docs.dodopayments.com/api-reference
+        
+        const fullUrl = `${apiBaseUrl}/subscriptions/${dodoSubscriptionId}`;
+        const dodoAuthHeader = `Bearer ${dodoApiKey}`;
+        const headers = {
+            'Authorization': dodoAuthHeader,
+            'Content-Type': 'application/json'
+        };
+        
+        console.log('📞 Calling Dodo Payments API to cancel subscription');
+        console.log('📞 Subscription ID:', dodoSubscriptionId);
+        console.log('📞 Full URL:', fullUrl);
+        console.log('📞 Request method: PATCH');
+        console.log('📞 Request body:', JSON.stringify({ cancel_at_next_billing_date: true }));
+        console.log('📞 Auth header length:', dodoAuthHeader.length);
+        console.log('📞 Auth header starts with:', dodoAuthHeader.substring(0, 20) + '...');
+        console.log('📞 Full API key (first 10 chars):', dodoApiKey ? dodoApiKey.substring(0, 10) + '...' : 'MISSING');
+        console.log('📞 Full API key (last 10 chars):', dodoApiKey ? '...' + dodoApiKey.substring(dodoApiKey.length - 10) : 'MISSING');
+        console.log('📞 API key format check:');
+        console.log('   - Starts with sk_test_?', dodoApiKey?.startsWith('sk_test_'));
+        console.log('   - Starts with sk_live_?', dodoApiKey?.startsWith('sk_live_'));
+        console.log('   - Starts with _?', dodoApiKey?.startsWith('_'));
+        console.log('   - Contains dots?', dodoApiKey?.includes('.'));
+        
+        let dodoResponse;
+        let dodoData;
+        
+        try {
+            // Cancel immediately in Dodo Payments (not scheduled)
+            // Use status: 'cancelled' for immediate cancellation
+            dodoResponse = await fetch(fullUrl, {
+                method: 'PATCH',
+                headers: headers,
+                body: JSON.stringify({
+                    status: 'cancelled'
+                })
+            });
+            
+            console.log('📞 Dodo Payments response status:', dodoResponse.status);
+            
+            if (!dodoResponse.ok) {
+                const errorText = await dodoResponse.text();
+                console.error('❌ Dodo Payments API error:', dodoResponse.status);
+                console.error('❌ Error response:', errorText);
+                console.error('❌ Full error details:');
+                console.error('   Status:', dodoResponse.status);
+                console.error('   Status Text:', dodoResponse.statusText);
+                console.error('   Response Headers:', JSON.stringify(Object.fromEntries(dodoResponse.headers.entries()), null, 2));
+                console.error('   Error Body:', errorText);
+                console.error('   API Key Used: DODO_PAYMENTS_API_KEY');
+                console.error('   Subscription ID:', dodoSubscriptionId);
+                console.error('   Full URL:', fullUrl);
+                
+                // 401 means authentication failed - could be wrong key, expired key, or key doesn't have permission
+                if (dodoResponse.status === 401) {
+                    return res.status(401).json({ 
+                        success: false,
+                        error: 'Authentication failed',
+                        message: `401 Unauthorized: The API key in DODO_PAYMENTS_API_KEY does not have permission to cancel this subscription, or the key/subscription type mismatch (test vs live). Verify in Dodo Payments dashboard: 1) The API key is correct and active, 2) The subscription ID belongs to the same account as the API key, 3) The API key has subscription cancellation permissions.`,
+                        dodoError: errorText,
+                        hint: 'Check Dodo Payments dashboard: API key permissions, subscription account, and key/subscription type match'
+                    });
+                }
+                
+                // For other errors, return immediately
+                return res.status(dodoResponse.status).json({ 
+                    success: false,
+                    error: 'Failed to cancel subscription in Dodo Payments',
+                    message: `Dodo Payments API returned ${dodoResponse.status}: ${errorText}`,
+                    dodoError: errorText
+                });
+            }
+            
+            // API call succeeded - parse response
+            try {
+                dodoData = await dodoResponse.json();
+                console.log('✅ Dodo Payments cancellation successful');
+                console.log('📦 Full Dodo Payments response:', JSON.stringify(dodoData, null, 2));
+                console.log('📦 Subscription status in response:', dodoData?.status);
+                console.log('📦 Cancel at next billing date:', dodoData?.cancel_at_next_billing_date);
+                console.log('📦 Cancel at period end:', dodoData?.cancel_at_period_end);
+            } catch (jsonError) {
+                // Some APIs return empty body on success
+                console.log('✅ Dodo Payments cancellation successful (no response body)');
+                console.log('⚠️ No response body - cannot verify cancellation status');
+                dodoData = null;
+            }
+            
+        } catch (fetchError) {
+            console.error('❌ Fetch error calling Dodo Payments:', fetchError);
+            console.error('❌ Fetch error details:', {
+                message: fetchError.message,
+                code: fetchError.code,
+                cause: fetchError.cause
+            });
+            
+            // DO NOT update Supabase if fetch failed
+            return res.status(500).json({ 
+                success: false,
+                error: 'Network error calling Dodo Payments API',
+                message: fetchError.message
+            });
+        }
+        
+        // IMPORTANT: Subscription IS cancelled (in Dodo Payments), but access continues until end_date
+        console.log('✅ Dodo Payments API call succeeded - subscription cancelled immediately in Dodo');
+        console.log('📋 Subscription is cancelled, but access continues until end of billing period');
+        
+        // Calculate when access ends (end of current billing period)
+        // Use next_billing_date if available, otherwise calculate from start_date
+        const nextBillingDate = subscription.next_billing_date ? new Date(subscription.next_billing_date) : null;
+        let accessEndDate = nextBillingDate;
+        
+        // If no next_billing_date, calculate from start_date + billing period
+        if (!accessEndDate && subscription.start_date) {
+            accessEndDate = new Date(subscription.start_date);
+            // Add billing period (monthly = 1 month, quarterly = 3 months)
+            if (subscription.plan_type === 'monthly') {
+                accessEndDate.setMonth(accessEndDate.getMonth() + 1);
+            } else if (subscription.plan_type === 'quarterly') {
+                accessEndDate.setMonth(accessEndDate.getMonth() + 3);
+            }
+        }
+        
+        // If still no date, use current date + 1 month as fallback
+        if (!accessEndDate) {
+            accessEndDate = new Date();
+            accessEndDate.setMonth(accessEndDate.getMonth() + 1);
+        }
+        
+        // Update Supabase: status = 'cancelled' (subscription IS cancelled)
+        // But end_date = when access ends (user keeps access until then)
+        const { data: updatedSub, error: updateError } = await supabaseAdmin
+            .from('subscriptions')
+            .update({
+                status: 'cancelled', // Subscription IS cancelled
+                end_date: accessEndDate.toISOString().split('T')[0], // Access ends on this date
+                updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+            .select()
+            .single();
+        
+        if (updateError) {
+            console.error('❌ Error updating Supabase:', updateError);
+            // Dodo Payments cancelled but Supabase update failed
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Subscription cancelled immediately in Dodo Payments (Supabase update failed)',
+                dodoResponse: dodoData,
+                warning: 'Supabase may not reflect cancellation - please check manually'
+            });
+        }
+        
+        console.log('✅ Subscription cancelled immediately in Dodo Payments');
+        console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
+        
+        // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
+        try {
+            const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Chess Player';
+            
+            const emailApiUrl = process.env.VERCEL_URL 
+                ? `https://${process.env.VERCEL_URL}/api/send-email`
+                : 'https://memo-chess.com/api/send-email';
+            
+            // Don't await - fire and forget, non-blocking
+            fetch(emailApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'subscription_cancelled',
+                    to: user.email,
+                    name: userName
+                })
+            }).catch(() => {
+                // Silently fail - email is optional, cancellation already succeeded
+            });
+        } catch (emailError) {
+            // Silently fail - email is optional
+            console.log('Note: Could not send cancellation email (non-critical)');
+        }
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Subscription cancelled successfully. Your access will continue until the end of your current billing period.',
+            subscription: updatedSub,
+            dodoResponse: dodoData,
+            accessEndDate: accessEndDate.toISOString().split('T')[0],
+            note: 'Subscription status is cancelled, but access continues until end_date'
+        });
+        
+    } catch (error) {
+        console.error('❌ Error cancelling subscription:', error);
+        return res.status(500).json({ 
+            error: 'Internal server error',
+            message: error.message 
+        });
+    }
+}
+

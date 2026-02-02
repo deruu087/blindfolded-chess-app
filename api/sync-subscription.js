@@ -1,0 +1,186 @@
+// Vercel serverless function to sync subscription from Dodo Payments to Supabase
+// This can be called manually or from payment-success page if webhook didn't fire
+
+import { createClient } from '@supabase/supabase-js';
+
+export default async function handler(req, res) {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+    
+    if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+    }
+    
+    try {
+        const { userEmail, subscriptionId, amount, currency, planType, paymentDate } = req.body;
+        
+        console.log('🔄 [SYNC] Syncing subscription to Supabase:', {
+            userEmail,
+            subscriptionId,
+            amount,
+            currency,
+            planType,
+            paymentDate
+        });
+        
+        // Validate required fields
+        if (!userEmail) {
+            return res.status(400).json({ error: 'Missing required field: userEmail' });
+        }
+        
+        if (!amount || !currency || !planType) {
+            return res.status(400).json({ error: 'Missing required fields: amount, currency, or planType' });
+        }
+        
+        // Initialize Supabase
+        const supabaseUrl = process.env.SUPABASE_URL;
+        if (!supabaseUrl) {
+            console.error('❌ SUPABASE_URL not configured');
+            return res.status(500).json({ error: 'Server configuration error: SUPABASE_URL missing' });
+        }
+        
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+        if (!supabaseServiceKey) {
+            console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured');
+            return res.status(500).json({ error: 'Server configuration error: SUPABASE_SERVICE_ROLE_KEY missing' });
+        }
+        
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        });
+        
+        // Find user by email
+        let userId = null;
+        let foundUser = null;
+        try {
+            const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+            
+            if (userError) {
+                console.error('❌ Error listing users:', userError);
+                return res.status(500).json({ error: 'Failed to find user', message: userError.message });
+            } else if (users) {
+                foundUser = users.find(u => u.email === userEmail);
+                if (foundUser) {
+                    userId = foundUser.id;
+                    console.log('✅ Found user:', userId, 'for email:', userEmail);
+                } else {
+                    console.error('❌ User not found for email:', userEmail);
+                    return res.status(404).json({ 
+                        error: 'User not found', 
+                        message: `No user found with email: ${userEmail}` 
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error finding user:', error);
+            return res.status(500).json({ error: 'Error finding user', message: error.message });
+        }
+        
+        // Validate plan type
+        if (planType !== 'monthly' && planType !== 'quarterly') {
+            return res.status(400).json({ error: 'Invalid plan_type - must be monthly or quarterly' });
+        }
+        
+        const amountNum = parseFloat(amount);
+        if (isNaN(amountNum)) {
+            return res.status(400).json({ error: 'Invalid amount value' });
+        }
+        
+        // Create/update subscription
+        const subscriptionData = {
+            user_id: userId,
+            email: userEmail,
+            plan_type: planType,
+            status: 'active',
+            start_date: paymentDate ? paymentDate.split('T')[0] : new Date().toISOString().split('T')[0],
+            end_date: null,
+            amount_paid: amountNum,
+            currency: currency,
+            payment_method: 'dodo_payments',
+            dodo_subscription_id: subscriptionId || null,
+            updated_at: new Date().toISOString()
+        };
+        
+        console.log('📝 [SYNC] Creating subscription:', subscriptionData);
+        
+        const { data: subscription, error: subError } = await supabase
+            .from('subscriptions')
+            .upsert(subscriptionData, {
+                onConflict: 'user_id'
+            })
+            .select()
+            .single();
+        
+        if (subError) {
+            console.error('❌ Error creating/updating subscription:', subError);
+            return res.status(500).json({ 
+                error: 'Failed to create subscription',
+                message: subError.message 
+            });
+        }
+        
+        console.log('✅ [SYNC] Subscription created/updated:', subscription);
+        
+        // Create payment record
+        const paymentData = {
+            user_id: userId,
+            email: userEmail,
+            amount: amountNum,
+            currency: currency,
+            status: 'paid',
+            payment_date: paymentDate || new Date().toISOString(),
+            invoice_url: `https://checkout.dodopayments.com/account`,
+            order_id: subscriptionId || `sync_${Date.now()}`,
+            transaction_id: subscriptionId || `sync_${Date.now()}`,
+            payment_method: 'dodo_payments',
+            description: `${planType} subscription payment`
+        };
+        
+        console.log('📝 [SYNC] Creating payment record:', paymentData);
+        
+        const { data: payment, error: paymentError } = await supabase
+            .from('payments')
+            .insert(paymentData)
+            .select()
+            .single();
+        
+        if (paymentError) {
+            console.error('⚠️ Error creating payment record:', paymentError);
+            // Don't fail - subscription was created successfully
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Subscription created but payment record failed',
+                subscription: subscription,
+                paymentError: paymentError.message
+            });
+        }
+        
+        console.log('✅ [SYNC] Payment record created:', payment);
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Subscription and payment synced successfully',
+            subscription: subscription,
+            payment: payment
+        });
+        
+    } catch (error) {
+        console.error('❌ [SYNC] Error syncing subscription:', error);
+        return res.status(500).json({ 
+            error: 'Internal server error',
+            message: error.message 
+        });
+    }
+}
+
