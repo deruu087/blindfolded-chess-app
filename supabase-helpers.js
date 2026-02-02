@@ -707,11 +707,10 @@ async function cancelSubscription() {
 
         console.log('✅ Session token available');
 
-    // Determine API endpoint (production vs local)
-    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
-    const apiUrl = isProduction 
-        ? 'https://memo-chess.com/api/cancel-subscription'
-        : 'http://localhost:3000/api/cancel-subscription';
+    // Determine API endpoint (use current origin for production, localhost for local dev)
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3000/api/cancel-subscription'
+        : `${window.location.origin}/api/cancel-subscription`;
 
     try {
         console.log('📞 Calling cancel subscription API:', apiUrl);
