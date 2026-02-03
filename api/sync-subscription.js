@@ -208,12 +208,20 @@ export default async function handler(req, res) {
                 console.log('📧 [SYNC] Making fetch request to email API...');
                 const fetchStartTime = Date.now();
                 
-                const emailResponse = await fetch(emailApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(emailPayload),
-                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                // Create timeout promise
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Email fetch timeout after 10 seconds')), 10000);
                 });
+                
+                // Race between fetch and timeout
+                const emailResponse = await Promise.race([
+                    fetch(emailApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(emailPayload)
+                    }),
+                    timeoutPromise
+                ]);
                 
                 const fetchDuration = Date.now() - fetchStartTime;
                 console.log('📧 [SYNC] Fetch completed in', fetchDuration, 'ms, status:', emailResponse.status);
