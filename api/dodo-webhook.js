@@ -397,13 +397,16 @@ export default async function handler(req, res) {
                         const userName = foundUser?.user_metadata?.name || 
                                        foundUser?.user_metadata?.full_name || 
                                        customerEmail?.split('@')[0] || 
-                                       null;
+                                       'Chess Player';
                         
                         const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
                         
                         const emailApiUrl = process.env.VERCEL_URL 
                             ? `https://${process.env.VERCEL_URL}/api/send-email`
                             : 'https://memo-chess.com/api/send-email';
+                        
+                        console.log('📧 [WEBHOOK] Sending subscription confirmation email to:', customerEmail);
+                        console.log('📧 [WEBHOOK] Email API URL:', emailApiUrl);
                         
                         // Don't await - fire and forget, non-blocking
                         fetch(emailApiUrl, {
@@ -415,12 +418,18 @@ export default async function handler(req, res) {
                                 name: userName,
                                 data: { planName, amount, currency }
                             })
-                        }).catch(() => {
-                            // Silently fail - email is optional, payment already succeeded
+                        }).then((emailResponse) => {
+                            if (emailResponse.ok) {
+                                console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully');
+                            } else {
+                                console.warn('⚠️ [WEBHOOK] Email API returned error:', emailResponse.status);
+                            }
+                        }).catch((emailError) => {
+                            console.warn('⚠️ [WEBHOOK] Could not send subscription email (non-critical):', emailError.message);
                         });
                     } catch (emailError) {
                         // Silently fail - email is optional
-                        console.log('Note: Could not send subscription email (non-critical)');
+                        console.warn('⚠️ [WEBHOOK] Note: Could not send subscription email (non-critical):', emailError.message);
                     }
                     
                     return res.status(200).json({ 

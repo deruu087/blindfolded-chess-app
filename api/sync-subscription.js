@@ -176,6 +176,38 @@ export default async function handler(req, res) {
         
         console.log('✅ [SYNC] Payment record created:', payment);
         
+        // Send subscription confirmation email (NON-BLOCKING)
+        try {
+            const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
+            
+            const emailApiUrl = process.env.VERCEL_URL 
+                ? `https://${process.env.VERCEL_URL}/api/send-email`
+                : 'https://memo-chess.com/api/send-email';
+            
+            // Don't await - fire and forget, non-blocking
+            fetch(emailApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'subscription_confirmed',
+                    to: userEmail,
+                    name: userEmail.split('@')[0], // Use email prefix as name
+                    data: { 
+                        planName, 
+                        amount: finalAmount, 
+                        currency: currency 
+                    }
+                })
+            }).then(() => {
+                console.log('✅ [SYNC] Subscription confirmation email sent');
+            }).catch((emailError) => {
+                console.warn('⚠️ [SYNC] Could not send subscription email (non-critical):', emailError);
+            });
+        } catch (emailError) {
+            // Silently fail - email is optional
+            console.log('⚠️ [SYNC] Note: Could not send subscription email (non-critical)');
+        }
+        
         return res.status(200).json({ 
             success: true, 
             message: 'Subscription and payment synced successfully',
