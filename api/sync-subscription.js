@@ -194,20 +194,29 @@ export default async function handler(req, res) {
                 console.log('📧 [SYNC] Email API URL:', emailApiUrl);
                 console.log('📧 [SYNC] Email data:', { planName, amount, currency });
                 
+                const emailPayload = {
+                    type: 'subscription_confirmed',
+                    to: userEmail,
+                    name: userEmail.split('@')[0], // Use email prefix as name
+                    data: { 
+                        planName, 
+                        amount: amount, // Use amount from request body
+                        currency: currency 
+                    }
+                };
+                
+                console.log('📧 [SYNC] Making fetch request to email API...');
+                const fetchStartTime = Date.now();
+                
                 const emailResponse = await fetch(emailApiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'subscription_confirmed',
-                        to: userEmail,
-                        name: userEmail.split('@')[0], // Use email prefix as name
-                        data: { 
-                            planName, 
-                            amount: amount, // Use amount from request body
-                            currency: currency 
-                        }
-                    })
+                    body: JSON.stringify(emailPayload),
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
                 });
+                
+                const fetchDuration = Date.now() - fetchStartTime;
+                console.log('📧 [SYNC] Fetch completed in', fetchDuration, 'ms, status:', emailResponse.status);
                 
                 if (emailResponse.ok) {
                     const emailResult = await emailResponse.json().catch(() => ({}));
