@@ -177,9 +177,11 @@ export default async function handler(req, res) {
         console.log('✅ [SYNC] Payment record created:', payment);
         
         // Send subscription confirmation email (NON-BLOCKING)
+        console.log('📧 [SYNC] Starting email send process for:', userEmail);
         // Use IIFE to handle async without blocking
         (async () => {
             try {
+                console.log('📧 [SYNC] IIFE executing, preparing email...');
                 const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
                 
                 // Use production URL directly (more reliable than VERCEL_URL)
