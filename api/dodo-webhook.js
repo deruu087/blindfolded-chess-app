@@ -391,36 +391,38 @@ export default async function handler(req, res) {
                     console.log('💰 Amount:', amount, currency);
                     console.log('📦 Plan:', planType);
                     
-                    // Send subscription confirmation email (NON-BLOCKING - wrapped in try-catch)
-                    try {
-                        // Only use real user data - no fallbacks
-                        const userName = foundUser?.user_metadata?.name || 
-                                       foundUser?.user_metadata?.full_name || 
-                                       customerEmail?.split('@')[0] || 
-                                       'Chess Player';
-                        
-                        const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
-                        
-                        // Use production URL directly (more reliable than VERCEL_URL)
-                        // VERCEL_URL might be a preview URL, but we want production emails
-                        const emailApiUrl = process.env.VERCEL_ENV === 'development' && process.env.VERCEL_URL
-                            ? `http://${process.env.VERCEL_URL}/api/send-email`
-                            : 'https://memo-chess.com/api/send-email';
-                        
-                        console.log('📧 [WEBHOOK] Sending subscription confirmation email to:', customerEmail);
-                        console.log('📧 [WEBHOOK] Email API URL:', emailApiUrl);
-                        
-                        // Don't await - fire and forget, non-blocking
-                        fetch(emailApiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                type: 'subscription_confirmed',
-                                to: customerEmail,
-                                name: userName,
-                                data: { planName, amount, currency }
-                            })
-                        }).then(async (emailResponse) => {
+                    // Send subscription confirmation email (NON-BLOCKING)
+                    // Use IIFE to handle async without blocking
+                    (async () => {
+                        try {
+                            // Only use real user data - no fallbacks
+                            const userName = foundUser?.user_metadata?.name || 
+                                           foundUser?.user_metadata?.full_name || 
+                                           customerEmail?.split('@')[0] || 
+                                           'Chess Player';
+                            
+                            const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
+                            
+                            // Use production URL directly (more reliable than VERCEL_URL)
+                            // VERCEL_URL might be a preview URL, but we want production emails
+                            const emailApiUrl = process.env.VERCEL_ENV === 'development' && process.env.VERCEL_URL
+                                ? `http://${process.env.VERCEL_URL}/api/send-email`
+                                : 'https://memo-chess.com/api/send-email';
+                            
+                            console.log('📧 [WEBHOOK] Sending subscription confirmation email to:', customerEmail);
+                            console.log('📧 [WEBHOOK] Email API URL:', emailApiUrl);
+                            
+                            const emailResponse = await fetch(emailApiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    type: 'subscription_confirmed',
+                                    to: customerEmail,
+                                    name: userName,
+                                    data: { planName, amount, currency }
+                                })
+                            });
+                            
                             if (emailResponse.ok) {
                                 const emailResult = await emailResponse.json().catch(() => ({}));
                                 console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully:', emailResult);
@@ -428,14 +430,13 @@ export default async function handler(req, res) {
                                 const errorText = await emailResponse.text().catch(() => 'Could not read error');
                                 console.warn('⚠️ [WEBHOOK] Email API returned error:', emailResponse.status, errorText);
                             }
-                        }).catch((emailError) => {
+                        } catch (emailError) {
+                            // Log full error details for debugging
                             console.warn('⚠️ [WEBHOOK] Could not send subscription email (non-critical):', emailError.message);
                             console.warn('⚠️ [WEBHOOK] Email error stack:', emailError.stack);
-                        });
-                    } catch (emailError) {
-                        // Silently fail - email is optional
-                        console.warn('⚠️ [WEBHOOK] Note: Could not send subscription email (non-critical):', emailError.message);
-                    }
+                            console.warn('⚠️ [WEBHOOK] Email error name:', emailError.name);
+                        }
+                    })(); // Execute immediately, don't await
                     
                     return res.status(200).json({ 
                         success: true, 

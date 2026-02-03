@@ -177,47 +177,49 @@ export default async function handler(req, res) {
         console.log('✅ [SYNC] Payment record created:', payment);
         
         // Send subscription confirmation email (NON-BLOCKING)
-        try {
-            const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
-            
-            // Use production URL directly (more reliable than VERCEL_URL)
-            // VERCEL_URL might be a preview URL, but we want production emails
-            const emailApiUrl = process.env.VERCEL_ENV === 'development' && process.env.VERCEL_URL
-                ? `http://${process.env.VERCEL_URL}/api/send-email`
-                : 'https://memo-chess.com/api/send-email';
-            
-            console.log('📧 [SYNC] Sending subscription confirmation email to:', userEmail);
-            console.log('📧 [SYNC] Email API URL:', emailApiUrl);
-            
-            // Don't await - fire and forget, non-blocking
-            fetch(emailApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'subscription_confirmed',
-                    to: userEmail,
-                    name: userEmail.split('@')[0], // Use email prefix as name
-                    data: { 
-                        planName, 
-                        amount: finalAmount, 
-                        currency: currency 
-                    }
-                })
-            }).then(async (emailResponse) => {
+        // Use IIFE to handle async without blocking
+        (async () => {
+            try {
+                const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
+                
+                // Use production URL directly (more reliable than VERCEL_URL)
+                // VERCEL_URL might be a preview URL, but we want production emails
+                const emailApiUrl = process.env.VERCEL_ENV === 'development' && process.env.VERCEL_URL
+                    ? `http://${process.env.VERCEL_URL}/api/send-email`
+                    : 'https://memo-chess.com/api/send-email';
+                
+                console.log('📧 [SYNC] Sending subscription confirmation email to:', userEmail);
+                console.log('📧 [SYNC] Email API URL:', emailApiUrl);
+                
+                const emailResponse = await fetch(emailApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'subscription_confirmed',
+                        to: userEmail,
+                        name: userEmail.split('@')[0], // Use email prefix as name
+                        data: { 
+                            planName, 
+                            amount: finalAmount, 
+                            currency: currency 
+                        }
+                    })
+                });
+                
                 if (emailResponse.ok) {
-                    console.log('✅ [SYNC] Subscription confirmation email sent successfully');
+                    const emailResult = await emailResponse.json().catch(() => ({}));
+                    console.log('✅ [SYNC] Subscription confirmation email sent successfully:', emailResult);
                 } else {
-                    const errorText = await emailResponse.text();
+                    const errorText = await emailResponse.text().catch(() => 'Could not read error');
                     console.warn('⚠️ [SYNC] Email API returned error:', emailResponse.status, errorText);
                 }
-            }).catch((emailError) => {
+            } catch (emailError) {
+                // Log full error details for debugging
                 console.warn('⚠️ [SYNC] Could not send subscription email (non-critical):', emailError.message);
-                console.warn('⚠️ [SYNC] Email error details:', emailError);
-            });
-        } catch (emailError) {
-            // Silently fail - email is optional
-            console.log('⚠️ [SYNC] Note: Could not send subscription email (non-critical)');
-        }
+                console.warn('⚠️ [SYNC] Email error stack:', emailError.stack);
+                console.warn('⚠️ [SYNC] Email error name:', emailError.name);
+            }
+        })(); // Execute immediately, don't await
         
         return res.status(200).json({ 
             success: true, 
