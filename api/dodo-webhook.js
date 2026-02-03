@@ -235,7 +235,28 @@ export default async function handler(req, res) {
                 }
                 
                 // Extract Dodo Payments subscription ID
-                const dodoSubscriptionId = data.subscription_id || orderId;
+                // CRITICAL: Try multiple possible field names for subscription ID
+                // Dodo Payments might send it as: subscription_id, subscription.id, id, or in nested structure
+                let dodoSubscriptionId = data.subscription_id || 
+                                        data.subscription?.id || 
+                                        data.subscription_id || 
+                                        data.id ||
+                                        orderId;
+                
+                // Log what we found for debugging
+                console.log('🔍 [WEBHOOK] Extracting subscription ID:');
+                console.log('🔍 [WEBHOOK] data.subscription_id:', data.subscription_id);
+                console.log('🔍 [WEBHOOK] data.subscription?.id:', data.subscription?.id);
+                console.log('🔍 [WEBHOOK] data.id:', data.id);
+                console.log('🔍 [WEBHOOK] orderId (fallback):', orderId);
+                console.log('🔍 [WEBHOOK] Final dodoSubscriptionId:', dodoSubscriptionId);
+                console.log('🔍 [WEBHOOK] Full data object keys:', Object.keys(data));
+                
+                // If we still don't have a subscription ID, log the full payload for debugging
+                if (!dodoSubscriptionId || dodoSubscriptionId === orderId) {
+                    console.warn('⚠️ [WEBHOOK] WARNING: Using orderId as subscription ID - may not be correct');
+                    console.warn('⚠️ [WEBHOOK] Full webhook payload:', JSON.stringify(webhookData, null, 2));
+                }
                 
                 const subscriptionData = {
                     user_id: userId,
@@ -252,7 +273,10 @@ export default async function handler(req, res) {
                     updated_at: new Date().toISOString()
                 };
                 
+                console.log('📝 [WEBHOOK] Subscription data to be saved:', JSON.stringify(subscriptionData, null, 2));
+                
                 try {
+                    console.log('💾 [WEBHOOK] Saving subscription to Supabase with dodo_subscription_id:', dodoSubscriptionId);
                     const { data: subscription, error: subError } = await supabase
                         .from('subscriptions')
                         .upsert(subscriptionData, {
@@ -269,9 +293,19 @@ export default async function handler(req, res) {
                         });
                     }
                     
+                    console.log('✅ [WEBHOOK] Subscription saved:', JSON.stringify(subscription, null, 2));
+                    console.log('✅ [WEBHOOK] Saved dodo_subscription_id:', subscription?.dodo_subscription_id);
+                    
+                    // Verify the subscription ID was actually saved
+                    if (!subscription.dodo_subscription_id) {
+                        console.error('❌ [WEBHOOK] CRITICAL: Subscription saved but dodo_subscription_id is NULL!');
+                        console.error('❌ [WEBHOOK] Subscription data sent:', JSON.stringify(subscriptionData, null, 2));
+                        console.error('❌ [WEBHOOK] Subscription data received:', JSON.stringify(subscription, null, 2));
+                    }
+                    
                     // Insert payment record into payments table
                     // Use subscription_id as order_id and transaction_id
-                    const subscriptionId = data.subscription_id || orderId;
+                    const subscriptionId = dodoSubscriptionId || data.subscription_id || orderId;
                     const paymentData = {
                         user_id: userId,
                         email: customerEmail, // Add email for easier querying
