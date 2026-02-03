@@ -40,6 +40,14 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing required fields: amount, currency, or planType' });
         }
         
+        // Warn if subscription ID looks like a generated ID (but still allow it as fallback)
+        if (subscriptionId && subscriptionId.startsWith('sync_')) {
+            console.warn('⚠️ [SYNC] WARNING: Subscription ID appears to be generated (starts with "sync_")');
+            console.warn('⚠️ [SYNC] This means the real subscription ID could not be fetched from Dodo Payments');
+            console.warn('⚠️ [SYNC] The webhook should update this with the correct subscription ID when it fires');
+            console.warn('⚠️ [SYNC] Cancellation may not work until the webhook updates the subscription ID');
+        }
+        
         // Initialize Supabase
         const supabaseUrl = process.env.SUPABASE_URL;
         if (!supabaseUrl) {

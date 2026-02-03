@@ -154,8 +154,9 @@
                         }
                         
                         // Try to sync subscription via API (if webhook didn't fire)
-                        // This uses the sync-subscription API endpoint which creates both subscription and payment records
+                        // First, try to get the real subscription ID from Dodo Payments
                         console.log('🔄 Attempting to sync subscription via API...');
+                        console.log('🔄 First, fetching real subscription ID from Dodo Payments...');
                         
                         // Get payment data from URL or use plan-based amounts (actual Dodo Payments prices)
                         const urlParams = new URLSearchParams(window.location.search);
@@ -169,7 +170,41 @@
                             console.log('💰 Using plan-based amount:', finalAmount, currency);
                         }
                         
-                        // Call sync API endpoint
+                        // Try to get real subscription ID from Dodo Payments API
+                        const getSubscriptionIdUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                            ? 'http://localhost:3000/api/get-subscription-id'
+                            : `${window.location.origin}/api/get-subscription-id`;
+                        
+                        let realSubscriptionId = paymentId; // Fallback to paymentId if fetch fails
+                        
+                        try {
+                            console.log('🔍 Fetching subscription ID from Dodo Payments...');
+                            const subscriptionIdResponse = await fetch(getSubscriptionIdUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    paymentId: paymentId,
+                                    orderId: paymentId
+                                })
+                            });
+                            
+                            const subscriptionIdResult = await subscriptionIdResponse.json();
+                            
+                            if (subscriptionIdResult.success && subscriptionIdResult.subscriptionId) {
+                                realSubscriptionId = subscriptionIdResult.subscriptionId;
+                                console.log('✅ Got real subscription ID from Dodo Payments:', realSubscriptionId);
+                            } else {
+                                console.warn('⚠️ Could not fetch subscription ID, using payment ID as fallback:', paymentId);
+                                console.warn('⚠️ Webhook should handle this automatically');
+                            }
+                        } catch (subscriptionIdError) {
+                            console.warn('⚠️ Error fetching subscription ID, using payment ID as fallback:', subscriptionIdError);
+                            console.warn('⚠️ Webhook should handle this automatically');
+                        }
+                        
+                        // Call sync API endpoint with real subscription ID (or fallback)
                         const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
                             ? 'http://localhost:3000/api/sync-subscription'
                             : `${window.location.origin}/api/sync-subscription`;
@@ -182,7 +217,7 @@
                                 },
                                 body: JSON.stringify({
                                     userEmail: user.email,
-                                    subscriptionId: paymentId,
+                                    subscriptionId: realSubscriptionId, // Use real subscription ID if available
                                     amount: finalAmount,
                                     currency: currency,
                                     planType: planType,

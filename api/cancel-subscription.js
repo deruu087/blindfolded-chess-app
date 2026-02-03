@@ -85,42 +85,93 @@ export default async function handler(req, res) {
         
         console.log('✅ Found subscription:', subscription.id, subscription.status);
         
+        // Get Dodo Payments API key from environment variable first (needed for fetching subscription ID)
+        // Dodo Payments determines test/live mode by the key itself, not by a separate flag
+        const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+        
         // Check if we have Dodo Payments subscription ID
         // IMPORTANT: Use subscription ID from Subscriptions dashboard, NOT payment ID
-        const dodoSubscriptionId = subscription.dodo_subscription_id;
+        let dodoSubscriptionId = subscription.dodo_subscription_id;
         
         console.log('🔍 Subscription ID from database:', dodoSubscriptionId);
         console.log('🔍 Full subscription object:', JSON.stringify(subscription, null, 2));
         
+        // If no subscription ID, try to fetch it from Dodo Payments using payment records
         if (!dodoSubscriptionId) {
-            console.warn('⚠️ No Dodo Payments subscription ID found, updating Supabase only');
-            // Update Supabase only (fallback for subscriptions created before we stored the ID)
-            const { data: updatedSub, error: updateError } = await supabaseAdmin
-                .from('subscriptions')
-                .update({
-                    status: 'cancelled',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', user.id)
-                .select()
-                .single();
+            console.warn('⚠️ No Dodo Payments subscription ID found in database');
+            console.log('🔍 Attempting to fetch subscription ID from Dodo Payments using payment records...');
             
-            if (updateError) {
-                console.error('❌ Error updating subscription:', updateError);
-                return res.status(500).json({ error: 'Failed to update subscription: ' + updateError.message });
+            if (!dodoApiKey) {
+                console.error('❌ Cannot fetch subscription ID: DODO_PAYMENTS_API_KEY not configured');
+                return res.status(500).json({ 
+                    success: false,
+                    error: 'Server configuration error',
+                    message: 'DODO_PAYMENTS_API_KEY is not configured. Cannot fetch subscription ID or cancel subscription. Please contact support at hi@memo-chess.com',
+                    hint: 'The API key is required to interact with Dodo Payments API.'
+                });
             }
             
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Subscription cancelled (Supabase only - no Dodo Payments ID)',
-                subscription: updatedSub
-            });
+            // Get the most recent payment for this user
+            const { data: recentPayment, error: paymentError } = await supabaseAdmin
+                .from('payments')
+                .select('order_id, transaction_id')
+                .eq('user_id', user.id)
+                .order('payment_date', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            
+            if (!paymentError && recentPayment && (recentPayment.order_id || recentPayment.transaction_id)) {
+                const paymentId = recentPayment.order_id || recentPayment.transaction_id;
+                console.log('🔍 Found payment record with ID:', paymentId);
+                
+                // Try to fetch subscription ID from Dodo Payments
+                const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
+                    ? 'https://test.dodopayments.com'
+                    : 'https://live.dodopayments.com';
+                
+                try {
+                    // Try to get subscription ID from payment/order
+                    const getSubscriptionIdUrl = `${apiBaseUrl}/payments/${paymentId}`;
+                    const paymentResponse = await fetch(getSubscriptionIdUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${dodoApiKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (paymentResponse.ok) {
+                        const paymentData = await paymentResponse.json();
+                        dodoSubscriptionId = paymentData.subscription_id || paymentData.subscription?.id;
+                        
+                        if (dodoSubscriptionId) {
+                            console.log('✅ Successfully fetched subscription ID from Dodo Payments:', dodoSubscriptionId);
+                            
+                            // Update subscription with the fetched ID
+                            await supabaseAdmin
+                                .from('subscriptions')
+                                .update({ dodo_subscription_id: dodoSubscriptionId })
+                                .eq('user_id', user.id);
+                        }
+                    }
+                } catch (fetchError) {
+                    console.warn('⚠️ Could not fetch subscription ID from Dodo Payments:', fetchError.message);
+                }
+            }
+            
+            // If still no subscription ID, return error with helpful message
+            if (!dodoSubscriptionId) {
+                console.error('❌ Cannot cancel subscription: No subscription ID available');
+                return res.status(400).json({ 
+                    success: false,
+                    error: 'Cannot cancel subscription',
+                    message: 'Subscription does not have a Dodo Payments subscription ID. This may happen if the subscription was created before we started storing subscription IDs. Please contact support to cancel your subscription, or wait for the webhook to update the subscription ID.',
+                    hint: 'The webhook should automatically update the subscription ID when it processes payment events. You can try again later, or contact support at hi@memo-chess.com'
+                });
+            }
         }
         
-        // Get Dodo Payments API key from environment variable
-        // Dodo Payments determines test/live mode by the key itself, not by a separate flag
-        const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
-        
+        // API key already checked above, log details
         console.log('🔑 API Key check:');
         console.log('   Key exists:', !!dodoApiKey);
         console.log('   Key length:', dodoApiKey ? dodoApiKey.length : 0);
@@ -130,40 +181,17 @@ export default async function handler(req, res) {
         }
         console.log('   ⚠️ IMPORTANT: Ensure the API key matches your subscription type (test or live)');
         
-        if (!dodoApiKey) {
-            console.error('❌ DODO_PAYMENTS_API_KEY not configured');
-            // Still update Supabase
-            const { data: updatedSub, error: updateError } = await supabaseAdmin
-                .from('subscriptions')
-                .update({
-                    status: 'cancelled',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', user.id)
-                .select()
-                .single();
-            
-            if (updateError) {
-                console.error('❌ Error updating subscription:', updateError);
-                return res.status(500).json({ error: 'Failed to update subscription: ' + updateError.message });
-            }
-            
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Subscription cancelled (Supabase only - API key not configured)',
-                subscription: updatedSub
-            });
-        }
-        
         // Dodo Payments API endpoint
         // Base URLs from Dodo Payments API Reference:
         // Test mode: https://test.dodopayments.com
         // Live mode: https://live.dodopayments.com
-        // Since we're using test subscriptions, use test endpoint
-        const apiBaseUrl = 'https://test.dodopayments.com';
+        // Auto-detect based on API key
+        const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
+            ? 'https://test.dodopayments.com'
+            : 'https://live.dodopayments.com';
         
         console.log('📞 Using API base URL:', apiBaseUrl);
-        console.log('📞 Note: Using test endpoint for test subscriptions');
+        console.log('📞 Mode:', dodoApiKey.startsWith('sk_test_') ? 'TEST' : 'LIVE');
         
         // Call Dodo Payments API to cancel subscription
         // IMPORTANT: Only update Supabase AFTER successful API call
