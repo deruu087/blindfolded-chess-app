@@ -301,6 +301,59 @@ export default async function handler(req, res) {
                         console.error('❌ [WEBHOOK] CRITICAL: Subscription saved but dodo_subscription_id is NULL!');
                         console.error('❌ [WEBHOOK] Subscription data sent:', JSON.stringify(subscriptionData, null, 2));
                         console.error('❌ [WEBHOOK] Subscription data received:', JSON.stringify(subscription, null, 2));
+                        
+                        // Try to fetch subscription ID from Dodo Payments API as fallback
+                        console.log('🔧 [WEBHOOK] Attempting to fetch subscription ID from Dodo Payments API...');
+                        try {
+                            const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+                            if (dodoApiKey) {
+                                const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
+                                    ? 'https://test.dodopayments.com'
+                                    : 'https://live.dodopayments.com';
+                                
+                                // Try to get subscription by customer email
+                                const subscriptionsUrl = `${apiBaseUrl}/subscriptions?customer_email=${encodeURIComponent(customerEmail)}`;
+                                const subscriptionsResponse = await fetch(subscriptionsUrl, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Authorization': `Bearer ${dodoApiKey}`,
+                                        'Content-Type': 'application/json'
+                                    }
+                                });
+                                
+                                if (subscriptionsResponse.ok) {
+                                    const subscriptionsData = await subscriptionsResponse.json();
+                                    const subscriptions = subscriptionsData.data || subscriptionsData.subscriptions || subscriptionsData;
+                                    
+                                    if (Array.isArray(subscriptions) && subscriptions.length > 0) {
+                                        const activeSub = subscriptions.find(s => 
+                                            (s.status === 'active' || s.status === 'Active') &&
+                                            s.customer?.email === customerEmail
+                                        ) || subscriptions[0];
+                                        
+                                        const fetchedSubscriptionId = activeSub.id || activeSub.subscription_id;
+                                        
+                                        if (fetchedSubscriptionId) {
+                                            console.log('✅ [WEBHOOK] Found subscription ID from API:', fetchedSubscriptionId);
+                                            
+                                            // Update subscription with the fetched ID
+                                            const { error: updateError } = await supabase
+                                                .from('subscriptions')
+                                                .update({ dodo_subscription_id: fetchedSubscriptionId })
+                                                .eq('user_id', userId);
+                                            
+                                            if (updateError) {
+                                                console.error('❌ [WEBHOOK] Failed to update subscription ID:', updateError);
+                                            } else {
+                                                console.log('✅ [WEBHOOK] Successfully updated subscription ID from API');
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (apiError) {
+                            console.error('❌ [WEBHOOK] Error fetching subscription ID from API:', apiError);
+                        }
                     }
                     
                     // Insert payment record into payments table
