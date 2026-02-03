@@ -159,18 +159,37 @@ export default async function handler(req, res) {
                 }
             }
             
-            // If still no subscription ID, return error with helpful message
+            // If still no subscription ID, allow cancellation but only update Supabase
+            // User will need to cancel manually in Dodo Payments dashboard
             if (!dodoSubscriptionId) {
-                console.error('❌ Cannot cancel subscription: No subscription ID available');
-                console.error('❌ Subscription details:', JSON.stringify(subscription, null, 2));
-                console.error('❌ Payment records checked:', recentPayment ? 'Found' : 'Not found');
-                return res.status(400).json({ 
-                    success: false,
-                    error: 'Cannot cancel subscription - No subscription ID found',
-                    message: 'Subscription does not have a Dodo Payments subscription ID. This may happen if the subscription was created before we started storing subscription IDs, or if the webhook has not yet processed the payment. Please contact support at hi@memo-chess.com to cancel your subscription manually.',
-                    hint: 'The webhook should automatically update the subscription ID when it processes payment events. You can try again later after the webhook processes, or contact support for immediate assistance.',
-                    subscriptionId: subscription.id,
-                    hasPaymentRecords: !!recentPayment
+                console.warn('⚠️ No subscription ID found - will only update Supabase');
+                console.warn('⚠️ User needs to cancel subscription manually in Dodo Payments dashboard');
+                
+                // Update Supabase to cancelled status
+                const { data: updatedSub, error: updateError } = await supabaseAdmin
+                    .from('subscriptions')
+                    .update({
+                        status: 'cancelled',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', user.id)
+                    .select()
+                    .single();
+                
+                if (updateError) {
+                    console.error('❌ Error updating subscription:', updateError);
+                    return res.status(500).json({ 
+                        success: false,
+                        error: 'Failed to update subscription: ' + updateError.message 
+                    });
+                }
+                
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Subscription status updated in our system. Please cancel your subscription manually in the Dodo Payments dashboard to stop billing.',
+                    subscription: updatedSub,
+                    note: 'You need to cancel the subscription in Dodo Payments dashboard to stop future charges. The subscription has been marked as cancelled in our system.',
+                    dodoPaymentsAction: 'Please visit Dodo Payments dashboard to cancel the subscription there'
                 });
             }
         }
