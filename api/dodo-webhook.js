@@ -2,6 +2,7 @@
 // This will automatically update Supabase subscriptions when payments succeed
 
 import { createClient } from '@supabase/supabase-js';
+import { sendEmailDirect } from './email-helpers.js';
 
 export default async function handler(req, res) {
     // Enable CORS
