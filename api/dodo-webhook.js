@@ -418,14 +418,17 @@ export default async function handler(req, res) {
                                 name: userName,
                                 data: { planName, amount, currency }
                             })
-                        }).then((emailResponse) => {
+                        }).then(async (emailResponse) => {
                             if (emailResponse.ok) {
-                                console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully');
+                                const emailResult = await emailResponse.json().catch(() => ({}));
+                                console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully:', emailResult);
                             } else {
-                                console.warn('⚠️ [WEBHOOK] Email API returned error:', emailResponse.status);
+                                const errorText = await emailResponse.text().catch(() => 'Could not read error');
+                                console.warn('⚠️ [WEBHOOK] Email API returned error:', emailResponse.status, errorText);
                             }
                         }).catch((emailError) => {
                             console.warn('⚠️ [WEBHOOK] Could not send subscription email (non-critical):', emailError.message);
+                            console.warn('⚠️ [WEBHOOK] Email error stack:', emailError.stack);
                         });
                     } catch (emailError) {
                         // Silently fail - email is optional
