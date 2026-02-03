@@ -274,23 +274,57 @@ export default async function handler(req, res) {
                 console.error('   Subscription ID:', dodoSubscriptionId);
                 console.error('   Full URL:', fullUrl);
                 
-                // 401 means authentication failed - could be wrong key, expired key, or key doesn't have permission
-                if (dodoResponse.status === 401) {
-                    return res.status(401).json({ 
+                // Don't fail - just update Supabase and inform user they need to cancel manually
+                console.warn('⚠️ Dodo Payments API call failed - will update Supabase only');
+                console.warn('⚠️ User needs to cancel subscription manually in Dodo Payments dashboard');
+                
+                // Calculate when access ends (end of current billing period)
+                const nextBillingDate = subscription.next_billing_date ? new Date(subscription.next_billing_date) : null;
+                let accessEndDate = nextBillingDate;
+                
+                if (!accessEndDate && subscription.start_date) {
+                    accessEndDate = new Date(subscription.start_date);
+                    if (subscription.plan_type === 'monthly') {
+                        accessEndDate.setMonth(accessEndDate.getMonth() + 1);
+                    } else if (subscription.plan_type === 'quarterly') {
+                        accessEndDate.setMonth(accessEndDate.getMonth() + 3);
+                    }
+                }
+                
+                if (!accessEndDate) {
+                    accessEndDate = new Date();
+                    accessEndDate.setMonth(accessEndDate.getMonth() + 1);
+                }
+                
+                // Update Supabase anyway
+                const { data: updatedSub, error: updateError } = await supabaseAdmin
+                    .from('subscriptions')
+                    .update({
+                        status: 'cancelled',
+                        end_date: accessEndDate.toISOString().split('T')[0],
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', user.id)
+                    .select()
+                    .single();
+                
+                if (updateError) {
+                    console.error('❌ Error updating Supabase:', updateError);
+                    return res.status(500).json({ 
                         success: false,
-                        error: 'Authentication failed',
-                        message: `401 Unauthorized: The API key in DODO_PAYMENTS_API_KEY does not have permission to cancel this subscription, or the key/subscription type mismatch (test vs live). Verify in Dodo Payments dashboard: 1) The API key is correct and active, 2) The subscription ID belongs to the same account as the API key, 3) The API key has subscription cancellation permissions.`,
-                        dodoError: errorText,
-                        hint: 'Check Dodo Payments dashboard: API key permissions, subscription account, and key/subscription type match'
+                        error: 'Failed to update subscription: ' + updateError.message 
                     });
                 }
                 
-                // For other errors, return immediately
-                return res.status(dodoResponse.status).json({ 
-                    success: false,
-                    error: 'Failed to cancel subscription in Dodo Payments',
-                    message: `Dodo Payments API returned ${dodoResponse.status}: ${errorText}`,
-                    dodoError: errorText
+                // Return success but inform user they need to cancel manually
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Subscription status updated in our system. However, we could not cancel it in Dodo Payments automatically. Please cancel your subscription manually in the Dodo Payments dashboard to stop future billing.',
+                    subscription: updatedSub,
+                    dodoPaymentsAction: 'Please visit Dodo Payments dashboard to cancel the subscription there',
+                    dodoError: errorText,
+                    accessEndDate: accessEndDate.toISOString().split('T')[0],
+                    note: 'Subscription is marked as cancelled in our system, but you must cancel it in Dodo Payments to stop billing'
                 });
             }
             
