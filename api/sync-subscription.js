@@ -180,8 +180,10 @@ export default async function handler(req, res) {
         try {
             const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
             
-            const emailApiUrl = process.env.VERCEL_URL 
-                ? `https://${process.env.VERCEL_URL}/api/send-email`
+            // Use production URL directly (more reliable than VERCEL_URL)
+            // VERCEL_URL might be a preview URL, but we want production emails
+            const emailApiUrl = process.env.VERCEL_ENV === 'development' && process.env.VERCEL_URL
+                ? `http://${process.env.VERCEL_URL}/api/send-email`
                 : 'https://memo-chess.com/api/send-email';
             
             console.log('📧 [SYNC] Sending subscription confirmation email to:', userEmail);
