@@ -2,6 +2,7 @@
 // This can be called manually or from payment-success page if webhook didn't fire
 
 import { createClient } from '@supabase/supabase-js';
+import { sendEmailDirect } from './email-helpers.js';
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -182,57 +183,28 @@ export default async function handler(req, res) {
         // Store promise to prevent garbage collection
         const emailPromise = (async () => {
             try {
-                console.log('📧 [SYNC] IIFE executing, preparing email...');
                 const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
+                const userName = userEmail.split('@')[0]; // Use email prefix as name
                 
-                // Use production URL directly (more reliable than VERCEL_URL)
-                // VERCEL_URL might be a preview URL, but we want production emails
-                const emailApiUrl = process.env.VERCEL_ENV === 'development' && process.env.VERCEL_URL
-                    ? `http://${process.env.VERCEL_URL}/api/send-email`
-                    : 'https://memo-chess.com/api/send-email';
+                console.log('📧 [SYNC] Sending subscription confirmation email directly (no HTTP call)');
+                console.log('📧 [SYNC] Email data:', { planName, amount, currency, to: userEmail });
                 
-                console.log('📧 [SYNC] Sending subscription confirmation email to:', userEmail);
-                console.log('📧 [SYNC] Email API URL:', emailApiUrl);
-                console.log('📧 [SYNC] Email data:', { planName, amount, currency });
-                
-                const emailPayload = {
-                    type: 'subscription_confirmed',
-                    to: userEmail,
-                    name: userEmail.split('@')[0], // Use email prefix as name
-                    data: { 
-                        planName, 
-                        amount: amount, // Use amount from request body
-                        currency: currency 
-                    }
-                };
-                
-                console.log('📧 [SYNC] Making fetch request to email API...');
-                const fetchStartTime = Date.now();
-                
-                // Create timeout promise
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Email fetch timeout after 10 seconds')), 10000);
+                const emailStartTime = Date.now();
+                const result = await sendEmailDirect('subscription_confirmed', userEmail, userName, {
+                    planName,
+                    amount,
+                    currency
                 });
                 
-                // Race between fetch and timeout
-                const emailResponse = await Promise.race([
-                    fetch(emailApiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(emailPayload)
-                    }),
-                    timeoutPromise
-                ]);
+                const emailDuration = Date.now() - emailStartTime;
                 
-                const fetchDuration = Date.now() - fetchStartTime;
-                console.log('📧 [SYNC] Fetch completed in', fetchDuration, 'ms, status:', emailResponse.status);
-                
-                if (emailResponse.ok) {
-                    const emailResult = await emailResponse.json().catch(() => ({}));
-                    console.log('✅ [SYNC] Subscription confirmation email sent successfully:', emailResult);
+                if (result.success) {
+                    console.log('✅ [SYNC] Subscription confirmation email sent successfully in', emailDuration, 'ms:', result.messageId);
                 } else {
-                    const errorText = await emailResponse.text().catch(() => 'Could not read error');
-                    console.warn('⚠️ [SYNC] Email API returned error:', emailResponse.status, errorText);
+                    console.warn('⚠️ [SYNC] Email sending failed:', result.error);
+                    if (result.details) {
+                        console.warn('⚠️ [SYNC] Email error details:', result.details);
+                    }
                 }
             } catch (emailError) {
                 // Log full error details for debugging
