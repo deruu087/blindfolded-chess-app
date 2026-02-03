@@ -190,6 +190,7 @@ export default async function handler(req, res) {
                 
                 console.log('📧 [SYNC] Sending subscription confirmation email to:', userEmail);
                 console.log('📧 [SYNC] Email API URL:', emailApiUrl);
+                console.log('📧 [SYNC] Email data:', { planName, amount, currency });
                 
                 const emailResponse = await fetch(emailApiUrl, {
                     method: 'POST',
@@ -200,7 +201,7 @@ export default async function handler(req, res) {
                         name: userEmail.split('@')[0], // Use email prefix as name
                         data: { 
                             planName, 
-                            amount: finalAmount, 
+                            amount: amount, // Use amount from request body
                             currency: currency 
                         }
                     })
