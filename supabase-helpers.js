@@ -707,6 +707,33 @@ async function cancelSubscription() {
 
         console.log('✅ Session token available');
 
+    // First, try to update subscription ID if missing (auto-fix)
+    const updateSubscriptionIdUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3000/api/update-subscription-id'
+        : `${window.location.origin}/api/update-subscription-id`;
+    
+    try {
+        console.log('🔧 Attempting to update subscription ID if missing...');
+        const updateResponse = await fetch(updateSubscriptionIdUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            }
+        });
+        
+        if (updateResponse.ok) {
+            const updateResult = await updateResponse.json();
+            if (updateResult.success && updateResult.subscriptionId) {
+                console.log('✅ Subscription ID updated:', updateResult.subscriptionId);
+            }
+        } else {
+            console.log('⚠️ Could not update subscription ID, will try cancellation anyway');
+        }
+    } catch (updateError) {
+        console.log('⚠️ Error updating subscription ID, will try cancellation anyway:', updateError);
+    }
+
     // Determine API endpoint (use current origin for production, localhost for local dev)
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:3000/api/cancel-subscription'
