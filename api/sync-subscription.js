@@ -40,25 +40,12 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing required fields: amount, currency, or planType' });
         }
         
-        // Reject generated IDs - only accept real subscription IDs from Dodo Payments
+        // Warn if subscription ID looks like a generated ID (but still allow it as fallback)
         if (subscriptionId && subscriptionId.startsWith('sync_')) {
-            console.error('❌ [SYNC] REJECTED: Subscription ID is generated (starts with "sync_")');
-            console.error('❌ [SYNC] Only real Dodo Payments subscription IDs are accepted');
-            return res.status(400).json({ 
-                error: 'Invalid subscription ID',
-                message: 'Subscription ID must be a real Dodo Payments subscription ID, not a generated ID. The webhook should create subscriptions automatically with the correct ID.',
-                hint: 'If you see this error, the webhook should handle subscription creation. Please wait for the webhook to process the payment.'
-            });
-        }
-        
-        // Reject if subscription ID is missing
-        if (!subscriptionId) {
-            console.error('❌ [SYNC] REJECTED: No subscription ID provided');
-            return res.status(400).json({ 
-                error: 'Missing subscription ID',
-                message: 'Subscription ID is required. The webhook should create subscriptions automatically with the correct ID.',
-                hint: 'If you see this error, the webhook should handle subscription creation. Please wait for the webhook to process the payment.'
-            });
+            console.warn('⚠️ [SYNC] WARNING: Subscription ID appears to be generated (starts with "sync_")');
+            console.warn('⚠️ [SYNC] This means the real subscription ID could not be fetched from Dodo Payments');
+            console.warn('⚠️ [SYNC] The webhook should update this with the correct subscription ID when it fires');
+            console.warn('⚠️ [SYNC] Cancellation may not work until the webhook updates the subscription ID');
         }
         
         // Initialize Supabase

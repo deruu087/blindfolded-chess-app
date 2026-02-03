@@ -153,51 +153,107 @@
                             return;
                         }
                         
-                        // Wait for webhook - do NOT sync manually
-                        // The webhook is the only source of truth for subscription creation
-                        console.log('⏳ Waiting for webhook to create subscription...');
-                        console.log('⏳ The webhook will automatically create the subscription with the correct subscription ID');
-                        console.log('⏳ If the webhook has already fired, the subscription should exist');
+                        // Try to sync subscription via API (if webhook didn't fire)
+                        // First, try to get the real subscription ID from Dodo Payments
+                        console.log('🔄 Attempting to sync subscription via API...');
+                        console.log('🔄 First, fetching real subscription ID from Dodo Payments...');
                         
-                        // Check again after a short delay (webhook might be processing)
-                        let checkCount = 0;
-                        const maxChecks = 10; // Check for 10 seconds
+                        // Get payment data from URL or use plan-based amounts (actual Dodo Payments prices)
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const amount = urlParams.get('amount');
+                        const currency = urlParams.get('currency') || 'EUR';
                         
-                        const checkSubscription = async () => {
-                            checkCount++;
-                            console.log(`🔍 Checking for subscription (attempt ${checkCount}/${maxChecks})...`);
+                        // Use plan-based amounts if not in URL (these are the actual Dodo Payments prices)
+                        let finalAmount = amount;
+                        if (!finalAmount) {
+                            finalAmount = planType === 'monthly' ? '3.49' : '8.90';
+                            console.log('💰 Using plan-based amount:', finalAmount, currency);
+                        }
+                        
+                        // Try to get real subscription ID from Dodo Payments API
+                        const getSubscriptionIdUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                            ? 'http://localhost:3000/api/get-subscription-id'
+                            : `${window.location.origin}/api/get-subscription-id`;
+                        
+                        let realSubscriptionId = paymentId; // Fallback to paymentId if fetch fails
+                        
+                        try {
+                            console.log('🔍 Fetching subscription ID from Dodo Payments...');
+                            const subscriptionIdResponse = await fetch(getSubscriptionIdUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    paymentId: paymentId,
+                                    orderId: paymentId
+                                })
+                            });
                             
-                            if (typeof window.getUserSubscription === 'function') {
-                                try {
-                                    const existingSubscription = await window.getUserSubscription();
-                                    
-                                    if (existingSubscription && existingSubscription.status === 'active' && existingSubscription.dodo_subscription_id) {
-                                        console.log('✅ Subscription found with subscription ID:', existingSubscription.dodo_subscription_id);
-                                        document.getElementById('loadingMessage').textContent = 'Subscription activated! Redirecting...';
-                                        localStorage.setItem('cachedSubscriptionStatus', 'true');
-                                        localStorage.setItem('cachedSubscriptionPlan', existingSubscription.plan_type || planType);
-                                        localStorage.removeItem('pendingSubscriptionPlan');
-                                        setTimeout(() => {
-                                            window.location.href = 'profile.html';
-                                        }, 1500);
-                                        return;
-                                    }
-                                } catch (e) {
-                                    console.log('Could not check subscription:', e);
-                                }
-                            }
+                            const subscriptionIdResult = await subscriptionIdResponse.json();
                             
-                            if (checkCount < maxChecks) {
-                                setTimeout(checkSubscription, 1000);
+                            if (subscriptionIdResult.success && subscriptionIdResult.subscriptionId) {
+                                realSubscriptionId = subscriptionIdResult.subscriptionId;
+                                console.log('✅ Got real subscription ID from Dodo Payments:', realSubscriptionId);
                             } else {
-                                console.error('❌ Subscription not created after waiting for webhook');
-                                document.getElementById('loadingMessage').textContent = 'Payment successful! The webhook is processing your subscription. This may take a few moments. Please refresh this page in a minute or check your profile.';
+                                console.warn('⚠️ Could not fetch subscription ID, using payment ID as fallback:', paymentId);
+                                console.warn('⚠️ Webhook should handle this automatically');
+                            }
+                        } catch (subscriptionIdError) {
+                            console.warn('⚠️ Error fetching subscription ID, using payment ID as fallback:', subscriptionIdError);
+                            console.warn('⚠️ Webhook should handle this automatically');
+                        }
+                        
+                        // Call sync API endpoint with real subscription ID (or fallback)
+                        const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                            ? 'http://localhost:3000/api/sync-subscription'
+                            : `${window.location.origin}/api/sync-subscription`;
+                        
+                        try {
+                            const syncResponse = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    userEmail: user.email,
+                                    subscriptionId: realSubscriptionId, // Use real subscription ID if available
+                                    amount: finalAmount,
+                                    currency: currency,
+                                    planType: planType,
+                                    paymentDate: new Date().toISOString()
+                                })
+                            });
+                            
+                            const syncResult = await syncResponse.json();
+                            
+                            if (syncResponse.ok && syncResult.success) {
+                                console.log('✅ Subscription synced successfully:', syncResult);
+                                
+                                // Update cache
+                                localStorage.setItem('cachedSubscriptionStatus', 'true');
+                                localStorage.setItem('cachedSubscriptionPlan', planType);
+                                
+                                // Clear pending subscription
+                                localStorage.removeItem('pendingSubscriptionPlan');
+                                
+                                // Update loading message
+                                document.getElementById('loadingMessage').textContent = 'Subscription activated! Redirecting...';
+                                
+                                // Redirect to profile after 2 seconds
+                                setTimeout(() => {
+                                    window.location.href = 'profile.html';
+                                }, 2000);
+                            } else {
+                                console.error('❌ Sync failed:', syncResult);
+                                document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated by webhook shortly.';
                                 document.getElementById('manualRedirectBtn').style.display = 'inline-block';
                             }
-                        };
-                        
-                        // Start checking
-                        setTimeout(checkSubscription, 1000);
+                        } catch (syncError) {
+                            console.error('❌ Error calling sync API:', syncError);
+                            document.getElementById('loadingMessage').textContent = 'Payment successful! Subscription will be activated by webhook shortly.';
+                            document.getElementById('manualRedirectBtn').style.display = 'inline-block';
+                        }
                     } else {
                         // User not logged in - redirect to sign in
                         document.getElementById('loadingMessage').textContent = 'Please sign in to activate your subscription.';

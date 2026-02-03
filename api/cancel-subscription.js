@@ -91,20 +91,84 @@ export default async function handler(req, res) {
         
         // Check if we have Dodo Payments subscription ID
         // IMPORTANT: Use subscription ID from Subscriptions dashboard, NOT payment ID
-        const dodoSubscriptionId = subscription.dodo_subscription_id;
+        let dodoSubscriptionId = subscription.dodo_subscription_id;
         
         console.log('🔍 Subscription ID from database:', dodoSubscriptionId);
         console.log('🔍 Full subscription object:', JSON.stringify(subscription, null, 2));
         
-        // NO FALLBACKS - Fail if subscription ID is missing
+        // If no subscription ID, try to fetch it from Dodo Payments using payment records
         if (!dodoSubscriptionId) {
-            console.error('❌ Cannot cancel subscription: No subscription ID in database');
-            return res.status(400).json({ 
-                success: false,
-                error: 'Cannot cancel subscription',
-                message: 'Subscription does not have a Dodo Payments subscription ID. The webhook should have created the subscription with the correct ID. Please contact support at hi@memo-chess.com to cancel your subscription.',
-                hint: 'This subscription may have been created before we started storing subscription IDs, or the webhook did not fire correctly. Please contact support for assistance.'
-            });
+            console.warn('⚠️ No Dodo Payments subscription ID found in database');
+            console.log('🔍 Attempting to fetch subscription ID from Dodo Payments using payment records...');
+            
+            if (!dodoApiKey) {
+                console.error('❌ Cannot fetch subscription ID: DODO_PAYMENTS_API_KEY not configured');
+                return res.status(500).json({ 
+                    success: false,
+                    error: 'Server configuration error',
+                    message: 'DODO_PAYMENTS_API_KEY is not configured. Cannot fetch subscription ID or cancel subscription. Please contact support at hi@memo-chess.com',
+                    hint: 'The API key is required to interact with Dodo Payments API.'
+                });
+            }
+            
+            // Get the most recent payment for this user
+            const { data: recentPayment, error: paymentError } = await supabaseAdmin
+                .from('payments')
+                .select('order_id, transaction_id')
+                .eq('user_id', user.id)
+                .order('payment_date', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            
+            if (!paymentError && recentPayment && (recentPayment.order_id || recentPayment.transaction_id)) {
+                const paymentId = recentPayment.order_id || recentPayment.transaction_id;
+                console.log('🔍 Found payment record with ID:', paymentId);
+                
+                // Try to fetch subscription ID from Dodo Payments
+                const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
+                    ? 'https://test.dodopayments.com'
+                    : 'https://live.dodopayments.com';
+                
+                try {
+                    // Try to get subscription ID from payment/order
+                    const getSubscriptionIdUrl = `${apiBaseUrl}/payments/${paymentId}`;
+                    const paymentResponse = await fetch(getSubscriptionIdUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${dodoApiKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (paymentResponse.ok) {
+                        const paymentData = await paymentResponse.json();
+                        dodoSubscriptionId = paymentData.subscription_id || paymentData.subscription?.id;
+                        
+                        if (dodoSubscriptionId) {
+                            console.log('✅ Successfully fetched subscription ID from Dodo Payments:', dodoSubscriptionId);
+                            
+                            // Update subscription with the fetched ID
+                            await supabaseAdmin
+                                .from('subscriptions')
+                                .update({ dodo_subscription_id: dodoSubscriptionId })
+                                .eq('user_id', user.id);
+                        }
+                    }
+                } catch (fetchError) {
+                    console.warn('⚠️ Could not fetch subscription ID from Dodo Payments:', fetchError.message);
+                }
+            }
+            
+            // If still no subscription ID, return error with helpful message
+            if (!dodoSubscriptionId) {
+                console.error('❌ Cannot cancel subscription: No subscription ID available');
+                return res.status(400).json({ 
+                    success: false,
+                    error: 'Cannot cancel subscription',
+                    message: 'Subscription does not have a Dodo Payments subscription ID. This may happen if the subscription was created before we started storing subscription IDs. Please contact support to cancel your subscription, or wait for the webhook to update the subscription ID.',
+                    hint: 'The webhook should automatically update the subscription ID when it processes payment events. You can try again later, or contact support at hi@memo-chess.com'
+                });
+            }
         }
         
         // API key already checked above, log details
