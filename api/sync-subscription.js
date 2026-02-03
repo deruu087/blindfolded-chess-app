@@ -179,7 +179,8 @@ export default async function handler(req, res) {
         // Send subscription confirmation email (NON-BLOCKING)
         console.log('📧 [SYNC] Starting email send process for:', userEmail);
         // Use IIFE to handle async without blocking
-        (async () => {
+        // Store promise to prevent garbage collection
+        const emailPromise = (async () => {
             try {
                 console.log('📧 [SYNC] IIFE executing, preparing email...');
                 const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
@@ -240,6 +241,11 @@ export default async function handler(req, res) {
                 console.warn('⚠️ [SYNC] Email error name:', emailError.name);
             }
         })(); // Execute immediately, don't await
+        
+        // Attach error handler to prevent unhandled rejection
+        emailPromise.catch(err => {
+            console.warn('⚠️ [SYNC] Unhandled email promise rejection:', err.message);
+        });
         
         return res.status(200).json({ 
             success: true, 
