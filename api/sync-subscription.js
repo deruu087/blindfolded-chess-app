@@ -184,6 +184,9 @@ export default async function handler(req, res) {
                 ? `https://${process.env.VERCEL_URL}/api/send-email`
                 : 'https://memo-chess.com/api/send-email';
             
+            console.log('📧 [SYNC] Sending subscription confirmation email to:', userEmail);
+            console.log('📧 [SYNC] Email API URL:', emailApiUrl);
+            
             // Don't await - fire and forget, non-blocking
             fetch(emailApiUrl, {
                 method: 'POST',
@@ -198,10 +201,16 @@ export default async function handler(req, res) {
                         currency: currency 
                     }
                 })
-            }).then(() => {
-                console.log('✅ [SYNC] Subscription confirmation email sent');
+            }).then(async (emailResponse) => {
+                if (emailResponse.ok) {
+                    console.log('✅ [SYNC] Subscription confirmation email sent successfully');
+                } else {
+                    const errorText = await emailResponse.text();
+                    console.warn('⚠️ [SYNC] Email API returned error:', emailResponse.status, errorText);
+                }
             }).catch((emailError) => {
-                console.warn('⚠️ [SYNC] Could not send subscription email (non-critical):', emailError);
+                console.warn('⚠️ [SYNC] Could not send subscription email (non-critical):', emailError.message);
+                console.warn('⚠️ [SYNC] Email error details:', emailError);
             });
         } catch (emailError) {
             // Silently fail - email is optional
