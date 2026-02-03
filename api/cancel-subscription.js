@@ -162,11 +162,15 @@ export default async function handler(req, res) {
             // If still no subscription ID, return error with helpful message
             if (!dodoSubscriptionId) {
                 console.error('❌ Cannot cancel subscription: No subscription ID available');
+                console.error('❌ Subscription details:', JSON.stringify(subscription, null, 2));
+                console.error('❌ Payment records checked:', recentPayment ? 'Found' : 'Not found');
                 return res.status(400).json({ 
                     success: false,
-                    error: 'Cannot cancel subscription',
-                    message: 'Subscription does not have a Dodo Payments subscription ID. This may happen if the subscription was created before we started storing subscription IDs. Please contact support to cancel your subscription, or wait for the webhook to update the subscription ID.',
-                    hint: 'The webhook should automatically update the subscription ID when it processes payment events. You can try again later, or contact support at hi@memo-chess.com'
+                    error: 'Cannot cancel subscription - No subscription ID found',
+                    message: 'Subscription does not have a Dodo Payments subscription ID. This may happen if the subscription was created before we started storing subscription IDs, or if the webhook has not yet processed the payment. Please contact support at hi@memo-chess.com to cancel your subscription manually.',
+                    hint: 'The webhook should automatically update the subscription ID when it processes payment events. You can try again later after the webhook processes, or contact support for immediate assistance.',
+                    subscriptionId: subscription.id,
+                    hasPaymentRecords: !!recentPayment
                 });
             }
         }

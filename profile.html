@@ -3085,8 +3085,11 @@
                         // Reload billing info to show updated status
                         loadBillingInfo();
                     } else {
-                        console.error('🔴 Cancellation failed:', result.error);
-                        alert('Error cancelling subscription: ' + (result.error || 'Unknown error') + '. Please try again or contact support.');
+                        console.error('🔴 Cancellation failed:', result);
+                        console.error('🔴 Error details:', result.details);
+                        // Show more specific error message
+                        const errorMsg = result.error || result.message || 'Unknown error';
+                        alert('Error cancelling subscription: ' + errorMsg + '. Please try again or contact support at hi@memo-chess.com');
                     }
                 } catch (error) {
                     console.error('🔴 Error cancelling subscription:', error);

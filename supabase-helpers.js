@@ -739,7 +739,14 @@ async function cancelSubscription() {
 
         if (!response.ok) {
             console.error('❌ API error:', result);
-            return { success: false, error: result.error || result.message || 'Failed to cancel subscription' };
+            // Return more detailed error message
+            const errorMessage = result.message || result.error || 'Failed to cancel subscription';
+            console.error('❌ Error message:', errorMessage);
+            return { 
+                success: false, 
+                error: errorMessage,
+                details: result // Include full error details for debugging
+            };
         }
 
         console.log('✅ Subscription cancelled successfully!', result);
