@@ -149,12 +149,24 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
+    }
+    
+    // Handle GET requests for health checks (Dodo Payments verification)
+    if (req.method === 'GET') {
+        console.log('🏥 [WEBHOOK] Health check received');
+        return res.status(200).json({ 
+            status: 'ok',
+            message: 'Webhook endpoint is active',
+            endpoint: '/api/dodo-webhook',
+            accepts: ['POST'],
+            timestamp: new Date().toISOString()
+        });
     }
     
     if (req.method !== 'POST') {
