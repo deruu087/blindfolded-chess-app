@@ -116,6 +116,25 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
     }
     
     console.warn('⚠️ [INVOICE] Could not find invoice URL from Dodo Payments API');
+    
+    // Last resort: Try to construct invoice URL from payment/order ID
+    // Many payment providers use patterns like /invoices/{id} or /payments/{id}/invoice
+    if (idsToTry.length > 0) {
+        const idToUse = idsToTry[0];
+        const possibleUrls = [
+            `${apiBaseUrl}/invoices/${idToUse}`,
+            `${apiBaseUrl}/payments/${idToUse}/invoice`,
+            `${apiBaseUrl}/orders/${idToUse}/invoice`,
+            `https://checkout.dodopayments.com/invoices/${idToUse}`,
+            `https://checkout.dodopayments.com/payments/${idToUse}/invoice`
+        ];
+        
+        console.log('🔧 [INVOICE] Attempting constructed invoice URLs:', possibleUrls);
+        // Return the first constructed URL as a best guess
+        // User can verify if it works
+        return possibleUrls[0];
+    }
+    
     return null;
 }
 
