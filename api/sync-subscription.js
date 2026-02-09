@@ -205,6 +205,14 @@ export default async function handler(req, res) {
             console.log('⚠️ [SYNC] Using generated subscription ID, skipping invoice URL construction');
         }
         
+        // Extract payment_id if we found one
+        let extractedPaymentId = null;
+        if (subscriptionId && subscriptionId.startsWith('pay_')) {
+            extractedPaymentId = subscriptionId;
+        } else if (paymentId && paymentId.startsWith('pay_')) {
+            extractedPaymentId = paymentId;
+        }
+        
         // Create payment record
         const paymentData = {
             user_id: userId,
@@ -214,11 +222,18 @@ export default async function handler(req, res) {
             status: 'paid',
             payment_date: paymentDate || new Date().toISOString(),
             invoice_url: invoiceUrl, // Use fetched invoice URL or fallback
+            payment_id: extractedPaymentId, // Store Dodo Payments payment ID
             order_id: subscriptionId || `sync_${Date.now()}`,
             transaction_id: subscriptionId || `sync_${Date.now()}`,
             payment_method: 'dodo_payments',
             description: `${planType} subscription payment`
         };
+        
+        if (extractedPaymentId) {
+            console.log('✅ [SYNC] Storing payment_id:', extractedPaymentId);
+        } else {
+            console.log('⚠️ [SYNC] No payment_id found in format pay_XXX');
+        }
         
         console.log('📝 [SYNC] Creating payment record:', paymentData);
         

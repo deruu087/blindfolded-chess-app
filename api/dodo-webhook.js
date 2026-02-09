@@ -560,6 +560,15 @@ export default async function handler(req, res) {
                         console.log('⚠️ [WEBHOOK] Using fallback invoice URL (account page)');
                     }
                     
+                    // Extract payment_id (should be in format pay_XXX)
+                    const extractedPaymentId = paymentId && paymentId.startsWith('pay_') 
+                        ? paymentId 
+                        : (data.payment_id && data.payment_id.startsWith('pay_') 
+                            ? data.payment_id 
+                            : (data.id && data.id.startsWith('pay_') 
+                                ? data.id 
+                                : null));
+                    
                     const paymentData = {
                         user_id: userId,
                         email: customerEmail, // Add email for easier querying
@@ -568,11 +577,18 @@ export default async function handler(req, res) {
                         status: 'paid',
                         payment_date: data.created_at || data.previous_billing_date || data.payment_date || new Date().toISOString(),
                         invoice_url: finalInvoiceUrl, // Use the fetched/extracted invoice URL
+                        payment_id: extractedPaymentId, // Store Dodo Payments payment ID
                         order_id: subscriptionId,
                         transaction_id: subscriptionId,
                         payment_method: 'dodo_payments',
                         description: `${planType} subscription payment`
                     };
+                    
+                    if (extractedPaymentId) {
+                        console.log('✅ [WEBHOOK] Storing payment_id:', extractedPaymentId);
+                    } else {
+                        console.log('⚠️ [WEBHOOK] No payment_id found in format pay_XXX');
+                    }
                     
                     const { data: payment, error: paymentError } = await supabase
                         .from('payments')
