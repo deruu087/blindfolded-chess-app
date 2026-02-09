@@ -144,6 +144,7 @@ export default async function handler(req, res) {
         // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
         // Format: https://test.dodopayments.com/invoices/payments/pay_XXX
         let invoiceUrl = `https://checkout.dodopayments.com/account`; // Default fallback
+        let paymentId = null; // Declare outside if block so it's always available
         
         if (subscriptionId && !subscriptionId.startsWith('sync_')) {
             // Only try if we have a real subscription ID (not a generated one)
@@ -156,7 +157,6 @@ export default async function handler(req, res) {
                 console.log('🔍 [SYNC] Attempting to get payment ID for invoice URL...');
                 
                 // Try to get payment ID from payments endpoint
-                let paymentId = null;
                 try {
                     const paymentUrl = `${apiBaseUrl}/payments/${subscriptionId}`;
                     const response = await fetch(paymentUrl, {
