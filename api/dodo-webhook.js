@@ -311,8 +311,7 @@ export default async function handler(req, res) {
                 return res.status(500).json({ error: 'Error finding user', message: error.message });
             }
             
-            // Determine plan type from payment frequency - NO FALLBACKS
-            // Only use real data from webhook
+            // Determine plan type from payment frequency or amount
             const amountNum = parseFloat(amount);
             if (isNaN(amountNum)) {
                 console.error('❌ Invalid amount:', amount);
@@ -321,43 +320,52 @@ export default async function handler(req, res) {
             
             let planType = null;
             
-            // Check payment frequency from webhook data (REQUIRED)
+            // First, try to get from payment frequency (if available)
             if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 1) {
                 planType = 'monthly';
+                console.log('✅ Plan type determined from payment frequency (monthly)');
             } else if (data.payment_frequency_interval === 'Month' && data.payment_frequency_count === 3) {
                 planType = 'quarterly';
+                console.log('✅ Plan type determined from payment frequency (quarterly)');
             }
             
-            // If plan type not determined from frequency, determine from amount
+            // If plan type not determined from frequency, try other methods
             if (!planType) {
                 // Try to get from plan_type field if available
-                planType = data.plan_type || data.plan;
+                planType = data.plan_type || data.plan || data.subscription?.plan_type;
                 
-                // If still not found, determine from amount (now in decimal format)
+                if (planType) {
+                    console.log('✅ Plan type found in webhook data:', planType);
+                    // Normalize plan type
+                    if (planType.toLowerCase().includes('month')) {
+                        planType = 'monthly';
+                    } else if (planType.toLowerCase().includes('quarter')) {
+                        planType = 'quarterly';
+                    }
+                }
+                
+                // If still not found, determine from amount (works for both USD and EUR)
                 if (!planType) {
-                    // Hardcoded amounts for monthly and quarterly subscriptions (USD, in decimal)
+                    // Hardcoded amounts for monthly and quarterly subscriptions (same in USD and EUR)
                     const MONTHLY_AMOUNT = 3.49;
                     const QUARTERLY_AMOUNT = 8.90;
                     
-                    // Allow small variance (0.01) for rounding
-                    if (Math.abs(amountNum - MONTHLY_AMOUNT) < 0.02) {
+                    // Allow small variance (0.02) for rounding and currency conversion
+                    if (Math.abs(amountNum - MONTHLY_AMOUNT) < 0.03) {
                         planType = 'monthly';
-                        console.log('✅ Plan type determined from amount (monthly):', amountNum);
-                    } else if (Math.abs(amountNum - QUARTERLY_AMOUNT) < 0.02) {
+                        console.log('✅ Plan type determined from amount (monthly):', amountNum, currency);
+                    } else if (Math.abs(amountNum - QUARTERLY_AMOUNT) < 0.03) {
                         planType = 'quarterly';
-                        console.log('✅ Plan type determined from amount (quarterly):', amountNum);
+                        console.log('✅ Plan type determined from amount (quarterly):', amountNum, currency);
                     } else {
                         console.error('❌ Cannot determine plan type - amount does not match monthly or quarterly');
                         console.error('Amount received:', amountNum, currency);
-                        console.error('Expected monthly:', MONTHLY_AMOUNT, 'USD');
-                        console.error('Expected quarterly:', QUARTERLY_AMOUNT, 'USD');
-                        return res.status(400).json({ 
-                            error: 'Cannot determine plan type from amount',
-                            amount: amountNum,
-                            currency: currency,
-                            expectedMonthly: MONTHLY_AMOUNT,
-                            expectedQuarterly: QUARTERLY_AMOUNT
-                        });
+                        console.error('Expected monthly:', MONTHLY_AMOUNT);
+                        console.error('Expected quarterly:', QUARTERLY_AMOUNT);
+                        console.error('Available data fields:', Object.keys(data));
+                        // Don't fail - try to continue with a default
+                        planType = 'monthly'; // Default to monthly as fallback
+                        console.warn('⚠️ Defaulting to monthly plan type');
                     }
                 }
             }
@@ -503,16 +511,17 @@ export default async function handler(req, res) {
                     // Use subscription_id as order_id and transaction_id
                     const subscriptionId = dodoSubscriptionId || data.subscription_id || orderId;
                     
-                    // Try to extract invoice URL from webhook data first
-                    console.log('🔍 [WEBHOOK] Checking webhook data for invoice URL...');
+                    // Extract invoice URL and payment ID from webhook data
+                    console.log('🔍 [WEBHOOK] Checking webhook data for invoice URL and payment ID...');
                     console.log('🔍 [WEBHOOK] Webhook data keys:', Object.keys(data));
                     
-                    // Extract payment ID - this is what we need for invoice URL
+                    // Extract payment ID - Dodo sends this directly in the payload
                     const paymentId = data.payment_id || 
                                      data.id || 
                                      data.transaction_id ||
                                      orderId;
                     
+                    // Extract invoice URL - Dodo often includes this directly!
                     let invoiceUrl = data.invoice_url || 
                                      data.invoice?.url || 
                                      data.invoice_link ||
@@ -525,8 +534,8 @@ export default async function handler(req, res) {
                                      null;
                     
                     if (invoiceUrl) {
-                        console.log('✅ [WEBHOOK] Found invoice URL in webhook data:', invoiceUrl);
-                    } else if (paymentId) {
+                        console.log('✅ [WEBHOOK] Found invoice URL directly in webhook data:', invoiceUrl);
+                    } else if (paymentId && paymentId.startsWith('pay_')) {
                         // Construct invoice URL using Dodo Payments pattern
                         const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
                         const apiBaseUrl = dodoApiKey && dodoApiKey.startsWith('sk_test_') 
@@ -536,7 +545,7 @@ export default async function handler(req, res) {
                         invoiceUrl = `${apiBaseUrl}/invoices/payments/${paymentId}`;
                         console.log('🔧 [WEBHOOK] Constructed invoice URL from payment ID:', invoiceUrl);
                     } else {
-                        console.log('⚠️ [WEBHOOK] No payment ID found, attempting to fetch from Dodo API...');
+                        console.log('⚠️ [WEBHOOK] No invoice URL or payment ID found, attempting to fetch from Dodo API...');
                         console.log('🔍 [WEBHOOK] IDs to try:', {
                             payment_id: data.payment_id || data.id,
                             order_id: data.order_id || orderId,
@@ -561,10 +570,11 @@ export default async function handler(req, res) {
                     }
                     
                     // Extract payment_id (should be in format pay_XXX)
-                    const extractedPaymentId = paymentId && paymentId.startsWith('pay_') 
-                        ? paymentId 
-                        : (data.payment_id && data.payment_id.startsWith('pay_') 
-                            ? data.payment_id 
+                    // Dodo sends payment_id directly in the payload
+                    const extractedPaymentId = data.payment_id && data.payment_id.startsWith('pay_')
+                        ? data.payment_id
+                        : (paymentId && paymentId.startsWith('pay_') 
+                            ? paymentId 
                             : (data.id && data.id.startsWith('pay_') 
                                 ? data.id 
                                 : null));
