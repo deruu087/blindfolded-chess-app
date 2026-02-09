@@ -6,5 +6,19 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/api/dodo-webhook",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.memo-chess.com"
+        }
+      ],
+      "destination": "https://memo-chess.com/api/dodo-webhook",
+      "permanent": false,
+      "statusCode": 307
+    }
   ]
 }
