@@ -117,22 +117,30 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
     
     console.warn('⚠️ [INVOICE] Could not find invoice URL from Dodo Payments API');
     
-    // Last resort: Try to construct invoice URL from payment/order ID
-    // Many payment providers use patterns like /invoices/{id} or /payments/{id}/invoice
+    // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
+    // Format: https://test.dodopayments.com/invoices/payments/pay_XXX
+    // or: https://live.dodopayments.com/invoices/payments/pay_XXX
     if (idsToTry.length > 0) {
         const idToUse = idsToTry[0];
-        const possibleUrls = [
-            `${apiBaseUrl}/invoices/${idToUse}`,
-            `${apiBaseUrl}/payments/${idToUse}/invoice`,
-            `${apiBaseUrl}/orders/${idToUse}/invoice`,
-            `https://checkout.dodopayments.com/invoices/${idToUse}`,
-            `https://checkout.dodopayments.com/payments/${idToUse}/invoice`
-        ];
         
-        console.log('🔧 [INVOICE] Attempting constructed invoice URLs:', possibleUrls);
-        // Return the first constructed URL as a best guess
-        // User can verify if it works
-        return possibleUrls[0];
+        // Check if ID looks like a payment ID (starts with pay_)
+        // If not, try to find a payment ID in the responses we got
+        let paymentId = idToUse;
+        
+        // If ID doesn't start with pay_, it might be a subscription/order ID
+        // We'll still try to construct the URL, but it might not work
+        if (!paymentId.startsWith('pay_')) {
+            console.log('⚠️ [INVOICE] ID does not look like a payment ID (pay_XXX), but constructing URL anyway');
+        }
+        
+        // Use checkout.dodopayments.com domain (not API domain)
+        const checkoutDomain = apiBaseUrl.includes('test') 
+            ? 'https://test.dodopayments.com'
+            : 'https://live.dodopayments.com';
+        
+        const constructedUrl = `${checkoutDomain}/invoices/payments/${paymentId}`;
+        console.log('🔧 [INVOICE] Constructing invoice URL using Dodo pattern:', constructedUrl);
+        return constructedUrl;
     }
     
     return null;
@@ -499,6 +507,12 @@ export default async function handler(req, res) {
                     console.log('🔍 [WEBHOOK] Checking webhook data for invoice URL...');
                     console.log('🔍 [WEBHOOK] Webhook data keys:', Object.keys(data));
                     
+                    // Extract payment ID - this is what we need for invoice URL
+                    const paymentId = data.payment_id || 
+                                     data.id || 
+                                     data.transaction_id ||
+                                     orderId;
+                    
                     let invoiceUrl = data.invoice_url || 
                                      data.invoice?.url || 
                                      data.invoice_link ||
@@ -512,9 +526,17 @@ export default async function handler(req, res) {
                     
                     if (invoiceUrl) {
                         console.log('✅ [WEBHOOK] Found invoice URL in webhook data:', invoiceUrl);
+                    } else if (paymentId) {
+                        // Construct invoice URL using Dodo Payments pattern
+                        const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+                        const apiBaseUrl = dodoApiKey && dodoApiKey.startsWith('sk_test_') 
+                            ? 'https://test.dodopayments.com'
+                            : 'https://live.dodopayments.com';
+                        
+                        invoiceUrl = `${apiBaseUrl}/invoices/payments/${paymentId}`;
+                        console.log('🔧 [WEBHOOK] Constructed invoice URL from payment ID:', invoiceUrl);
                     } else {
-                        console.log('⚠️ [WEBHOOK] No invoice URL in webhook data');
-                        console.log('🔍 [WEBHOOK] Attempting to fetch from Dodo API...');
+                        console.log('⚠️ [WEBHOOK] No payment ID found, attempting to fetch from Dodo API...');
                         console.log('🔍 [WEBHOOK] IDs to try:', {
                             payment_id: data.payment_id || data.id,
                             order_id: data.order_id || orderId,

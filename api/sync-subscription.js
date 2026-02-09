@@ -141,20 +141,22 @@ export default async function handler(req, res) {
         
         console.log('✅ [SYNC] Subscription created/updated:', subscription);
         
-        // Fetch invoice URL from Dodo Payments API if we have a real subscription ID
+        // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
+        // Format: https://test.dodopayments.com/invoices/payments/pay_XXX
         let invoiceUrl = `https://checkout.dodopayments.com/account`; // Default fallback
         
         if (subscriptionId && !subscriptionId.startsWith('sync_')) {
-            // Only try to fetch if we have a real subscription ID (not a generated one)
+            // Only try if we have a real subscription ID (not a generated one)
             const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
             if (dodoApiKey) {
                 const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
                     ? 'https://test.dodopayments.com'
                     : 'https://live.dodopayments.com';
                 
-                console.log('🔍 [SYNC] Attempting to fetch invoice URL from Dodo Payments API...');
+                console.log('🔍 [SYNC] Attempting to get payment ID for invoice URL...');
                 
-                // Try payments endpoint
+                // Try to get payment ID from payments endpoint
+                let paymentId = null;
                 try {
                     const paymentUrl = `${apiBaseUrl}/payments/${subscriptionId}`;
                     const response = await fetch(paymentUrl, {
@@ -167,57 +169,40 @@ export default async function handler(req, res) {
                     
                     if (response.ok) {
                         const paymentData = await response.json();
-                        const foundInvoiceUrl = paymentData.invoice_url || 
-                                               paymentData.invoice?.url ||
-                                               paymentData.invoice_link ||
-                                               paymentData.receipt_url ||
-                                               paymentData.receipt?.url ||
-                                               paymentData.payment_url ||
-                                               paymentData.download_url;
+                        // Payment ID might be in the response as 'id' or 'payment_id'
+                        paymentId = paymentData.id || paymentData.payment_id;
                         
-                        if (foundInvoiceUrl) {
-                            invoiceUrl = foundInvoiceUrl;
-                            console.log('✅ [SYNC] Found invoice URL:', invoiceUrl);
+                        if (paymentId && paymentId.startsWith('pay_')) {
+                            // Construct invoice URL using Dodo pattern
+                            invoiceUrl = `${apiBaseUrl}/invoices/payments/${paymentId}`;
+                            console.log('✅ [SYNC] Constructed invoice URL:', invoiceUrl);
                         } else {
-                            console.log('⚠️ [SYNC] Payment data retrieved but no invoice URL found');
+                            // If subscriptionId itself looks like a payment ID, use it
+                            if (subscriptionId.startsWith('pay_')) {
+                                invoiceUrl = `${apiBaseUrl}/invoices/payments/${subscriptionId}`;
+                                console.log('✅ [SYNC] Using subscription ID as payment ID for invoice URL:', invoiceUrl);
+                            } else {
+                                console.log('⚠️ [SYNC] Could not determine payment ID for invoice URL');
+                            }
                         }
                     } else {
-                        // Try orders endpoint as fallback
-                        try {
-                            const orderUrl = `${apiBaseUrl}/orders/${subscriptionId}`;
-                            const orderResponse = await fetch(orderUrl, {
-                                method: 'GET',
-                                headers: {
-                                    'Authorization': `Bearer ${dodoApiKey}`,
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-                            
-                            if (orderResponse.ok) {
-                                const orderData = await orderResponse.json();
-                                const foundInvoiceUrl = orderData.invoice_url || 
-                                                       orderData.invoice?.url ||
-                                                       orderData.invoice_link ||
-                                                       orderData.receipt_url ||
-                                                       orderData.receipt?.url ||
-                                                       orderData.payment_url ||
-                                                       orderData.download_url;
-                                
-                                if (foundInvoiceUrl) {
-                                    invoiceUrl = foundInvoiceUrl;
-                                    console.log('✅ [SYNC] Found invoice URL from orders endpoint:', invoiceUrl);
-                                }
-                            }
-                        } catch (orderError) {
-                            console.warn('⚠️ [SYNC] Could not fetch from orders endpoint:', orderError.message);
+                        // If subscriptionId looks like a payment ID, use it directly
+                        if (subscriptionId.startsWith('pay_')) {
+                            invoiceUrl = `${apiBaseUrl}/invoices/payments/${subscriptionId}`;
+                            console.log('✅ [SYNC] Using subscription ID as payment ID for invoice URL:', invoiceUrl);
                         }
                     }
                 } catch (error) {
-                    console.warn('⚠️ [SYNC] Could not fetch invoice URL:', error.message);
+                    console.warn('⚠️ [SYNC] Could not fetch payment data:', error.message);
+                    // If subscriptionId looks like a payment ID, use it directly
+                    if (subscriptionId.startsWith('pay_')) {
+                        invoiceUrl = `${apiBaseUrl}/invoices/payments/${subscriptionId}`;
+                        console.log('✅ [SYNC] Using subscription ID as payment ID for invoice URL (fallback):', invoiceUrl);
+                    }
                 }
             }
         } else {
-            console.log('⚠️ [SYNC] Using generated subscription ID, skipping invoice URL fetch');
+            console.log('⚠️ [SYNC] Using generated subscription ID, skipping invoice URL construction');
         }
         
         // Create payment record

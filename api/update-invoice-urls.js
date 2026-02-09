@@ -91,12 +91,26 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
         }
     }
     
-    // Try to construct invoice URL
+    // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
+    // Format: https://test.dodopayments.com/invoices/payments/pay_XXX
     if (idsToTry.length > 0) {
         const idToUse = idsToTry[0];
-        const constructedUrl = `${apiBaseUrl}/invoices/${idToUse}`;
-        console.log('🔧 [INVOICE] Using constructed URL:', constructedUrl);
-        return constructedUrl;
+        
+        // Use checkout.dodopayments.com domain (not API domain)
+        const checkoutDomain = apiBaseUrl.includes('test') 
+            ? 'https://test.dodopayments.com'
+            : 'https://live.dodopayments.com';
+        
+        // If ID looks like a payment ID (starts with pay_), use it directly
+        if (idToUse.startsWith('pay_')) {
+            const constructedUrl = `${checkoutDomain}/invoices/payments/${idToUse}`;
+            console.log('🔧 [INVOICE] Constructed invoice URL:', constructedUrl);
+            return constructedUrl;
+        } else {
+            // Try to find payment ID in the API responses we already got
+            // If we have a payment ID from earlier, use it
+            console.log('⚠️ [INVOICE] ID does not look like payment ID, cannot construct invoice URL');
+        }
     }
     
     return null;
