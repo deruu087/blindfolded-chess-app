@@ -7,18 +7,17 @@
       "dest": "/$1"
     }
   ],
-  "redirects": [
+  "rewrites": [
     {
       "source": "/api/dodo-webhook",
       "has": [
         {
           "type": "host",
-          "value": "www.memo-chess.com"
+          "value": "memo-chess.com"
         }
       ],
-      "destination": "https://memo-chess.com/api/dodo-webhook",
-      "permanent": false,
-      "statusCode": 307
+      "destination": "/api/dodo-webhook",
+      "statusCode": 200
     }
   ]
 }
