@@ -4,6 +4,95 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmailDirect } from './email-helpers.js';
 
+/**
+ * Helper function to get invoice URL from Dodo Payments API
+ * Tries multiple endpoints and field names to find the invoice URL
+ */
+async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
+    const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+    if (!dodoApiKey) {
+        console.warn('⚠️ [INVOICE] DODO_PAYMENTS_API_KEY not configured, cannot fetch invoice URL');
+        return null;
+    }
+    
+    const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
+        ? 'https://test.dodopayments.com'
+        : 'https://live.dodopayments.com';
+    
+    // Try multiple IDs in order of preference
+    const idsToTry = [paymentId, orderId, subscriptionId].filter(Boolean);
+    
+    for (const id of idsToTry) {
+        // Try payments endpoint
+        try {
+            const paymentUrl = `${apiBaseUrl}/payments/${id}`;
+            const response = await fetch(paymentUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${dodoApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const paymentData = await response.json();
+                
+                // Try various possible field names for invoice URL
+                const invoiceUrl = paymentData.invoice_url || 
+                                   paymentData.invoice?.url ||
+                                   paymentData.invoice_link ||
+                                   paymentData.receipt_url ||
+                                   paymentData.receipt?.url ||
+                                   paymentData.payment_url ||
+                                   paymentData.download_url ||
+                                   paymentData.url;
+                
+                if (invoiceUrl) {
+                    console.log('✅ [INVOICE] Found invoice URL from payments endpoint:', invoiceUrl);
+                    return invoiceUrl;
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [INVOICE] Error fetching from payments endpoint:', error.message);
+        }
+        
+        // Try orders endpoint
+        try {
+            const orderUrl = `${apiBaseUrl}/orders/${id}`;
+            const response = await fetch(orderUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${dodoApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const orderData = await response.json();
+                
+                const invoiceUrl = orderData.invoice_url || 
+                                   orderData.invoice?.url ||
+                                   orderData.invoice_link ||
+                                   orderData.receipt_url ||
+                                   orderData.receipt?.url ||
+                                   orderData.payment_url ||
+                                   orderData.download_url ||
+                                   orderData.url;
+                
+                if (invoiceUrl) {
+                    console.log('✅ [INVOICE] Found invoice URL from orders endpoint:', invoiceUrl);
+                    return invoiceUrl;
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ [INVOICE] Error fetching from orders endpoint:', error.message);
+        }
+    }
+    
+    console.warn('⚠️ [INVOICE] Could not find invoice URL from Dodo Payments API');
+    return null;
+}
+
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -360,6 +449,37 @@ export default async function handler(req, res) {
                     // Insert payment record into payments table
                     // Use subscription_id as order_id and transaction_id
                     const subscriptionId = dodoSubscriptionId || data.subscription_id || orderId;
+                    
+                    // Try to extract invoice URL from webhook data first
+                    let invoiceUrl = data.invoice_url || 
+                                     data.invoice?.url || 
+                                     data.invoice_link ||
+                                     data.receipt_url ||
+                                     data.receipt?.url ||
+                                     data.payment_url ||
+                                     null;
+                    
+                    if (invoiceUrl) {
+                        console.log('✅ [WEBHOOK] Found invoice URL in webhook data:', invoiceUrl);
+                    } else {
+                        console.log('⚠️ [WEBHOOK] No invoice URL in webhook, fetching from Dodo API...');
+                        // Fetch from Dodo Payments API
+                        invoiceUrl = await getInvoiceUrlFromDodo(
+                            data.payment_id || data.id,
+                            data.order_id || orderId,
+                            subscriptionId
+                        );
+                    }
+                    
+                    // Use fetched invoice URL or fallback to account page
+                    const finalInvoiceUrl = invoiceUrl || `https://checkout.dodopayments.com/account`;
+                    
+                    if (invoiceUrl) {
+                        console.log('✅ [WEBHOOK] Using invoice URL:', finalInvoiceUrl);
+                    } else {
+                        console.log('⚠️ [WEBHOOK] Using fallback invoice URL (account page)');
+                    }
+                    
                     const paymentData = {
                         user_id: userId,
                         email: customerEmail, // Add email for easier querying
@@ -367,7 +487,7 @@ export default async function handler(req, res) {
                         currency: currency,
                         status: 'paid',
                         payment_date: data.created_at || data.previous_billing_date || data.payment_date || new Date().toISOString(),
-                        invoice_url: `https://checkout.dodopayments.com/account`,
+                        invoice_url: finalInvoiceUrl, // Use the fetched/extracted invoice URL
                         order_id: subscriptionId,
                         transaction_id: subscriptionId,
                         payment_method: 'dodo_payments',
