@@ -160,12 +160,17 @@ export default async function handler(req, res) {
     // Handle GET requests for health checks (Dodo Payments verification)
     if (req.method === 'GET') {
         console.log('🏥 [WEBHOOK] Health check received');
+        console.log('🏥 [WEBHOOK] Request URL:', req.url);
+        console.log('🏥 [WEBHOOK] Request headers:', JSON.stringify(req.headers, null, 2));
+        console.log('🏥 [WEBHOOK] Host:', req.headers.host);
         return res.status(200).json({ 
             status: 'ok',
             message: 'Webhook endpoint is active',
             endpoint: '/api/dodo-webhook',
             accepts: ['POST'],
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            requestUrl: req.url,
+            host: req.headers.host
         });
     }
     
