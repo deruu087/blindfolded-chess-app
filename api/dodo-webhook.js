@@ -36,6 +36,8 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
             
             if (response.ok) {
                 const paymentData = await response.json();
+                console.log('📄 [INVOICE] Payment data from API:', JSON.stringify(paymentData, null, 2));
+                console.log('📄 [INVOICE] Payment data keys:', Object.keys(paymentData));
                 
                 // Try various possible field names for invoice URL
                 const invoiceUrl = paymentData.invoice_url || 
@@ -45,12 +47,26 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
                                    paymentData.receipt?.url ||
                                    paymentData.payment_url ||
                                    paymentData.download_url ||
-                                   paymentData.url;
+                                   paymentData.url ||
+                                   paymentData.invoice_pdf_url ||
+                                   paymentData.receipt_pdf_url ||
+                                   paymentData.checkout_url;
                 
                 if (invoiceUrl) {
                     console.log('✅ [INVOICE] Found invoice URL from payments endpoint:', invoiceUrl);
                     return invoiceUrl;
+                } else {
+                    console.log('⚠️ [INVOICE] No invoice URL found in payment data. Available fields:', Object.keys(paymentData));
+                    // Try to construct invoice URL if we have an ID
+                    if (id) {
+                        const constructedUrl = `${apiBaseUrl}/invoices/${id}`;
+                        console.log('🔧 [INVOICE] Attempting constructed URL:', constructedUrl);
+                        // Don't return constructed URL yet - we'll verify it exists
+                    }
                 }
+            } else {
+                const errorText = await response.text();
+                console.log('⚠️ [INVOICE] Payments endpoint returned error:', response.status, errorText);
             }
         } catch (error) {
             console.warn('⚠️ [INVOICE] Error fetching from payments endpoint:', error.message);
@@ -69,6 +85,8 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
             
             if (response.ok) {
                 const orderData = await response.json();
+                console.log('📄 [INVOICE] Order data from API:', JSON.stringify(orderData, null, 2));
+                console.log('📄 [INVOICE] Order data keys:', Object.keys(orderData));
                 
                 const invoiceUrl = orderData.invoice_url || 
                                    orderData.invoice?.url ||
@@ -77,12 +95,20 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
                                    orderData.receipt?.url ||
                                    orderData.payment_url ||
                                    orderData.download_url ||
-                                   orderData.url;
+                                   orderData.url ||
+                                   orderData.invoice_pdf_url ||
+                                   orderData.receipt_pdf_url ||
+                                   orderData.checkout_url;
                 
                 if (invoiceUrl) {
                     console.log('✅ [INVOICE] Found invoice URL from orders endpoint:', invoiceUrl);
                     return invoiceUrl;
+                } else {
+                    console.log('⚠️ [INVOICE] No invoice URL found in order data. Available fields:', Object.keys(orderData));
                 }
+            } else {
+                const errorText = await response.text();
+                console.log('⚠️ [INVOICE] Orders endpoint returned error:', response.status, errorText);
             }
         } catch (error) {
             console.warn('⚠️ [INVOICE] Error fetching from orders endpoint:', error.message);
@@ -451,18 +477,31 @@ export default async function handler(req, res) {
                     const subscriptionId = dodoSubscriptionId || data.subscription_id || orderId;
                     
                     // Try to extract invoice URL from webhook data first
+                    console.log('🔍 [WEBHOOK] Checking webhook data for invoice URL...');
+                    console.log('🔍 [WEBHOOK] Webhook data keys:', Object.keys(data));
+                    
                     let invoiceUrl = data.invoice_url || 
                                      data.invoice?.url || 
                                      data.invoice_link ||
                                      data.receipt_url ||
                                      data.receipt?.url ||
                                      data.payment_url ||
+                                     data.checkout_url ||
+                                     data.invoice_pdf_url ||
+                                     data.receipt_pdf_url ||
                                      null;
                     
                     if (invoiceUrl) {
                         console.log('✅ [WEBHOOK] Found invoice URL in webhook data:', invoiceUrl);
                     } else {
-                        console.log('⚠️ [WEBHOOK] No invoice URL in webhook, fetching from Dodo API...');
+                        console.log('⚠️ [WEBHOOK] No invoice URL in webhook data');
+                        console.log('🔍 [WEBHOOK] Attempting to fetch from Dodo API...');
+                        console.log('🔍 [WEBHOOK] IDs to try:', {
+                            payment_id: data.payment_id || data.id,
+                            order_id: data.order_id || orderId,
+                            subscription_id: subscriptionId
+                        });
+                        
                         // Fetch from Dodo Payments API
                         invoiceUrl = await getInvoiceUrlFromDodo(
                             data.payment_id || data.id,
