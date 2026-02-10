@@ -281,18 +281,32 @@ export default async function handler(req, res) {
         };
         
         if (extractedPaymentId) {
-            // Use upsert with payment_id as unique constraint
-            const { data: upserted, error: upsertError } = await supabase
+            // Try to find existing payment first
+            const { data: existing } = await supabase
                 .from('payments')
-                .upsert(upsertData, {
-                    onConflict: 'payment_id',
-                    ignoreDuplicates: false
-                })
-                .select()
-                .single();
+                .select('*')
+                .eq('payment_id', extractedPaymentId)
+                .eq('user_id', userId)
+                .maybeSingle();
             
-            if (upsertError) {
-                // Fallback to insert (might fail if duplicate, handle it)
+            if (existing) {
+                // Update existing payment
+                const { data: updated, error: updateError } = await supabase
+                    .from('payments')
+                    .update(upsertData)
+                    .eq('id', existing.id)
+                    .select()
+                    .single();
+                
+                if (updateError) {
+                    console.error('⚠️ Error updating payment record:', updateError);
+                    payment = existing; // Use existing if update fails
+                } else {
+                    payment = updated;
+                    console.log('✅ [SYNC] Payment record updated:', payment);
+                }
+            } else {
+                // Insert new payment
                 const { data: inserted, error: insertError } = await supabase
                     .from('payments')
                     .insert(paymentData)
@@ -300,25 +314,26 @@ export default async function handler(req, res) {
                     .single();
                 
                 if (insertError) {
-                    // Check if it's a duplicate error
+                    // Check if it's a duplicate error (unique constraint violation)
                     if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
                         console.log('🔄 [SYNC] Duplicate payment detected, fetching existing...');
-                        const { data: existing } = await supabase
+                        // Fetch existing payment
+                        const { data: existingAfterInsert } = await supabase
                             .from('payments')
                             .select('*')
                             .eq('payment_id', extractedPaymentId)
                             .eq('user_id', userId)
                             .single();
                         
-                        if (existing) {
+                        if (existingAfterInsert) {
                             // Update existing with better data
                             const { data: updated } = await supabase
                                 .from('payments')
                                 .update(upsertData)
-                                .eq('id', existing.id)
+                                .eq('id', existingAfterInsert.id)
                                 .select()
                                 .single();
-                            payment = updated || existing;
+                            payment = updated || existingAfterInsert;
                             console.log('✅ [SYNC] Payment record updated (duplicate handled):', payment);
                         } else {
                             console.error('⚠️ Duplicate error but could not find existing payment:', insertError);
@@ -342,9 +357,6 @@ export default async function handler(req, res) {
                     payment = inserted;
                     console.log('✅ [SYNC] Payment record created:', payment);
                 }
-            } else {
-                payment = upserted;
-                console.log('✅ [SYNC] Payment record upserted:', payment);
             }
         } else {
             // For payments without payment_id, use manual check and insert with duplicate handling

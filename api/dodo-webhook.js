@@ -668,15 +668,72 @@ export default async function handler(req, res) {
                     }
                     
                     if (conflictTarget === 'payment_id') {
-                        // Upsert using payment_id as unique constraint
-                        const { data: upserted, error: upsertError } = await supabase
+                        // Try to find existing payment first
+                        const { data: existing } = await supabase
                             .from('payments')
-                            .upsert(upsertData, {
-                                onConflict: 'payment_id',
-                                ignoreDuplicates: false
-                            })
-                            .select()
-                            .single();
+                            .select('*')
+                            .eq('payment_id', extractedPaymentId)
+                            .eq('user_id', userId)
+                            .maybeSingle();
+                        
+                        let payment;
+                        if (existing) {
+                            // Update existing payment
+                            const { data: updated, error: updateError } = await supabase
+                                .from('payments')
+                                .update(upsertData)
+                                .eq('id', existing.id)
+                                .select()
+                                .single();
+                            
+                            if (updateError) {
+                                console.error('⚠️ Error updating payment record:', updateError);
+                                payment = existing; // Use existing if update fails
+                            } else {
+                                payment = updated;
+                                console.log('✅ [WEBHOOK] Payment record updated:', payment);
+                            }
+                        } else {
+                            // Insert new payment
+                            const { data: inserted, error: insertError } = await supabase
+                                .from('payments')
+                                .insert(paymentData)
+                                .select()
+                                .single();
+                            
+                            if (insertError) {
+                                // Check if it's a duplicate error (unique constraint violation)
+                                if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+                                    console.log('🔄 [WEBHOOK] Duplicate payment detected, fetching existing...');
+                                    // Fetch existing payment
+                                    const { data: existingAfterInsert } = await supabase
+                                        .from('payments')
+                                        .select('*')
+                                        .eq('payment_id', extractedPaymentId)
+                                        .eq('user_id', userId)
+                                        .single();
+                                    
+                                    if (existingAfterInsert) {
+                                        // Update existing with better data
+                                        const { data: updated } = await supabase
+                                            .from('payments')
+                                            .update(upsertData)
+                                            .eq('id', existingAfterInsert.id)
+                                            .select()
+                                            .single();
+                                        payment = updated || existingAfterInsert;
+                                        console.log('✅ [WEBHOOK] Payment record updated (duplicate handled):', payment);
+                                    } else {
+                                        console.error('⚠️ Duplicate error but could not find existing payment:', insertError);
+                                    }
+                                } else {
+                                    console.error('⚠️ Error creating payment record:', insertError);
+                                }
+                            } else {
+                                payment = inserted;
+                                console.log('✅ [WEBHOOK] Payment record created:', payment);
+                            }
+                        }
                         
                         if (upsertError) {
                             console.error('⚠️ Error upserting payment record:', upsertError);
