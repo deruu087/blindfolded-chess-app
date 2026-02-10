@@ -123,17 +123,17 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
     // or: https://live.dodopayments.com/invoices/payments/pay_XXX
     
     // Find the first ID that looks like a payment ID (pay_XXX)
-    let paymentId = null;
+    let validPaymentId = null;
     for (const id of idsToTry) {
         if (id && id.startsWith('pay_')) {
-            paymentId = id;
+            validPaymentId = id;
             break;
         }
     }
     
     // Only construct URL if we have a valid payment_id
-    if (paymentId) {
-        const constructedUrl = `${apiBaseUrl}/invoices/payments/${paymentId}`;
+    if (validPaymentId) {
+        const constructedUrl = `${apiBaseUrl}/invoices/payments/${validPaymentId}`;
         console.log('🔧 [INVOICE] Constructing invoice URL using payment_id:', constructedUrl);
         return constructedUrl;
     } else {
