@@ -272,51 +272,156 @@ export default async function handler(req, res) {
         
         console.log('📝 [SYNC] Creating/updating payment record:', paymentData);
         
+        // Use upsert to handle duplicates atomically at database level
+        // This prevents race conditions where multiple requests check before insert
         let payment;
-        if (existingPayment) {
-            // Update existing payment (keep the one with correct invoice URL)
-            const { data: updated, error: updateError } = await supabase
+        const upsertData = {
+            ...paymentData,
+            updated_at: new Date().toISOString()
+        };
+        
+        if (extractedPaymentId) {
+            // Use upsert with payment_id as unique constraint
+            const { data: upserted, error: upsertError } = await supabase
                 .from('payments')
-                .update({
-                    ...paymentData,
-                    updated_at: new Date().toISOString()
+                .upsert(upsertData, {
+                    onConflict: 'payment_id',
+                    ignoreDuplicates: false
                 })
-                .eq('id', existingPayment.id)
                 .select()
                 .single();
             
-            if (updateError) {
-                console.error('⚠️ Error updating payment record:', updateError);
-                // Don't fail - subscription was created successfully
-                return res.status(200).json({ 
-                    success: true, 
-                    message: 'Subscription created but payment record update failed',
-                    subscription: subscription,
-                    paymentError: updateError.message
-                });
+            if (upsertError) {
+                // Fallback to insert (might fail if duplicate, handle it)
+                const { data: inserted, error: insertError } = await supabase
+                    .from('payments')
+                    .insert(paymentData)
+                    .select()
+                    .single();
+                
+                if (insertError) {
+                    // Check if it's a duplicate error
+                    if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+                        console.log('🔄 [SYNC] Duplicate payment detected, fetching existing...');
+                        const { data: existing } = await supabase
+                            .from('payments')
+                            .select('*')
+                            .eq('payment_id', extractedPaymentId)
+                            .eq('user_id', userId)
+                            .single();
+                        
+                        if (existing) {
+                            // Update existing with better data
+                            const { data: updated } = await supabase
+                                .from('payments')
+                                .update(upsertData)
+                                .eq('id', existing.id)
+                                .select()
+                                .single();
+                            payment = updated || existing;
+                            console.log('✅ [SYNC] Payment record updated (duplicate handled):', payment);
+                        } else {
+                            console.error('⚠️ Duplicate error but could not find existing payment:', insertError);
+                            return res.status(200).json({ 
+                                success: true, 
+                                message: 'Subscription created but payment record failed (duplicate)',
+                                subscription: subscription,
+                                paymentError: insertError.message
+                            });
+                        }
+                    } else {
+                        console.error('⚠️ Error creating payment record:', insertError);
+                        return res.status(200).json({ 
+                            success: true, 
+                            message: 'Subscription created but payment record failed',
+                            subscription: subscription,
+                            paymentError: insertError.message
+                        });
+                    }
+                } else {
+                    payment = inserted;
+                    console.log('✅ [SYNC] Payment record created:', payment);
+                }
+            } else {
+                payment = upserted;
+                console.log('✅ [SYNC] Payment record upserted:', payment);
             }
-            payment = updated;
-            console.log('✅ [SYNC] Payment record updated (deduplication):', payment);
         } else {
-            // Insert new payment
-            const { data: inserted, error: paymentError } = await supabase
-                .from('payments')
-                .insert(paymentData)
-                .select()
-                .single();
-            
-            if (paymentError) {
-                console.error('⚠️ Error creating payment record:', paymentError);
-                // Don't fail - subscription was created successfully
-                return res.status(200).json({ 
-                    success: true, 
-                    message: 'Subscription created but payment record failed',
-                    subscription: subscription,
-                    paymentError: paymentError.message
-                });
+            // For payments without payment_id, use manual check and insert with duplicate handling
+            if (existingPayment) {
+                // Update existing payment
+                const { data: updated, error: updateError } = await supabase
+                    .from('payments')
+                    .update(upsertData)
+                    .eq('id', existingPayment.id)
+                    .select()
+                    .single();
+                
+                if (updateError) {
+                    console.error('⚠️ Error updating payment record:', updateError);
+                    return res.status(200).json({ 
+                        success: true, 
+                        message: 'Subscription created but payment record update failed',
+                        subscription: subscription,
+                        paymentError: updateError.message
+                    });
+                }
+                payment = updated;
+                console.log('✅ [SYNC] Payment record updated (deduplication):', payment);
+            } else {
+                // Try insert, handle duplicate error
+                const { data: inserted, error: insertError } = await supabase
+                    .from('payments')
+                    .insert(paymentData)
+                    .select()
+                    .single();
+                
+                if (insertError) {
+                    // Check if it's a duplicate error (unique constraint violation)
+                    if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+                        console.log('🔄 [SYNC] Duplicate payment detected, fetching existing...');
+                        // Fetch existing payment
+                        const { data: existing } = await supabase
+                            .from('payments')
+                            .select('*')
+                            .eq('order_id', subscriptionId)
+                            .eq('user_id', userId)
+                            .eq('amount', amountNum)
+                            .maybeSingle();
+                        
+                        if (existing) {
+                            // Update existing with better data
+                            const { data: updated } = await supabase
+                                .from('payments')
+                                .update(upsertData)
+                                .eq('id', existing.id)
+                                .select()
+                                .single();
+                            payment = updated || existing;
+                            console.log('✅ [SYNC] Payment record updated (duplicate handled):', payment);
+                        } else {
+                            console.error('⚠️ Duplicate error but could not find existing payment:', insertError);
+                            return res.status(200).json({ 
+                                success: true, 
+                                message: 'Subscription created but payment record failed (duplicate)',
+                                subscription: subscription,
+                                paymentError: insertError.message
+                            });
+                        }
+                    } else {
+                        console.error('⚠️ Error creating payment record:', insertError);
+                        return res.status(200).json({ 
+                            success: true, 
+                            message: 'Subscription created but payment record failed',
+                            subscription: subscription,
+                            paymentError: insertError.message
+                        });
+                    }
+                } else {
+                    payment = inserted;
+                    console.log('✅ [SYNC] Payment record created:', payment);
+                }
             }
-            payment = inserted;
-            console.log('✅ [SYNC] Payment record created:', payment);
         }
         
         // Send subscription confirmation email (NON-BLOCKING)
