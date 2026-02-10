@@ -179,21 +179,17 @@
                         
                         try {
                             console.log('🔍 Fetching subscription ID from Dodo Payments...');
-                            const subscriptionIdResponse = await fetch(getSubscriptionIdUrl, {
-                                method: 'POST',
+                            const subscriptionIdResponse = await fetch(`${getSubscriptionIdUrl}?paymentId=${encodeURIComponent(paymentId || '')}&orderId=${encodeURIComponent(paymentId || '')}`, {
+                                method: 'GET',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    paymentId: paymentId,
-                                    orderId: paymentId
-                                })
+                                }
                             });
                             
                             const subscriptionIdResult = await subscriptionIdResponse.json();
                             
-                            if (subscriptionIdResult.success && subscriptionIdResult.subscriptionId) {
-                                realSubscriptionId = subscriptionIdResult.subscriptionId;
+                            if (subscriptionIdResult.success && subscriptionIdResult.subscription_id) {
+                                realSubscriptionId = subscriptionIdResult.subscription_id;
                                 console.log('✅ Got real subscription ID from Dodo Payments:', realSubscriptionId);
                             } else {
                                 console.warn('⚠️ Could not fetch subscription ID, using payment ID as fallback:', paymentId);
