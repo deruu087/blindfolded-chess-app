@@ -61,11 +61,13 @@ export default async function handler(req, res) {
             });
         }
         
-        // Group payments by user_id, amount, and date (same day)
+        // Group payments by user_id and date (same day) - allow different amounts
+        // This catches payments made on the same day even if amounts differ slightly
         const paymentGroups = {};
         for (const payment of allPayments) {
             const dateKey = new Date(payment.payment_date).toISOString().split('T')[0]; // YYYY-MM-DD
-            const groupKey = `${payment.user_id}_${payment.amount}_${dateKey}`;
+            // Group by user and date only - amounts can differ (tax, discounts, etc.)
+            const groupKey = `${payment.user_id}_${dateKey}`;
             
             if (!paymentGroups[groupKey]) {
                 paymentGroups[groupKey] = [];
@@ -73,15 +75,33 @@ export default async function handler(req, res) {
             paymentGroups[groupKey].push(payment);
         }
         
-        // Find groups with duplicates (more than 1 payment)
+        // Find groups with potential duplicates (more than 1 payment on same day)
+        // Also check if they have the same payment_id, order_id, or transaction_id
         const duplicates = [];
         for (const [groupKey, payments] of Object.entries(paymentGroups)) {
             if (payments.length > 1) {
-                duplicates.push({
-                    groupKey,
-                    payments,
-                    count: payments.length
-                });
+                // Check if they share any common identifier (payment_id, order_id, transaction_id)
+                const hasCommonId = payments.some((p1, i) => 
+                    payments.slice(i + 1).some(p2 => 
+                        (p1.payment_id && p2.payment_id && p1.payment_id === p2.payment_id) ||
+                        (p1.order_id && p2.order_id && p1.order_id === p2.order_id) ||
+                        (p1.transaction_id && p2.transaction_id && p1.transaction_id === p2.transaction_id)
+                    )
+                );
+                
+                // Or if amounts are very close (within 1 EUR) - likely same payment with tax adjustment
+                const amountsClose = payments.length === 2 && 
+                    Math.abs(parseFloat(payments[0].amount) - parseFloat(payments[1].amount)) < 1.0;
+                
+                if (hasCommonId || amountsClose) {
+                    duplicates.push({
+                        groupKey,
+                        payments,
+                        count: payments.length,
+                        hasCommonId,
+                        amountsClose
+                    });
+                }
             }
         }
         
@@ -95,8 +115,17 @@ export default async function handler(req, res) {
         for (const duplicate of duplicates) {
             const { payments } = duplicate;
             
-            // Sort by: 1) Has payment_id (pay_XXX), 2) Has correct invoice URL (not default account page), 3) Most recent
+            // Sort by: 1) Correct amount (3.49 for monthly), 2) Has payment_id (pay_XXX), 3) Has correct invoice URL, 4) Most recent
             payments.sort((a, b) => {
+                // Prefer correct amount (3.49 for monthly, 8.90 for quarterly)
+                const aAmount = parseFloat(a.amount);
+                const bAmount = parseFloat(b.amount);
+                const correctAmounts = [3.49, 8.90];
+                const aIsCorrectAmount = correctAmounts.includes(aAmount);
+                const bIsCorrectAmount = correctAmounts.includes(bAmount);
+                if (aIsCorrectAmount && !bIsCorrectAmount) return -1;
+                if (!aIsCorrectAmount && bIsCorrectAmount) return 1;
+                
                 // Prefer payments with payment_id
                 const aHasPaymentId = a.payment_id && a.payment_id.startsWith('pay_');
                 const bHasPaymentId = b.payment_id && b.payment_id.startsWith('pay_');
@@ -112,6 +141,11 @@ export default async function handler(req, res) {
                                        b.invoice_url.includes('/invoices/payments/');
                 if (aHasCorrectUrl && !bHasCorrectUrl) return -1;
                 if (!aHasCorrectUrl && bHasCorrectUrl) return 1;
+                
+                // Prefer higher amount (in case of tax adjustments, keep the full amount)
+                if (aAmount !== bAmount) {
+                    return bAmount - aAmount;
+                }
                 
                 // Prefer most recent
                 return new Date(b.payment_date) - new Date(a.payment_date);
