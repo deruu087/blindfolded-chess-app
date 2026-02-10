@@ -21,6 +21,140 @@ export default async function handler(req, res) {
     }
     
     try {
+        // Check action parameter
+        const { action = 'cleanup' } = req.body || {};
+        
+        // Handle update-invoices action (from update-invoice-urls.js)
+        if (action === 'update-invoices') {
+            // Import the getInvoiceUrlFromDodo function logic
+            const getInvoiceUrlFromDodo = async (paymentId, orderId, subscriptionId) => {
+                const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+                if (!dodoApiKey) return null;
+                
+                const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
+                    ? 'https://test.dodopayments.com'
+                    : 'https://live.dodopayments.com';
+                
+                const idsToTry = [paymentId, orderId, subscriptionId].filter(Boolean);
+                
+                for (const id of idsToTry) {
+                    try {
+                        const paymentUrl = `${apiBaseUrl}/payments/${id}`;
+                        const response = await fetch(paymentUrl, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${dodoApiKey}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const paymentData = await response.json();
+                            const invoiceUrl = paymentData.invoice_url || paymentData.invoice?.url;
+                            if (invoiceUrl) return invoiceUrl;
+                        }
+                    } catch (error) {
+                        console.warn('Error fetching invoice URL:', error.message);
+                    }
+                }
+                
+                // Construct URL if we have payment_id
+                let validPaymentId = null;
+                for (const id of idsToTry) {
+                    if (id && id.startsWith('pay_')) {
+                        validPaymentId = id;
+                        break;
+                    }
+                }
+                
+                if (validPaymentId) {
+                    return `${apiBaseUrl}/invoices/payments/${validPaymentId}`;
+                }
+                
+                return null;
+            };
+            
+            // Initialize Supabase with service role key
+            const supabaseUrl = process.env.SUPABASE_URL;
+            if (!supabaseUrl) {
+                return res.status(500).json({ error: 'SUPABASE_URL not configured' });
+            }
+            
+            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+            if (!supabaseServiceKey) {
+                return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' });
+            }
+            
+            const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false
+                }
+            });
+            
+            // Get all payments with default invoice URL that have payment_id
+            const { data: payments, error: paymentsError } = await supabase
+                .from('payments')
+                .select('*')
+                .eq('invoice_url', 'https://checkout.dodopayments.com/account')
+                .not('payment_id', 'is', null)
+                .like('payment_id', 'pay_%');
+            
+            if (paymentsError) {
+                return res.status(500).json({ error: 'Failed to fetch payments', details: paymentsError.message });
+            }
+            
+            if (!payments || payments.length === 0) {
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'No payments found with default invoice URL',
+                    updated: 0
+                });
+            }
+            
+            let updated = 0;
+            let failed = 0;
+            
+            for (const payment of payments) {
+                try {
+                    const invoiceUrl = await getInvoiceUrlFromDodo(
+                        payment.payment_id,
+                        payment.order_id,
+                        payment.transaction_id
+                    );
+                    
+                    if (invoiceUrl && invoiceUrl !== 'https://checkout.dodopayments.com/account') {
+                        const { error: updateError } = await supabase
+                            .from('payments')
+                            .update({ invoice_url: invoiceUrl })
+                            .eq('id', payment.id);
+                        
+                        if (updateError) {
+                            console.error(`❌ Error updating payment ${payment.id}:`, updateError);
+                            failed++;
+                        } else {
+                            console.log(`✅ Updated payment ${payment.id} with invoice URL: ${invoiceUrl}`);
+                            updated++;
+                        }
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    console.error(`❌ Error processing payment ${payment.id}:`, error);
+                    failed++;
+                }
+            }
+            
+            return res.status(200).json({
+                success: true,
+                message: `Updated ${updated} invoice URLs, ${failed} failed`,
+                updated,
+                failed,
+                total: payments.length
+            });
+        }
+        
+        // Default action: cleanup duplicates (original cleanup logic)
         // Initialize Supabase with service role key
         const supabaseUrl = process.env.SUPABASE_URL;
         if (!supabaseUrl) {

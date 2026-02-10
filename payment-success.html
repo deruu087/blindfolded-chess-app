@@ -172,8 +172,8 @@
                         
                         // Try to get real subscription ID from Dodo Payments API
                         const getSubscriptionIdUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                            ? 'http://localhost:3000/api/get-subscription-id'
-                            : `${window.location.origin}/api/get-subscription-id`;
+                            ? 'http://localhost:3000/api/update-subscription-id'
+                            : `${window.location.origin}/api/update-subscription-id`;
                         
                         let realSubscriptionId = paymentId; // Fallback to paymentId if fetch fails
                         

@@ -1,12 +1,14 @@
 // Vercel serverless function to update subscription ID for existing subscriptions
-// This can be called to fix subscriptions that don't have dodo_subscription_id
+// Combined endpoint: Can both get and update subscription ID
+// GET: Fetch subscription ID from Dodo Payments
+// POST: Fetch and update subscription ID in Supabase
 
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
     if (req.method === 'OPTIONS') {
@@ -14,6 +16,80 @@ export default async function handler(req, res) {
         return;
     }
     
+    // Handle GET request (fetch subscription ID from Dodo Payments - combines get-subscription-id.js)
+    if (req.method === 'GET') {
+        try {
+            const { paymentId, orderId, email } = req.query;
+            
+            if (!paymentId && !orderId && !email) {
+                return res.status(400).json({ error: 'Missing required parameter: paymentId, orderId, or email' });
+            }
+            
+            const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+            if (!dodoApiKey) {
+                return res.status(500).json({ error: 'DODO_PAYMENTS_API_KEY not configured' });
+            }
+            
+            const apiBaseUrl = dodoApiKey.startsWith('sk_test_') 
+                ? 'https://test.dodopayments.com'
+                : 'https://live.dodopayments.com';
+            
+            let subscriptionId = null;
+            
+            // Try payment ID first
+            if (paymentId) {
+                try {
+                    const paymentUrl = `${apiBaseUrl}/payments/${paymentId}`;
+                    const response = await fetch(paymentUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${dodoApiKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const paymentData = await response.json();
+                        subscriptionId = paymentData.subscription_id || paymentData.subscription?.id || paymentData.data?.subscription_id;
+                    }
+                } catch (error) {
+                    console.warn('Error fetching from payments endpoint:', error.message);
+                }
+            }
+            
+            // Try order ID if payment ID didn't work
+            if (!subscriptionId && orderId) {
+                try {
+                    const orderUrl = `${apiBaseUrl}/orders/${orderId}`;
+                    const response = await fetch(orderUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${dodoApiKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const orderData = await response.json();
+                        subscriptionId = orderData.subscription_id || orderData.subscription?.id || orderData.data?.subscription_id;
+                    }
+                } catch (error) {
+                    console.warn('Error fetching from orders endpoint:', error.message);
+                }
+            }
+            
+            if (subscriptionId) {
+                return res.status(200).json({ success: true, subscription_id: subscriptionId });
+            } else {
+                return res.status(404).json({ error: 'Subscription ID not found' });
+            }
+        } catch (error) {
+            console.error('❌ Error in GET handler:', error);
+            return res.status(500).json({ error: 'Internal server error', message: error.message });
+        }
+    }
+    
+    // Handle POST request (original update-subscription-id logic)
     if (req.method !== 'POST') {
         res.status(405).json({ error: 'Method not allowed' });
         return;
