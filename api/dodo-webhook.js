@@ -118,29 +118,28 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
     console.warn('⚠️ [INVOICE] Could not find invoice URL from Dodo Payments API');
     
     // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
+    // IMPORTANT: Must use payment_id (pay_XXX), NOT subscription_id (sub_XXX)
     // Format: https://test.dodopayments.com/invoices/payments/pay_XXX
     // or: https://live.dodopayments.com/invoices/payments/pay_XXX
-    if (idsToTry.length > 0) {
-        const idToUse = idsToTry[0];
-        
-        // Check if ID looks like a payment ID (starts with pay_)
-        // If not, try to find a payment ID in the responses we got
-        let paymentId = idToUse;
-        
-        // If ID doesn't start with pay_, it might be a subscription/order ID
-        // We'll still try to construct the URL, but it might not work
-        if (!paymentId.startsWith('pay_')) {
-            console.log('⚠️ [INVOICE] ID does not look like a payment ID (pay_XXX), but constructing URL anyway');
+    
+    // Find the first ID that looks like a payment ID (pay_XXX)
+    let paymentId = null;
+    for (const id of idsToTry) {
+        if (id && id.startsWith('pay_')) {
+            paymentId = id;
+            break;
         }
-        
-        // Use checkout.dodopayments.com domain (not API domain)
-        const checkoutDomain = apiBaseUrl.includes('test') 
-            ? 'https://test.dodopayments.com'
-            : 'https://live.dodopayments.com';
-        
-        const constructedUrl = `${checkoutDomain}/invoices/payments/${paymentId}`;
-        console.log('🔧 [INVOICE] Constructing invoice URL using Dodo pattern:', constructedUrl);
+    }
+    
+    // Only construct URL if we have a valid payment_id
+    if (paymentId) {
+        const constructedUrl = `${apiBaseUrl}/invoices/payments/${paymentId}`;
+        console.log('🔧 [INVOICE] Constructing invoice URL using payment_id:', constructedUrl);
         return constructedUrl;
+    } else {
+        console.warn('⚠️ [INVOICE] No payment_id (pay_XXX) found in IDs. Cannot construct invoice URL.');
+        console.warn('⚠️ [INVOICE] IDs tried:', idsToTry);
+        console.warn('⚠️ [INVOICE] Invoice URL must use payment_id, not subscription_id or order_id');
     }
     
     return null;
