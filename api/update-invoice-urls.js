@@ -92,25 +92,28 @@ async function getInvoiceUrlFromDodo(paymentId, orderId, subscriptionId) {
     }
     
     // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
+    // IMPORTANT: Must use payment_id (pay_XXX), NOT subscription_id (sub_XXX)
     // Format: https://test.dodopayments.com/invoices/payments/pay_XXX
-    if (idsToTry.length > 0) {
-        const idToUse = idsToTry[0];
-        
-        // Use checkout.dodopayments.com domain (not API domain)
-        const checkoutDomain = apiBaseUrl.includes('test') 
-            ? 'https://test.dodopayments.com'
-            : 'https://live.dodopayments.com';
-        
-        // If ID looks like a payment ID (starts with pay_), use it directly
-        if (idToUse.startsWith('pay_')) {
-            const constructedUrl = `${checkoutDomain}/invoices/payments/${idToUse}`;
-            console.log('🔧 [INVOICE] Constructed invoice URL:', constructedUrl);
-            return constructedUrl;
-        } else {
-            // Try to find payment ID in the API responses we already got
-            // If we have a payment ID from earlier, use it
-            console.log('⚠️ [INVOICE] ID does not look like payment ID, cannot construct invoice URL');
+    // or: https://live.dodopayments.com/invoices/payments/pay_XXX
+    
+    // Find the first ID that looks like a payment ID (pay_XXX)
+    let paymentId = null;
+    for (const id of idsToTry) {
+        if (id && id.startsWith('pay_')) {
+            paymentId = id;
+            break;
         }
+    }
+    
+    // Only construct URL if we have a valid payment_id
+    if (paymentId) {
+        const constructedUrl = `${apiBaseUrl}/invoices/payments/${paymentId}`;
+        console.log('🔧 [INVOICE] Constructing invoice URL using payment_id:', constructedUrl);
+        return constructedUrl;
+    } else {
+        console.warn('⚠️ [INVOICE] No payment_id (pay_XXX) found in IDs. Cannot construct invoice URL.');
+        console.warn('⚠️ [INVOICE] IDs tried:', idsToTry);
+        console.warn('⚠️ [INVOICE] Invoice URL must use payment_id, not subscription_id or order_id');
     }
     
     return null;
@@ -151,12 +154,14 @@ export default async function handler(req, res) {
             }
         });
         
-        // Get all payments with the default invoice URL
+        // Get all payments with the default invoice URL that have a payment_id
+        // IMPORTANT: Only update payments that have payment_id (pay_XXX), not subscription_id (sub_XXX)
         const { data: payments, error: paymentsError } = await supabase
             .from('payments')
             .select('*')
             .eq('invoice_url', 'https://checkout.dodopayments.com/account')
-            .not('order_id', 'is', null);
+            .not('payment_id', 'is', null)
+            .like('payment_id', 'pay_%'); // Only payments with payment_id starting with pay_
         
         if (paymentsError) {
             console.error('❌ Error fetching payments:', paymentsError);
