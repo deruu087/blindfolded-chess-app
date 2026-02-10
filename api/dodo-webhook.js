@@ -616,17 +616,72 @@ export default async function handler(req, res) {
                         console.log('⚠️ [WEBHOOK] No payment_id found in format pay_XXX');
                     }
                     
-                    const { data: payment, error: paymentError } = await supabase
-                        .from('payments')
-                        .insert(paymentData)
-                        .select()
-                        .single();
+                    // Check if payment already exists (deduplication)
+                    let existingPayment = null;
+                    if (extractedPaymentId) {
+                        const { data: existing } = await supabase
+                            .from('payments')
+                            .select('*')
+                            .eq('payment_id', extractedPaymentId)
+                            .eq('user_id', userId)
+                            .maybeSingle();
+                        
+                        if (existing) {
+                            existingPayment = existing;
+                            console.log('🔄 [WEBHOOK] Payment with payment_id already exists, will update:', existingPayment.id);
+                        }
+                    }
                     
-                    if (paymentError) {
-                        // Log error but don't fail the webhook - payment was successful
-                        console.error('⚠️ Error creating payment record:', paymentError);
+                    // Also check by order_id/transaction_id if no payment_id
+                    if (!existingPayment && subscriptionId) {
+                        const { data: existing } = await supabase
+                            .from('payments')
+                            .select('*')
+                            .eq('order_id', subscriptionId)
+                            .eq('user_id', userId)
+                            .eq('amount', amountNum)
+                            .maybeSingle();
+                        
+                        if (existing) {
+                            existingPayment = existing;
+                            console.log('🔄 [WEBHOOK] Payment with order_id already exists, will update:', existingPayment.id);
+                        }
+                    }
+                    
+                    let payment;
+                    if (existingPayment) {
+                        // Update existing payment (keep the one with correct invoice URL)
+                        const { data: updated, error: updateError } = await supabase
+                            .from('payments')
+                            .update({
+                                ...paymentData,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', existingPayment.id)
+                            .select()
+                            .single();
+                        
+                        if (updateError) {
+                            console.error('⚠️ Error updating payment record:', updateError);
+                        } else {
+                            payment = updated;
+                            console.log('✅ [WEBHOOK] Payment record updated (deduplication):', payment);
+                        }
                     } else {
-                        console.log('✅ Payment record created:', payment);
+                        // Insert new payment
+                        const { data: inserted, error: paymentError } = await supabase
+                            .from('payments')
+                            .insert(paymentData)
+                            .select()
+                            .single();
+                        
+                        if (paymentError) {
+                            // Log error but don't fail the webhook - payment was successful
+                            console.error('⚠️ Error creating payment record:', paymentError);
+                        } else {
+                            payment = inserted;
+                            console.log('✅ [WEBHOOK] Payment record created:', payment);
+                        }
                     }
                     
                     console.log('✅ Subscription created/updated:', subscription);
