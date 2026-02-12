@@ -727,6 +727,35 @@ export default async function handler(req, res) {
                         }
                     }
                     
+                    // Also check by amount + date (within 5 minutes) to catch duplicates even without payment_id
+                    if (!existingPayment) {
+                        const paymentDateObj = new Date(paymentData.payment_date);
+                        const fiveMinutesAgo = new Date(paymentDateObj.getTime() - 5 * 60 * 1000);
+                        const fiveMinutesLater = new Date(paymentDateObj.getTime() + 5 * 60 * 1000);
+                        
+                        const { data: recentPayments } = await supabase
+                            .from('payments')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .eq('amount', amountNum)
+                            .eq('currency', currency)
+                            .gte('payment_date', fiveMinutesAgo.toISOString())
+                            .lte('payment_date', fiveMinutesLater.toISOString())
+                            .order('payment_date', { ascending: false })
+                            .limit(5);
+                        
+                        if (recentPayments && recentPayments.length > 0) {
+                            // Find the most recent one with correct invoice URL or payment_id
+                            const bestPayment = recentPayments.find(p => 
+                                (p.payment_id && p.payment_id.startsWith('pay_')) ||
+                                (p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account'))
+                            ) || recentPayments[0];
+                            
+                            existingPayment = bestPayment;
+                            console.log('🔄 [WEBHOOK] Found recent payment with same amount/date, will update:', existingPayment.id);
+                        }
+                    }
+                    
                     // Use upsert to handle duplicates atomically at database level
                     // This prevents race conditions where multiple requests check before insert
                     let payment;
