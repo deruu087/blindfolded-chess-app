@@ -218,6 +218,30 @@ export default async function handler(req, res) {
             }
         }
         
+        // Check if payment was already created recently (within last 2 minutes) by webhook
+        // This prevents sync-subscription from creating duplicate if webhook already processed it
+        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+        const { data: recentPayment } = await supabase
+            .from('payments')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('amount', amountNum)
+            .gte('created_at', twoMinutesAgo.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        
+        if (recentPayment) {
+            console.log('✅ [SYNC] Payment already exists (likely created by webhook), skipping payment creation:', recentPayment.id);
+            console.log('✅ [SYNC] This prevents duplicate payments when both webhook and sync-subscription run');
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Subscription synced successfully. Payment already exists (created by webhook).',
+                subscription: subscription,
+                payment: recentPayment
+            });
+        }
+        
         // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
         // IMPORTANT: Must use payment_id (pay_XXX), NOT subscription_id (sub_XXX)
         // Format: https://test.dodopayments.com/invoices/payments/pay_XXX
