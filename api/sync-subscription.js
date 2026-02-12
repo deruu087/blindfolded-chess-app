@@ -130,27 +130,41 @@ export default async function handler(req, res) {
         
         let subscription;
         if (existingSubscription) {
-            // Update existing subscription
-            console.log('🔄 [SYNC] Subscription exists, updating:', existingSubscription.id);
-            const { data: updated, error: updateError } = await supabase
-                .from('subscriptions')
-                .update({
-                    ...subscriptionData,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', userId)
-                .select()
-                .single();
+            // Check if we should keep existing or update (prefer correct amount)
+            const existingAmount = parseFloat(existingSubscription.amount_paid);
+            const newAmount = parseFloat(subscriptionData.amount_paid);
+            const correctAmounts = [3.49, 3.50, 8.90]; // Allow 3.50 as correct (close to 3.49)
             
-            if (updateError) {
-                console.error('❌ Error updating subscription:', updateError);
-                return res.status(500).json({ 
-                    error: 'Failed to update subscription',
-                    message: updateError.message 
-                });
+            const existingIsCorrect = correctAmounts.includes(existingAmount);
+            const newIsCorrect = correctAmounts.includes(newAmount);
+            
+            // If existing has correct amount and new doesn't, keep existing (don't update)
+            if (existingIsCorrect && !newIsCorrect) {
+                console.log('✅ [SYNC] Keeping existing subscription with correct amount:', existingAmount);
+                subscription = existingSubscription;
+            } else {
+                // Update existing subscription (new is correct or both are same)
+                console.log('🔄 [SYNC] Subscription exists, updating:', existingSubscription.id);
+                const { data: updated, error: updateError } = await supabase
+                    .from('subscriptions')
+                    .update({
+                        ...subscriptionData,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', userId)
+                    .select()
+                    .single();
+                
+                if (updateError) {
+                    console.error('❌ Error updating subscription:', updateError);
+                    return res.status(500).json({ 
+                        error: 'Failed to update subscription',
+                        message: updateError.message 
+                    });
+                }
+                subscription = updated;
+                console.log('✅ [SYNC] Subscription updated:', subscription);
             }
-            subscription = updated;
-            console.log('✅ [SYNC] Subscription updated:', subscription);
         } else {
             // Insert new subscription
             console.log('📝 [SYNC] Creating new subscription:', subscriptionData);
