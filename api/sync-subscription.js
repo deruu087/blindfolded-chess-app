@@ -121,25 +121,88 @@ export default async function handler(req, res) {
             updated_at: new Date().toISOString()
         };
         
-        console.log('📝 [SYNC] Creating subscription:', subscriptionData);
-        
-        const { data: subscription, error: subError } = await supabase
+        // Check if subscription already exists (prevent race condition)
+        const { data: existingSubscription } = await supabase
             .from('subscriptions')
-            .upsert(subscriptionData, {
-                onConflict: 'user_id'
-            })
-            .select()
-            .single();
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
         
-        if (subError) {
-            console.error('❌ Error creating/updating subscription:', subError);
-            return res.status(500).json({ 
-                error: 'Failed to create subscription',
-                message: subError.message 
-            });
+        let subscription;
+        if (existingSubscription) {
+            // Update existing subscription
+            console.log('🔄 [SYNC] Subscription exists, updating:', existingSubscription.id);
+            const { data: updated, error: updateError } = await supabase
+                .from('subscriptions')
+                .update({
+                    ...subscriptionData,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', userId)
+                .select()
+                .single();
+            
+            if (updateError) {
+                console.error('❌ Error updating subscription:', updateError);
+                return res.status(500).json({ 
+                    error: 'Failed to update subscription',
+                    message: updateError.message 
+                });
+            }
+            subscription = updated;
+            console.log('✅ [SYNC] Subscription updated:', subscription);
+        } else {
+            // Insert new subscription
+            console.log('📝 [SYNC] Creating new subscription:', subscriptionData);
+            const { data: inserted, error: insertError } = await supabase
+                .from('subscriptions')
+                .insert(subscriptionData)
+                .select()
+                .single();
+            
+            if (insertError) {
+                // Check if it's a duplicate error (unique constraint violation)
+                if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+                    console.log('🔄 [SYNC] Duplicate subscription detected, fetching existing...');
+                    // Fetch existing subscription
+                    const { data: existingAfterInsert } = await supabase
+                        .from('subscriptions')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .single();
+                    
+                    if (existingAfterInsert) {
+                        // Update existing with better data
+                        const { data: updated } = await supabase
+                            .from('subscriptions')
+                            .update({
+                                ...subscriptionData,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('user_id', userId)
+                            .select()
+                            .single();
+                        subscription = updated || existingAfterInsert;
+                        console.log('✅ [SYNC] Subscription updated (duplicate handled):', subscription);
+                    } else {
+                        console.error('❌ Duplicate error but could not find existing subscription:', insertError);
+                        return res.status(500).json({ 
+                            error: 'Failed to create subscription (duplicate)',
+                            message: insertError.message 
+                        });
+                    }
+                } else {
+                    console.error('❌ Error creating subscription:', insertError);
+                    return res.status(500).json({ 
+                        error: 'Failed to create subscription',
+                        message: insertError.message 
+                    });
+                }
+            } else {
+                subscription = inserted;
+                console.log('✅ [SYNC] Subscription created:', subscription);
+            }
         }
-        
-        console.log('✅ [SYNC] Subscription created/updated:', subscription);
         
         // Construct invoice URL using Dodo Payments pattern: /invoices/payments/{payment_id}
         // IMPORTANT: Must use payment_id (pay_XXX), NOT subscription_id (sub_XXX)
