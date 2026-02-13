@@ -21,13 +21,17 @@ export default async function handler(req, res) {
     }
     
     try {
-        const { userEmail, subscriptionId, amount, currency, planType, paymentDate } = req.body;
+        const { userEmail, subscriptionId, amount, currency: webhookCurrency, planType, paymentDate } = req.body;
+        
+        // ALWAYS use USD regardless of what's sent
+        const currency = 'USD';
         
         console.log('🔄 [SYNC] Syncing subscription to Supabase:', {
             userEmail,
             subscriptionId,
             amount,
-            currency,
+            webhookCurrency: webhookCurrency,
+            currency: 'USD', // Always USD, ignore webhook currency // Always USD
             planType,
             paymentDate
         });
@@ -37,8 +41,8 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing required field: userEmail' });
         }
         
-        if (!amount || !currency || !planType) {
-            return res.status(400).json({ error: 'Missing required fields: amount, currency, or planType' });
+        if (!amount || !planType) {
+            return res.status(400).json({ error: 'Missing required fields: amount or planType' });
         }
         
         // Warn if subscription ID looks like a generated ID (but still allow it as fallback)
@@ -115,7 +119,7 @@ export default async function handler(req, res) {
             start_date: paymentDate ? paymentDate.split('T')[0] : new Date().toISOString().split('T')[0],
             end_date: null,
             amount_paid: amountNum,
-            currency: currency,
+            currency: 'USD', // Always USD, ignore webhook currency
             payment_method: 'dodo_payments',
             dodo_subscription_id: subscriptionId || null,
             updated_at: new Date().toISOString()
@@ -322,7 +326,7 @@ export default async function handler(req, res) {
             user_id: userId,
             email: userEmail,
             amount: amountNum,
-            currency: currency,
+            currency: 'USD', // Always USD, ignore webhook currency
             status: 'paid',
             payment_date: paymentDate || new Date().toISOString(),
             invoice_url: invoiceUrl, // Use fetched invoice URL or fallback

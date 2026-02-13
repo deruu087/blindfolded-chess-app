@@ -176,7 +176,7 @@ function getWelcomeEmail(name) {
 function getSubscriptionConfirmedEmail(name, data) {
     const planName = data?.planName || 'Premium';
     const amount = data?.amount || 'N/A';
-    const currency = data?.currency || 'EUR';
+    const currency = data?.currency || 'USD';
     
     return {
         subject: 'Subscription Confirmed - Memo Chess',

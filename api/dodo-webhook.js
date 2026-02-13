@@ -225,16 +225,11 @@ export default async function handler(req, res) {
         const amountNum = parseFloat(amountRaw);
         amount = (amountNum / 100).toFixed(2); // Always convert cents to decimal
         
-        // Extract currency - NO FALLBACKS
-        const currency = data.currency || data.settlement_currency || data.currency_code;
-        if (!currency) {
-            console.error('❌ No currency found in webhook data');
-            console.error('Available data fields:', Object.keys(data));
-            return res.status(400).json({ 
-                error: 'Missing required field: currency',
-                availableFields: Object.keys(data)
-            });
-        }
+        // Extract currency from webhook (for logging only) - IGNORE IT, ALWAYS USE USD
+        const webhookCurrency = data.currency || data.settlement_currency || data.currency_code || 'USD';
+        // ALWAYS use USD regardless of what webhook sends
+        const currency = 'USD';
+        console.log('📋 [WEBHOOK] Currency from webhook:', webhookCurrency, '- Using USD instead');
         
         // Extract status - NO FALLBACKS
         const status = data.status || data.payment_status || data.state;
@@ -252,7 +247,8 @@ export default async function handler(req, res) {
             customerEmail,
             orderId,
             amount,
-            currency,
+            webhookCurrency: webhookCurrency,
+            currency: currency, // Always USD
             status,
             rawAmount: amountRaw
         });
@@ -434,7 +430,7 @@ export default async function handler(req, res) {
                     end_date: null, // No end date for recurring subscriptions
                     next_billing_date: nextBillingDate, // Store next billing date from webhook
                     amount_paid: amountNum,
-                    currency: currency,
+                    currency: 'USD', // Always USD, ignore webhook currency
                     payment_method: 'dodo_payments',
                     dodo_subscription_id: dodoSubscriptionId, // Store Dodo Payments subscription ID for API calls
                     updated_at: new Date().toISOString()
@@ -678,7 +674,7 @@ export default async function handler(req, res) {
                         user_id: userId,
                         email: customerEmail, // Add email for easier querying
                         amount: amountNum,
-                        currency: currency,
+                        currency: 'USD', // Always USD, ignore webhook currency
                         status: 'paid',
                         payment_date: data.created_at || data.previous_billing_date || data.payment_date || new Date().toISOString(),
                         invoice_url: finalInvoiceUrl, // Use the fetched/extracted invoice URL
