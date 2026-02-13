@@ -1533,6 +1533,24 @@
         </div>
     </div>
 
+    <!-- Subscription Warning Modal -->
+    <div id="subscriptionWarningModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Active Subscription Found</h2>
+                <span class="close" onclick="closeSubscriptionWarningModal()">&times;</span>
+            </div>
+            <div class="account-info">
+                <p>You already have an active subscription. To change or upgrade your subscription plan, please cancel your current subscription first.</p>
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #6b7280;">You can manage your subscription from your profile page.</p>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-modal btn-primary" onclick="window.location.href='profile.html'">Go to Profile</button>
+                <button type="button" class="btn-modal btn-secondary" onclick="closeSubscriptionWarningModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Load and display statistics
         async function loadStatistics() {
@@ -1871,17 +1889,35 @@
             const signInModal = document.getElementById('signInModal');
             const registerModal = document.getElementById('registerModal');
             const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+            const subscriptionWarningModal = document.getElementById('subscriptionWarningModal');
             if (signInModal) signInModal.style.display = 'none';
             if (registerModal) registerModal.style.display = 'none';
             if (logoutConfirmModal) logoutConfirmModal.style.display = 'none';
+            if (subscriptionWarningModal) subscriptionWarningModal.style.display = 'none';
             
             // Close dynamically created modals
             const dynamicModals = document.querySelectorAll('.modal');
             dynamicModals.forEach(modal => {
-                if (modal.id !== 'signInModal' && modal.id !== 'registerModal') {
+                if (modal.id !== 'signInModal' && modal.id !== 'registerModal' && modal.id !== 'subscriptionWarningModal') {
                     modal.remove();
                 }
             });
+        }
+
+        // Show subscription warning modal
+        function showSubscriptionWarningModal() {
+            const modal = document.getElementById('subscriptionWarningModal');
+            if (modal) {
+                modal.style.display = 'block';
+            }
+        }
+
+        // Close subscription warning modal
+        function closeSubscriptionWarningModal() {
+            const modal = document.getElementById('subscriptionWarningModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
 
 
@@ -2058,7 +2094,23 @@
                     return;
                 }
                 
-                // User is authenticated - proceed to payment
+                // Check if user already has an active subscription
+                if (typeof window.hasActiveSubscription === 'function') {
+                    try {
+                        const hasActive = await window.hasActiveSubscription();
+                        if (hasActive) {
+                            console.log('User already has an active subscription. Showing warning modal.');
+                            window.subscribing = false;
+                            showSubscriptionWarningModal();
+                            return;
+                        }
+                    } catch (err) {
+                        console.warn('Error checking subscription status:', err);
+                        // Continue with subscription if check fails
+                    }
+                }
+                
+                // User is authenticated and doesn't have active subscription - proceed to payment
                 console.log('User is authenticated, redirecting to Dodo Payments');
                 redirectToDodoPayments(plan);
                 window.subscribing = false;
