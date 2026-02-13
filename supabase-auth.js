@@ -283,6 +283,23 @@ function setupAuthListener(callback) {
         return false;
     }
 
+    // IMMEDIATE redirect check - runs before async operations
+    // This catches OAuth returns where Supabase has already processed the tokens
+    (function immediateRedirectCheck() {
+        const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
+        const currentHash = window.location.hash;
+        const isEmptyHash = !currentHash || currentHash === '#' || currentHash === '';
+        const hasOAuthTokens = currentHash.includes('access_token') || currentHash.includes('code=') || 
+                              window.location.search.includes('code=') || window.location.search.includes('access_token');
+        
+        // If we're on root/# and have OAuth tokens, redirect immediately
+        if (isRootPath && hasOAuthTokens) {
+            console.log('🔄 [IMMEDIATE] OAuth tokens detected, redirecting to profile...');
+            window.location.replace('profile.html');
+            return;
+        }
+    })();
+    
     // Check for existing session on initial load (handles OAuth redirect)
     // NOTE: We DON'T send welcome email here - only in onAuthStateChange SIGNED_IN event
     // This prevents duplicate emails when both initial session and SIGNED_IN fire
