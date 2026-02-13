@@ -333,12 +333,11 @@ function setupAuthListener(callback) {
             // Check if page was just loaded (not a tab switch)
             // If page was hidden when this runs, it's likely a tab switch
             const timeSinceLoad = Date.now() - pageLoadTime;
-            const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 2000;
+            const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 3000;
             
             // Always redirect if:
-            // 1. We detected OAuth tokens (captured before Supabase cleared them)
-            // 2. We're on root/# with session and haven't redirected yet (OAuth return, tokens already processed)
-            // 3. We're on root/# with session and it's a fresh load (not a tab switch)
+            // 1. We detected OAuth tokens (captured before Supabase cleared them) - ALWAYS redirect
+            // 2. We're on root/# with session and haven't redirected yet AND it's a fresh load
             const shouldRedirect = hasOAuthTokens || 
                                   (isOnRoot && !hasRedirected && !isLikelyTabSwitch);
             
@@ -356,9 +355,11 @@ function setupAuthListener(callback) {
                     sessionStorage.removeItem(redirectKey);
                 }
                 sessionStorage.setItem(redirectKey, 'true');
-                console.log('🔄 Redirecting to profile from root/# (OAuth return detected)');
+                console.log('🔄 [AUTH] Redirecting to profile from root/#', { hasOAuthTokens, isOnRoot, hasRedirected, isLikelyTabSwitch });
                 window.location.replace('profile.html');
                 return;
+            } else {
+                console.log('🔄 [AUTH] NOT redirecting:', { isRootPath, isOnRoot, hasOAuthTokens, hasRedirected, isLikelyTabSwitch, timeSinceLoad, wasPageHidden });
             }
         }
     });
@@ -372,15 +373,17 @@ function setupAuthListener(callback) {
             // Send welcome email if new user (duplicate prevention is inside the function)
             await sendWelcomeEmailIfNew(user);
             
-            // Only redirect if we're not already on profile page
-            // Check if we're on root or root/# (OAuth return)
+            // Always redirect on SIGNED_IN if we're on root or root/#
+            // This handles OAuth returns where Supabase processes the tokens
             const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
-            const isEmptyHash = !window.location.hash || window.location.hash === '#' || window.location.hash === '';
-            const isOnRoot = isRootPath && isEmptyHash;
+            const currentHash = window.location.hash;
+            const isEmptyHash = !currentHash || currentHash === '#' || currentHash === '';
+            const isOnRoot = isRootPath && (isEmptyHash || hasOAuthTokens);
             
-            if ((isOnRoot || window.location.pathname !== '/profile.html') && 
+            if (isOnRoot && 
+                window.location.pathname !== '/profile.html' && 
                 !window.location.pathname.endsWith('profile.html')) {
-                console.log('🔄 [AUTH] SIGNED_IN event - redirecting to profile');
+                console.log('🔄 [AUTH] SIGNED_IN event - redirecting to profile from root/#');
                 window.location.replace('profile.html');
                 return;
             }
