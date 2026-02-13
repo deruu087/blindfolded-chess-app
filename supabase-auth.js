@@ -337,9 +337,9 @@ function setupAuthListener(callback) {
             
             // Always redirect if:
             // 1. We detected OAuth tokens (captured before Supabase cleared them) - ALWAYS redirect
-            // 2. We're on root/# with session and haven't redirected yet AND it's a fresh load
+            // 2. We're on root/# with session - redirect unless we've already redirected AND it's clearly a tab switch
             const shouldRedirect = hasOAuthTokens || 
-                                  (isOnRoot && !hasRedirected && !isLikelyTabSwitch);
+                                  (isOnRoot && (!hasRedirected || !isLikelyTabSwitch));
             
             // Only redirect if:
             // 1. We're on root path (with or without hash)
