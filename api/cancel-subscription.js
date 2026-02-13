@@ -2,6 +2,7 @@
 // This endpoint is called from the frontend when user cancels subscription
 
 import { createClient } from '@supabase/supabase-js';
+import { sendEmailDirect } from './email-helpers.js';
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -413,29 +414,32 @@ export default async function handler(req, res) {
         console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
         
         // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
-        try {
-            const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Chess Player';
-            
-            const emailApiUrl = process.env.VERCEL_URL 
-                ? `https://${process.env.VERCEL_URL}/api/send-email`
-                : 'https://memo-chess.com/api/send-email';
-            
-            // Don't await - fire and forget, non-blocking
-            fetch(emailApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: 'subscription_cancelled',
-                    to: user.email,
-                    name: userName
-                })
-            }).catch(() => {
+        (async () => {
+            try {
+                const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+                
+                console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
+                
+                if (typeof sendEmailDirect !== 'function') {
+                    console.error('❌ [CANCEL] sendEmailDirect is not a function!');
+                    return;
+                }
+                
+                const result = await sendEmailDirect('subscription_cancelled', user.email, userName);
+                
+                if (result.success) {
+                    console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
+                } else {
+                    console.error('❌ [CANCEL] Email sending failed:', result.error);
+                    if (result.details) {
+                        console.error('❌ [CANCEL] Email error details:', JSON.stringify(result.details, null, 2));
+                    }
+                }
+            } catch (emailError) {
                 // Silently fail - email is optional, cancellation already succeeded
-            });
-        } catch (emailError) {
-            // Silently fail - email is optional
-            console.log('Note: Could not send cancellation email (non-critical)');
-        }
+                console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
+            }
+        })(); // Execute immediately, don't await
         
         return res.status(200).json({ 
             success: true, 

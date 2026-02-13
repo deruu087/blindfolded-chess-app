@@ -1133,6 +1133,45 @@ export default async function handler(req, res) {
                             console.error('Error cancelling subscription:', subError);
                         } else {
                             console.log('✅ Subscription cancelled:', subscription);
+                            
+                            // Send cancellation email (NON-BLOCKING)
+                            (async () => {
+                                try {
+                                    // Get user details for email
+                                    const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+                                    let userName = customerEmail?.split('@')[0] || 'Chess Player';
+                                    
+                                    if (!userError && users) {
+                                        const foundUser = users.find(u => u.email === customerEmail);
+                                        if (foundUser) {
+                                            userName = foundUser.user_metadata?.name || 
+                                                      foundUser.user_metadata?.full_name || 
+                                                      userName;
+                                        }
+                                    }
+                                    
+                                    console.log('📧 [WEBHOOK] Preparing to send cancellation email to:', customerEmail);
+                                    
+                                    if (typeof sendEmailDirect !== 'function') {
+                                        console.error('❌ [WEBHOOK] sendEmailDirect is not a function!');
+                                        return;
+                                    }
+                                    
+                                    const result = await sendEmailDirect('subscription_cancelled', customerEmail, userName);
+                                    
+                                    if (result.success) {
+                                        console.log('✅ [WEBHOOK] Cancellation email sent successfully:', result.messageId);
+                                    } else {
+                                        console.error('❌ [WEBHOOK] Email sending failed:', result.error);
+                                        if (result.details) {
+                                            console.error('❌ [WEBHOOK] Email error details:', JSON.stringify(result.details, null, 2));
+                                        }
+                                    }
+                                } catch (emailError) {
+                                    // Silently fail - email is optional
+                                    console.error('❌ [WEBHOOK] Could not send cancellation email:', emailError.message);
+                                }
+                            })(); // Execute immediately, don't await
                         }
                     } catch (error) {
                         console.error('Error updating subscription:', error);
