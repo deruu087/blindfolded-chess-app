@@ -283,7 +283,23 @@ function setupAuthListener(callback) {
     // Check for existing session on initial load (handles OAuth redirect)
     // NOTE: We DON'T send welcome email here - only in onAuthStateChange SIGNED_IN event
     // This prevents duplicate emails when both initial session and SIGNED_IN fire
+    // Only run this check once on initial page load, not on tab switches
+    let initialSessionCheckDone = false;
+    
+    // Track page load time to detect tab switches
+    const pageLoadTime = Date.now();
+    let wasPageHidden = document.hidden;
+    
+    // Listen for visibility changes to detect tab switches
+    document.addEventListener('visibilitychange', () => {
+        wasPageHidden = document.hidden;
+    });
+    
     supabase.auth.getSession().then(async ({ data, error }) => {
+        // Only run redirect check once per page load
+        if (initialSessionCheckDone) return;
+        initialSessionCheckDone = true;
+        
         if (!error && data.session && data.session.user) {
             // Only redirect if user is on root path (/) or has empty hash (#)
             // This handles OAuth landing after Google login, but not normal navigation
@@ -295,14 +311,26 @@ function setupAuthListener(callback) {
             const redirectKey = 'initialRedirectDone_' + data.session.user.id;
             const hasRedirected = sessionStorage.getItem(redirectKey);
             
+            // Check if this is an OAuth redirect (has code or access_token in URL)
+            const isOAuthRedirect = window.location.search.includes('code=') || 
+                                   window.location.hash.includes('access_token') ||
+                                   window.location.hash.includes('code=');
+            
+            // Check if page was just loaded (not a tab switch)
+            // If page was hidden when this runs, it's likely a tab switch
+            const timeSinceLoad = Date.now() - pageLoadTime;
+            const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 500;
+            
             // Only redirect if:
             // 1. We're on root path or empty hash
             // 2. We're not already on profile
             // 3. We haven't already done this redirect for this session
+            // 4. This is either an OAuth redirect OR a fresh page load (not a tab switch)
             if ((isRootPath || isEmptyHash) && 
                 window.location.pathname !== '/profile.html' && 
                 !window.location.pathname.endsWith('profile.html') &&
-                !hasRedirected) {
+                !hasRedirected &&
+                (isOAuthRedirect || (!isLikelyTabSwitch && timeSinceLoad < 500))) {
                 sessionStorage.setItem(redirectKey, 'true');
                 window.location.replace('profile.html');
                 return;
