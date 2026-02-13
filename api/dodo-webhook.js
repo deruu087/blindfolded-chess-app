@@ -4,6 +4,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmailDirect } from './email-helpers.js';
 
+// Verify email helper import
+console.log('📧 [WEBHOOK] Email helper imported:', typeof sendEmailDirect);
+
 /**
  * Helper function to get invoice URL from Dodo Payments API
  * Tries multiple endpoints and field names to find the invoice URL

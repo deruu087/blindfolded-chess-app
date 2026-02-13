@@ -1,15 +1,27 @@
 // Shared email helper functions that can be imported by other API endpoints
 // This avoids HTTP calls between serverless functions
 
+console.log('📧 [EMAIL HELPER] Module loading...');
+console.log('📧 [EMAIL HELPER] Checking Resend import...');
+
 import { Resend } from 'resend';
+
+console.log('📧 [EMAIL HELPER] Resend imported successfully:', typeof Resend);
 
 // Check if API key is set
 const resendApiKey = process.env.RESEND_API_KEY;
+console.log('📧 [EMAIL HELPER] RESEND_API_KEY check:', { 
+    exists: !!resendApiKey, 
+    length: resendApiKey?.length || 0,
+    startsWith: resendApiKey?.substring(0, 5) || 'N/A'
+});
+
 if (!resendApiKey) {
-    console.error('❌ RESEND_API_KEY is not set in environment variables!');
+    console.error('❌ [EMAIL HELPER] RESEND_API_KEY is not set in environment variables!');
 }
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
+console.log('📧 [EMAIL HELPER] Resend client created:', !!resend);
 
 /**
  * Send an email directly (without HTTP call)
