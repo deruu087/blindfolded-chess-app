@@ -315,8 +315,9 @@ function setupAuthListener(callback) {
         if (!error && data.session && data.session.user) {
             // Only redirect if user is on root path (/) or has empty hash (#)
             // This handles OAuth landing after Google login, but not normal navigation
-            const isRootPath = window.location.pathname === '/';
-            const isEmptyHash = window.location.hash === '#' || window.location.hash === '';
+            const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
+            const isEmptyHash = !window.location.hash || window.location.hash === '#' || window.location.hash === '';
+            const isOnRoot = isRootPath && isEmptyHash;
             
             // Check if this is an OAuth redirect (has code or access_token in URL)
             // OAuth redirects can have these in hash or search params
@@ -333,19 +334,19 @@ function setupAuthListener(callback) {
             // Check if page was just loaded (not a tab switch)
             // If page was hidden when this runs, it's likely a tab switch
             const timeSinceLoad = Date.now() - pageLoadTime;
-            const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 500;
+            const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 2000;
             
             // Always allow redirect on OAuth (even if hasRedirected is set, as this is a new OAuth flow)
-            // Also allow if on root/# with session and fresh load (likely OAuth return, tokens already processed)
+            // For OAuth returns: if on root/# with session, allow redirect if not a tab switch
             // For non-OAuth: only redirect if we haven't redirected before AND it's a fresh page load
-            const isLikelyOAuthReturn = (isRootPath || isEmptyHash) && !hasRedirected && !isLikelyTabSwitch && timeSinceLoad < 500;
-            const shouldRedirect = isOAuthRedirect || isLikelyOAuthReturn;
+            const shouldRedirect = isOAuthRedirect || 
+                                  (isOnRoot && !hasRedirected && !isLikelyTabSwitch);
             
             // Only redirect if:
             // 1. We're on root path or empty hash
             // 2. We're not already on profile
             // 3. Should redirect based on OAuth or fresh load logic
-            if ((isRootPath || isEmptyHash) && 
+            if (isOnRoot && 
                 window.location.pathname !== '/profile.html' && 
                 !window.location.pathname.endsWith('profile.html') &&
                 shouldRedirect) {
@@ -355,6 +356,7 @@ function setupAuthListener(callback) {
                     sessionStorage.removeItem(redirectKey);
                 }
                 sessionStorage.setItem(redirectKey, 'true');
+                console.log('🔄 Redirecting to profile from root/#');
                 window.location.replace('profile.html');
                 return;
             }
@@ -363,7 +365,7 @@ function setupAuthListener(callback) {
 
     // Store the subscription so we can check if it exists
     authStateChangeSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
-        // Redirect to profile on SIGNED_IN event (for email login or future logins)
+        // Redirect to profile on SIGNED_IN event (for email login or OAuth)
         if (event === 'SIGNED_IN' && session && session.user) {
             const user = session.user;
             
@@ -371,7 +373,14 @@ function setupAuthListener(callback) {
             await sendWelcomeEmailIfNew(user);
             
             // Only redirect if we're not already on profile page
-            if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
+            // Check if we're on root or root/# (OAuth return)
+            const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
+            const isEmptyHash = !window.location.hash || window.location.hash === '#' || window.location.hash === '';
+            const isOnRoot = isRootPath && isEmptyHash;
+            
+            if ((isOnRoot || window.location.pathname !== '/profile.html') && 
+                !window.location.pathname.endsWith('profile.html')) {
+                console.log('🔄 [AUTH] SIGNED_IN event - redirecting to profile');
                 window.location.replace('profile.html');
                 return;
             }
