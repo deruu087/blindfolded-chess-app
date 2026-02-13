@@ -187,48 +187,37 @@ export default async function handler(req, res) {
                 
                 console.log('✅ Supabase: status = cancelled (no Dodo subscription ID found)');
                 
-                // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
-                // Store promise to prevent garbage collection and ensure Vercel keeps function alive
-                const emailPromise1 = (async () => {
-                    try {
-                        const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+                // Send cancellation email (wait with timeout to ensure it completes)
+                try {
+                    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+                    
+                    console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
+                    
+                    if (typeof sendEmailDirect === 'function') {
+                        // Wait for email with 8 second timeout (Vercel functions have ~10s limit)
+                        const emailPromise = sendEmailDirect('subscription_cancelled', user.email, userName);
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Email timeout')), 8000)
+                        );
                         
-                        console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
-                        
-                        if (typeof sendEmailDirect !== 'function') {
-                            console.error('❌ [CANCEL] sendEmailDirect is not a function!');
-                            return;
-                        }
-                        
-                        const result = await sendEmailDirect('subscription_cancelled', user.email, userName);
-                        
-                        if (result.success) {
-                            console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
-                        } else {
-                            console.error('❌ [CANCEL] Email sending failed:', result.error);
-                            if (result.details) {
-                                console.error('❌ [CANCEL] Email error details:', JSON.stringify(result.details, null, 2));
+                        try {
+                            const result = await Promise.race([emailPromise, timeoutPromise]);
+                            if (result.success) {
+                                console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
+                            } else {
+                                console.error('❌ [CANCEL] Email sending failed:', result.error);
                             }
+                        } catch (emailError) {
+                            // Timeout or other error - log but don't fail the cancellation
+                            console.error('❌ [CANCEL] Email send timeout or error (non-critical):', emailError.message);
                         }
-                    } catch (emailError) {
-                        // Silently fail - email is optional, cancellation already succeeded
-                        console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
-                        console.error('❌ [CANCEL] Email error stack:', emailError.stack);
+                    } else {
+                        console.error('❌ [CANCEL] sendEmailDirect is not a function!');
                     }
-                })(); // Execute immediately, don't await
-                
-                // Attach error handler to prevent unhandled rejection
-                emailPromise1.catch(err => {
-                    console.error('❌ [CANCEL] Unhandled email promise rejection:', err.message);
-                });
-                
-                // Store promise globally to prevent garbage collection
-                if (!global.emailPromises) {
-                    global.emailPromises = [];
+                } catch (emailError) {
+                    // Silently fail - email is optional, cancellation already succeeded
+                    console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
                 }
-                global.emailPromises.push(emailPromise1);
-                
-                console.log('📧 [CANCEL] Email send process initiated (non-blocking)');
                 
                 return res.status(200).json({ 
                     success: true, 
@@ -364,48 +353,37 @@ export default async function handler(req, res) {
                 
                 console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
                 
-                // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
-                // Store promise to prevent garbage collection and ensure Vercel keeps function alive
-                const emailPromise2 = (async () => {
-                    try {
-                        const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+                // Send cancellation email (wait with timeout to ensure it completes)
+                try {
+                    const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+                    
+                    console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
+                    
+                    if (typeof sendEmailDirect === 'function') {
+                        // Wait for email with 8 second timeout (Vercel functions have ~10s limit)
+                        const emailPromise = sendEmailDirect('subscription_cancelled', user.email, userName);
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Email timeout')), 8000)
+                        );
                         
-                        console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
-                        
-                        if (typeof sendEmailDirect !== 'function') {
-                            console.error('❌ [CANCEL] sendEmailDirect is not a function!');
-                            return;
-                        }
-                        
-                        const result = await sendEmailDirect('subscription_cancelled', user.email, userName);
-                        
-                        if (result.success) {
-                            console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
-                        } else {
-                            console.error('❌ [CANCEL] Email sending failed:', result.error);
-                            if (result.details) {
-                                console.error('❌ [CANCEL] Email error details:', JSON.stringify(result.details, null, 2));
+                        try {
+                            const result = await Promise.race([emailPromise, timeoutPromise]);
+                            if (result.success) {
+                                console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
+                            } else {
+                                console.error('❌ [CANCEL] Email sending failed:', result.error);
                             }
+                        } catch (emailError) {
+                            // Timeout or other error - log but don't fail the cancellation
+                            console.error('❌ [CANCEL] Email send timeout or error (non-critical):', emailError.message);
                         }
-                    } catch (emailError) {
-                        // Silently fail - email is optional, cancellation already succeeded
-                        console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
-                        console.error('❌ [CANCEL] Email error stack:', emailError.stack);
+                    } else {
+                        console.error('❌ [CANCEL] sendEmailDirect is not a function!');
                     }
-                })(); // Execute immediately, don't await
-                
-                // Attach error handler to prevent unhandled rejection
-                emailPromise2.catch(err => {
-                    console.error('❌ [CANCEL] Unhandled email promise rejection:', err.message);
-                });
-                
-                // Store promise globally to prevent garbage collection
-                if (!global.emailPromises) {
-                    global.emailPromises = [];
+                } catch (emailError) {
+                    // Silently fail - email is optional, cancellation already succeeded
+                    console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
                 }
-                global.emailPromises.push(emailPromise2);
-                
-                console.log('📧 [CANCEL] Email send process initiated (non-blocking)');
                 
                 // Return success but inform user they need to cancel manually
                 return res.status(200).json({ 
@@ -503,49 +481,37 @@ export default async function handler(req, res) {
         console.log('✅ Subscription cancelled immediately in Dodo Payments');
         console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
         
-        // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
-        // Store promise to prevent garbage collection and ensure Vercel keeps function alive
-        const emailPromise = (async () => {
-            try {
-                const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+        // Send cancellation email (wait with timeout to ensure it completes)
+        try {
+            const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+            
+            console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
+            
+            if (typeof sendEmailDirect === 'function') {
+                // Wait for email with 8 second timeout (Vercel functions have ~10s limit)
+                const emailPromise = sendEmailDirect('subscription_cancelled', user.email, userName);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Email timeout')), 8000)
+                );
                 
-                console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
-                
-                if (typeof sendEmailDirect !== 'function') {
-                    console.error('❌ [CANCEL] sendEmailDirect is not a function!');
-                    return;
-                }
-                
-                const result = await sendEmailDirect('subscription_cancelled', user.email, userName);
-                
-                if (result.success) {
-                    console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
-                } else {
-                    console.error('❌ [CANCEL] Email sending failed:', result.error);
-                    if (result.details) {
-                        console.error('❌ [CANCEL] Email error details:', JSON.stringify(result.details, null, 2));
+                try {
+                    const result = await Promise.race([emailPromise, timeoutPromise]);
+                    if (result.success) {
+                        console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
+                    } else {
+                        console.error('❌ [CANCEL] Email sending failed:', result.error);
                     }
+                } catch (emailError) {
+                    // Timeout or other error - log but don't fail the cancellation
+                    console.error('❌ [CANCEL] Email send timeout or error (non-critical):', emailError.message);
                 }
-            } catch (emailError) {
-                // Silently fail - email is optional, cancellation already succeeded
-                console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
-                console.error('❌ [CANCEL] Email error stack:', emailError.stack);
+            } else {
+                console.error('❌ [CANCEL] sendEmailDirect is not a function!');
             }
-        })(); // Execute immediately, don't await
-        
-        // Attach error handler to prevent unhandled rejection
-        emailPromise.catch(err => {
-            console.error('❌ [CANCEL] Unhandled email promise rejection:', err.message);
-        });
-        
-        // Store promise globally to prevent garbage collection
-        // This ensures Vercel keeps the function alive long enough for email to send
-        if (!global.emailPromises) {
-            global.emailPromises = [];
+        } catch (emailError) {
+            // Silently fail - email is optional, cancellation already succeeded
+            console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
         }
-        global.emailPromises.push(emailPromise);
-        
-        console.log('📧 [CANCEL] Email send process initiated (non-blocking)');
         
         return res.status(200).json({ 
             success: true, 
