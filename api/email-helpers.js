@@ -74,20 +74,61 @@ export async function sendEmailDirect(type, to, name, data = {}) {
         console.log('📧 [EMAIL HELPER] Attempting to send email via Resend...');
         console.log('📧 [EMAIL HELPER] Email content prepared, subject:', emailContent.subject);
         console.log('📧 [EMAIL HELPER] Calling resend.emails.send...');
-        
-        const { data: emailData, error } = await resend.emails.send({
+        console.log('📧 [EMAIL HELPER] Email payload:', {
             from: 'Memo Chess <hello@memo-chess.com>',
             to: [to],
             subject: emailContent.subject,
-            html: emailContent.html,
+            htmlLength: emailContent.html?.length || 0
         });
+        
+        const sendStartTime = Date.now();
+        let emailData, error;
+        
+        try {
+            const result = await Promise.race([
+                resend.emails.send({
+                    from: 'Memo Chess <hello@memo-chess.com>',
+                    to: [to],
+                    subject: emailContent.subject,
+                    html: emailContent.html,
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Email send timeout after 10 seconds')), 10000)
+                )
+            ]);
+            
+            emailData = result.data;
+            error = result.error;
+            
+            const sendDuration = Date.now() - sendStartTime;
+            console.log('📧 [EMAIL HELPER] Resend API call completed in', sendDuration, 'ms');
+        } catch (sendError) {
+            const sendDuration = Date.now() - sendStartTime;
+            console.error('❌ [EMAIL HELPER] Exception during resend.emails.send (after', sendDuration, 'ms):', sendError);
+            console.error('❌ [EMAIL HELPER] Exception details:', {
+                message: sendError.message,
+                stack: sendError.stack,
+                name: sendError.name
+            });
+            return { success: false, error: 'Exception sending email', details: sendError.message };
+        }
 
-        console.log('📧 [EMAIL HELPER] Resend API response received:', { hasData: !!emailData, hasError: !!error });
+        console.log('📧 [EMAIL HELPER] Resend API response received:', { 
+            hasData: !!emailData, 
+            hasError: !!error,
+            emailDataKeys: emailData ? Object.keys(emailData) : null,
+            errorKeys: error ? Object.keys(error) : null
+        });
 
         if (error) {
             console.error('❌ [EMAIL HELPER] Resend API error:', error);
             console.error('❌ [EMAIL HELPER] Resend API error details:', JSON.stringify(error, null, 2));
             return { success: false, error: 'Failed to send email', details: error };
+        }
+
+        if (!emailData) {
+            console.error('❌ [EMAIL HELPER] No email data and no error - unexpected response');
+            return { success: false, error: 'Unexpected response from Resend API', details: 'No data or error returned' };
         }
 
         console.log('✅ [EMAIL HELPER] Email sent successfully:', emailData);
