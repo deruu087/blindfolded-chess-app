@@ -1154,6 +1154,82 @@
             background-color: #e5e7eb;
         }
 
+        /* Result Modal (for success/error messages) */
+        .result-modal {
+            display: none;
+            position: fixed;
+            z-index: 1002;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .result-modal-content {
+            background-color: #ffffff;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+            text-align: center;
+        }
+
+        .result-modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .result-modal-header h2 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.25rem;
+            font-weight: normal;
+        }
+
+        .result-modal-header h2.success {
+            color: #10b981;
+        }
+
+        .result-modal-header h2.error {
+            color: #ef4444;
+        }
+
+        .result-modal-message {
+            color: #4b5563;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .result-modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-result-modal {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: normal;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .btn-result-modal-primary {
+            background-color: #1e3a8a;
+            color: white;
+        }
+
+        .btn-result-modal-primary:hover {
+            background-color: #1e40af;
+        }
+
         .btn-logout-yes {
             background-color: #e74c3c;
             color: white;
@@ -3080,28 +3156,68 @@
                     console.log('🔴 Result type:', typeof result);
                     
                     if (result.success) {
-                        // Show success message
-                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                        // Show success message in modal
+                        showResultModal(
+                            'Subscription Cancelled',
+                            'Subscription cancelled successfully. You will continue to have access until the end of your billing period.',
+                            'success'
+                        );
                         // Reload billing info to show updated status
                         loadBillingInfo();
                     } else {
                         console.error('🔴 Cancellation failed:', result);
                         console.error('🔴 Error details:', result.details);
-                        // Show more specific error message
+                        // Show more specific error message in modal
                         const errorMsg = result.error || result.message || 'Unknown error';
-                        alert('Error cancelling subscription: ' + errorMsg + '. Please try again or contact support at hi@memo-chess.com');
+                        showResultModal(
+                            'Error',
+                            'Error cancelling subscription: ' + errorMsg + '. Please try again or contact support at hi@memo-chess.com',
+                            'error'
+                        );
                     }
                 } catch (error) {
                     console.error('🔴 Error cancelling subscription:', error);
                     console.error('🔴 Error details:', error.message, error.stack);
-                    alert('Error cancelling subscription: ' + error.message + '. Please try again or contact support.');
+                    showResultModal(
+                        'Error',
+                        'Error cancelling subscription: ' + error.message + '. Please try again or contact support.',
+                        'error'
+                    );
                 }
             } else {
                 console.error('🔴 window.cancelSubscription function not found!');
-                alert('Cancel subscription function not available. Please contact support.');
+                showResultModal(
+                    'Error',
+                    'Cancel subscription function not available. Please contact support.',
+                    'error'
+                );
             }
         }
         window.confirmCancelSubscription = confirmCancelSubscription;
+
+        // Result Modal Functions
+        function showResultModal(title, message, type = 'info') {
+            const modal = document.getElementById('resultModal');
+            const titleElement = document.getElementById('resultModalTitle');
+            const messageElement = document.getElementById('resultModalMessage');
+            
+            if (modal && titleElement && messageElement) {
+                titleElement.textContent = title;
+                titleElement.className = type; // 'success', 'error', or default
+                messageElement.textContent = message;
+                modal.style.display = 'block';
+            }
+        }
+
+        function closeResultModal() {
+            const modal = document.getElementById('resultModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        window.showResultModal = showResultModal;
+        window.closeResultModal = closeResultModal;
 
         // Helper function for fallback (if modal functions not available)
         async function handleCancelSubscription() {
@@ -3109,17 +3225,33 @@
                 try {
                     const result = await window.cancelSubscription();
                     if (result.success) {
-                        alert('Subscription cancelled successfully. You will continue to have access until the end of your billing period.');
+                        showResultModal(
+                            'Subscription Cancelled',
+                            'Subscription cancelled successfully. You will continue to have access until the end of your billing period.',
+                            'success'
+                        );
                         loadBillingInfo();
                     } else {
-                        alert('Error cancelling subscription. Please try again or contact support.');
+                        showResultModal(
+                            'Error',
+                            'Error cancelling subscription. Please try again or contact support.',
+                            'error'
+                        );
                     }
                 } catch (error) {
                     console.error('Error cancelling subscription:', error);
-                    alert('Error cancelling subscription. Please try again or contact support.');
+                    showResultModal(
+                        'Error',
+                        'Error cancelling subscription. Please try again or contact support.',
+                        'error'
+                    );
                 }
             } else {
-                alert('Cancel subscription function not available. Please contact support.');
+                showResultModal(
+                    'Error',
+                    'Cancel subscription function not available. Please contact support.',
+                    'error'
+                );
             }
         }
         window.handleCancelSubscription = handleCancelSubscription;
@@ -3536,6 +3668,7 @@
                 const signInModal = document.getElementById('signInModal');
                 const registerModal = document.getElementById('registerModal');
                 const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+                const resultModal = document.getElementById('resultModal');
                 
                 // Don't close if clicking inside the modal content
                 if (logoutConfirmModal && logoutConfirmModal.contains(event.target) && event.target !== logoutConfirmModal) {
@@ -3544,6 +3677,10 @@
                 
                 if (event.target === signInModal) {
                     closeModal();
+                }
+                
+                if (event.target === resultModal) {
+                    closeResultModal();
                 }
                 if (event.target === registerModal) {
                     closeModal();
@@ -3669,6 +3806,21 @@
             <div class="cancel-subscription-buttons">
                 <button class="btn-cancel-subscription btn-cancel-subscription-yes" onclick="if(typeof window.confirmCancelSubscription === 'function') { window.confirmCancelSubscription(); } else { console.error('confirmCancelSubscription not found!'); }">Yes, Cancel</button>
                 <button class="btn-cancel-subscription btn-cancel-subscription-no" onclick="if(typeof window.closeCancelSubscriptionModal === 'function') { window.closeCancelSubscriptionModal(); } else { console.error('closeCancelSubscriptionModal not found!'); }">Keep Subscription</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal (for success/error messages) -->
+    <div id="resultModal" class="result-modal">
+        <div class="result-modal-content">
+            <div class="result-modal-header">
+                <h2 id="resultModalTitle">Result</h2>
+            </div>
+            <div class="result-modal-message" id="resultModalMessage">
+                <!-- Message will be inserted here -->
+            </div>
+            <div class="result-modal-buttons">
+                <button class="btn-result-modal btn-result-modal-primary" onclick="closeResultModal()">OK</button>
             </div>
         </div>
     </div>
