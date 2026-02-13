@@ -20,8 +20,12 @@ const resend = resendApiKey ? new Resend(resendApiKey) : null;
  * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
  */
 export async function sendEmailDirect(type, to, name, data = {}) {
+    console.log('📧 [EMAIL HELPER] sendEmailDirect called with:', { type, to, name, hasData: !!data });
+    console.log('📧 [EMAIL HELPER] Resend client initialized:', !!resend);
+    console.log('📧 [EMAIL HELPER] RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
+    
     if (!resend) {
-        console.error('❌ Resend client not initialized - RESEND_API_KEY missing');
+        console.error('❌ [EMAIL HELPER] Resend client not initialized - RESEND_API_KEY missing');
         return { success: false, error: 'Email service not configured' };
     }
 
@@ -56,6 +60,9 @@ export async function sendEmailDirect(type, to, name, data = {}) {
         }
 
         console.log('📧 [EMAIL HELPER] Attempting to send email via Resend...');
+        console.log('📧 [EMAIL HELPER] Email content prepared, subject:', emailContent.subject);
+        console.log('📧 [EMAIL HELPER] Calling resend.emails.send...');
+        
         const { data: emailData, error } = await resend.emails.send({
             from: 'Memo Chess <hello@memo-chess.com>',
             to: [to],
@@ -63,12 +70,16 @@ export async function sendEmailDirect(type, to, name, data = {}) {
             html: emailContent.html,
         });
 
+        console.log('📧 [EMAIL HELPER] Resend API response received:', { hasData: !!emailData, hasError: !!error });
+
         if (error) {
             console.error('❌ [EMAIL HELPER] Resend API error:', error);
+            console.error('❌ [EMAIL HELPER] Resend API error details:', JSON.stringify(error, null, 2));
             return { success: false, error: 'Failed to send email', details: error };
         }
 
         console.log('✅ [EMAIL HELPER] Email sent successfully:', emailData);
+        console.log('✅ [EMAIL HELPER] Email message ID:', emailData?.id);
         return { success: true, messageId: emailData?.id };
     } catch (error) {
         console.error('❌ [EMAIL HELPER] Exception sending email:', error);

@@ -1021,8 +1021,13 @@ export default async function handler(req, res) {
                     
                     // Send subscription confirmation email (NON-BLOCKING)
                     // Always send email when payment is successful, regardless of whether subscription is new or updated
+                    console.log('📧 [WEBHOOK] Starting email send process...');
+                    console.log('📧 [WEBHOOK] Customer email:', customerEmail);
+                    console.log('📧 [WEBHOOK] Found user:', foundUser?.id, foundUser?.email);
+                    
                     // Use IIFE to handle async without blocking
                     const emailPromise = (async () => {
+                        console.log('📧 [WEBHOOK] Email IIFE started executing...');
                         try {
                             // Only use real user data - no fallbacks
                             const userName = foundUser?.user_metadata?.name || 
@@ -1033,7 +1038,8 @@ export default async function handler(req, res) {
                             const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
                             
                             console.log('📧 [WEBHOOK] Sending subscription confirmation email directly (no HTTP call)');
-                            console.log('📧 [WEBHOOK] Email data:', { planName, amount, currency, to: customerEmail });
+                            console.log('📧 [WEBHOOK] Email data:', { planName, amount, currency, to: customerEmail, userName });
+                            console.log('📧 [WEBHOOK] About to call sendEmailDirect...');
                             
                             const emailStartTime = Date.now();
                             const result = await sendEmailDirect('subscription_confirmed', customerEmail, userName, {
@@ -1043,6 +1049,8 @@ export default async function handler(req, res) {
                             });
                             
                             const emailDuration = Date.now() - emailStartTime;
+                            
+                            console.log('📧 [WEBHOOK] sendEmailDirect returned:', { success: result.success, error: result.error, duration: emailDuration });
                             
                             if (result.success) {
                                 console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully in', emailDuration, 'ms:', result.messageId);
@@ -1060,10 +1068,15 @@ export default async function handler(req, res) {
                         }
                     })(); // Execute immediately, don't await
                     
+                    console.log('📧 [WEBHOOK] Email promise created, attaching error handler...');
+                    
                     // Attach error handler to prevent unhandled rejection
                     emailPromise.catch(err => {
                         console.error('❌ [WEBHOOK] Unhandled email promise rejection:', err.message);
+                        console.error('❌ [WEBHOOK] Unhandled email promise rejection stack:', err.stack);
                     });
+                    
+                    console.log('📧 [WEBHOOK] Email send process initiated (non-blocking)');
                     
                     return res.status(200).json({ 
                         success: true, 
