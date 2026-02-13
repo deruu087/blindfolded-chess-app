@@ -143,9 +143,6 @@ async function isSignedIn() {
 let authListenerSetup = false;
 let authStateChangeSubscription = null;
 
-// Global flag to prevent multiple redirect checks (persists across function calls)
-let initialSessionCheckDone = false;
-
 /**
  * Setup auth state change listener
  * Updates UI when auth state changes
@@ -283,124 +280,46 @@ function setupAuthListener(callback) {
         return false;
     }
 
-    // IMMEDIATE redirect check - runs before async operations
-    // This catches OAuth returns where Supabase has already processed the tokens
-    (function immediateRedirectCheck() {
-        const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
-        const currentHash = window.location.hash;
-        const isEmptyHash = !currentHash || currentHash === '#' || currentHash === '';
-        const hasOAuthTokens = currentHash.includes('access_token') || currentHash.includes('code=') || 
-                              window.location.search.includes('code=') || window.location.search.includes('access_token');
-        
-        // If we're on root/# and have OAuth tokens, redirect immediately
-        if (isRootPath && hasOAuthTokens) {
-            console.log('🔄 [IMMEDIATE] OAuth tokens detected, redirecting to profile...');
-            window.location.replace('profile.html');
-            return;
-        }
-    })();
-    
     // Check for existing session on initial load (handles OAuth redirect)
     // NOTE: We DON'T send welcome email here - only in onAuthStateChange SIGNED_IN event
     // This prevents duplicate emails when both initial session and SIGNED_IN fire
-    // Only run this check once per page load, not on tab switches
-    // Use global flag so it persists even if setupAuthListener is called multiple times
-    
-    // Only run redirect check once per page load (use global flag)
-    if (initialSessionCheckDone) {
-        // Already checked, skip
-        return;
-    }
-    
-    // Track page load time to detect tab switches (only on first call)
-    const pageLoadTime = Date.now();
-    let wasPageHidden = document.hidden;
-    
-    // Listen for visibility changes to detect tab switches (only add listener once)
-    if (!document.hasAttribute('data-visibility-listener-added')) {
-        document.setAttribute('data-visibility-listener-added', 'true');
-        document.addEventListener('visibilitychange', () => {
-            wasPageHidden = document.hidden;
-        });
-    }
-    
-    // Mark as done immediately to prevent re-execution
-    initialSessionCheckDone = true;
-    
-    // Capture hash IMMEDIATELY before Supabase processes it (for OAuth detection)
-    const initialHash = window.location.hash;
-    const initialSearch = window.location.search;
-    const hasOAuthTokens = initialHash.includes('access_token') || initialHash.includes('code=') || 
-                          initialSearch.includes('code=') || initialSearch.includes('access_token');
-    
+    // Only redirect if this is an OAuth callback (has code/access_token in URL) or first page load
     supabase.auth.getSession().then(async ({ data, error }) => {
         if (!error && data.session && data.session.user) {
-            // Only redirect if user is on root path (/) or has empty hash (#)
-            // This handles OAuth landing after Google login, but not normal navigation
-            const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
-            const currentHash = window.location.hash;
-            const isEmptyHash = !currentHash || currentHash === '#' || currentHash === '';
-            const isOnRoot = isRootPath && (isEmptyHash || hasOAuthTokens);
-            
-            // Check if we've already attempted a redirect for this session
-            // This prevents redirects when switching tabs back to the page
-            const redirectKey = 'initialRedirectDone_' + data.session.user.id;
-            const hasRedirected = sessionStorage.getItem(redirectKey);
-            
-            // Check if page was just loaded (not a tab switch)
-            // If page was hidden when this runs, it's likely a tab switch
-            const timeSinceLoad = Date.now() - pageLoadTime;
-            const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 3000;
-            
-            // Always redirect if:
-            // 1. We detected OAuth tokens (captured before Supabase cleared them) - ALWAYS redirect
-            // 2. We're on root/# with session - redirect unless we've already redirected AND it's clearly a tab switch
-            const shouldRedirect = hasOAuthTokens || 
-                                  (isOnRoot && (!hasRedirected || !isLikelyTabSwitch));
+            // Check if this is an OAuth callback by looking for auth parameters in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const isOAuthCallback = urlParams.has('code') || urlParams.has('access_token') || 
+                                   hashParams.has('access_token') || hashParams.has('code');
             
             // Only redirect if:
-            // 1. We're on root path (with or without hash)
-            // 2. We're not already on profile
-            // 3. Should redirect based on OAuth or fresh load logic
-            if (isRootPath && 
-                window.location.pathname !== '/profile.html' && 
-                !window.location.pathname.endsWith('profile.html') &&
-                shouldRedirect) {
-                // Mark as redirected BEFORE redirecting
-                if (hasOAuthTokens) {
-                    // Clear old redirect flag on OAuth to allow fresh redirect
-                    sessionStorage.removeItem(redirectKey);
-                }
-                sessionStorage.setItem(redirectKey, 'true');
-                console.log('🔄 [AUTH] Redirecting to profile from root/#', { hasOAuthTokens, isOnRoot, hasRedirected, isLikelyTabSwitch });
+            // 1. It's an OAuth callback (user just signed in via OAuth)
+            // 2. OR it's the first page load (no previous navigation state)
+            const isFirstLoad = !sessionStorage.getItem('hasNavigated');
+            
+            const isRootPath = window.location.pathname === '/';
+            const isEmptyHash = window.location.hash === '#';
+            
+            if ((isOAuthCallback || isFirstLoad) && (isRootPath || isEmptyHash) && 
+                window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
+                sessionStorage.setItem('hasNavigated', 'true');
                 window.location.replace('profile.html');
                 return;
-            } else {
-                console.log('🔄 [AUTH] NOT redirecting:', { isRootPath, isOnRoot, hasOAuthTokens, hasRedirected, isLikelyTabSwitch, timeSinceLoad, wasPageHidden });
             }
         }
     });
 
     // Store the subscription so we can check if it exists
     authStateChangeSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
-        // Redirect to profile on SIGNED_IN event (for email login or OAuth)
+        // Redirect to profile on SIGNED_IN event (for email login or future logins)
         if (event === 'SIGNED_IN' && session && session.user) {
             const user = session.user;
             
             // Send welcome email if new user (duplicate prevention is inside the function)
             await sendWelcomeEmailIfNew(user);
             
-            // Always redirect on SIGNED_IN if we're on root or root/#
-            // This handles OAuth returns where Supabase processes the tokens
-            const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
-            const currentHash = window.location.hash;
-            const isEmptyHash = !currentHash || currentHash === '#' || currentHash === '';
-            const isOnRoot = isRootPath && (isEmptyHash || hasOAuthTokens);
-            
-            if (isOnRoot && 
-                window.location.pathname !== '/profile.html' && 
-                !window.location.pathname.endsWith('profile.html')) {
-                console.log('🔄 [AUTH] SIGNED_IN event - redirecting to profile from root/#');
+            // Only redirect if we're not already on profile page
+            if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
                 window.location.replace('profile.html');
                 return;
             }
