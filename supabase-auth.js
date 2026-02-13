@@ -143,6 +143,9 @@ async function isSignedIn() {
 let authListenerSetup = false;
 let authStateChangeSubscription = null;
 
+// Global flag to prevent multiple redirect checks (persists across function calls)
+let initialSessionCheckDone = false;
+
 /**
  * Setup auth state change listener
  * Updates UI when auth state changes
@@ -283,22 +286,31 @@ function setupAuthListener(callback) {
     // Check for existing session on initial load (handles OAuth redirect)
     // NOTE: We DON'T send welcome email here - only in onAuthStateChange SIGNED_IN event
     // This prevents duplicate emails when both initial session and SIGNED_IN fire
-    // Only run this check once on initial page load, not on tab switches
-    let initialSessionCheckDone = false;
+    // Only run this check once per page load, not on tab switches
+    // Use global flag so it persists even if setupAuthListener is called multiple times
     
-    // Track page load time to detect tab switches
+    // Only run redirect check once per page load (use global flag)
+    if (initialSessionCheckDone) {
+        // Already checked, skip
+        return;
+    }
+    
+    // Track page load time to detect tab switches (only on first call)
     const pageLoadTime = Date.now();
     let wasPageHidden = document.hidden;
     
-    // Listen for visibility changes to detect tab switches
-    document.addEventListener('visibilitychange', () => {
-        wasPageHidden = document.hidden;
-    });
+    // Listen for visibility changes to detect tab switches (only add listener once)
+    if (!document.hasAttribute('data-visibility-listener-added')) {
+        document.setAttribute('data-visibility-listener-added', 'true');
+        document.addEventListener('visibilitychange', () => {
+            wasPageHidden = document.hidden;
+        });
+    }
+    
+    // Mark as done immediately to prevent re-execution
+    initialSessionCheckDone = true;
     
     supabase.auth.getSession().then(async ({ data, error }) => {
-        // Only run redirect check once per page load
-        if (initialSessionCheckDone) return;
-        initialSessionCheckDone = true;
         
         if (!error && data.session && data.session.user) {
             // Only redirect if user is on root path (/) or has empty hash (#)
@@ -310,6 +322,11 @@ function setupAuthListener(callback) {
             // This prevents redirects when switching tabs back to the page
             const redirectKey = 'initialRedirectDone_' + data.session.user.id;
             const hasRedirected = sessionStorage.getItem(redirectKey);
+            
+            // If we've already redirected for this session, never redirect again
+            if (hasRedirected) {
+                return;
+            }
             
             // Check if this is an OAuth redirect (has code or access_token in URL)
             const isOAuthRedirect = window.location.search.includes('code=') || 
@@ -324,13 +341,12 @@ function setupAuthListener(callback) {
             // Only redirect if:
             // 1. We're on root path or empty hash
             // 2. We're not already on profile
-            // 3. We haven't already done this redirect for this session
-            // 4. This is either an OAuth redirect OR a fresh page load (not a tab switch)
+            // 3. This is either an OAuth redirect OR a fresh page load (not a tab switch)
             if ((isRootPath || isEmptyHash) && 
                 window.location.pathname !== '/profile.html' && 
                 !window.location.pathname.endsWith('profile.html') &&
-                !hasRedirected &&
                 (isOAuthRedirect || (!isLikelyTabSwitch && timeSinceLoad < 500))) {
+                // Mark as redirected BEFORE redirecting
                 sessionStorage.setItem(redirectKey, 'true');
                 window.location.replace('profile.html');
                 return;
