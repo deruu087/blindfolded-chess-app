@@ -188,7 +188,8 @@ export default async function handler(req, res) {
                 console.log('✅ Supabase: status = cancelled (no Dodo subscription ID found)');
                 
                 // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
-                (async () => {
+                // Store promise to prevent garbage collection and ensure Vercel keeps function alive
+                const emailPromise1 = (async () => {
                     try {
                         const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
                         
@@ -212,8 +213,22 @@ export default async function handler(req, res) {
                     } catch (emailError) {
                         // Silently fail - email is optional, cancellation already succeeded
                         console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
+                        console.error('❌ [CANCEL] Email error stack:', emailError.stack);
                     }
                 })(); // Execute immediately, don't await
+                
+                // Attach error handler to prevent unhandled rejection
+                emailPromise1.catch(err => {
+                    console.error('❌ [CANCEL] Unhandled email promise rejection:', err.message);
+                });
+                
+                // Store promise globally to prevent garbage collection
+                if (!global.emailPromises) {
+                    global.emailPromises = [];
+                }
+                global.emailPromises.push(emailPromise1);
+                
+                console.log('📧 [CANCEL] Email send process initiated (non-blocking)');
                 
                 return res.status(200).json({ 
                     success: true, 
@@ -350,7 +365,8 @@ export default async function handler(req, res) {
                 console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
                 
                 // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
-                (async () => {
+                // Store promise to prevent garbage collection and ensure Vercel keeps function alive
+                const emailPromise2 = (async () => {
                     try {
                         const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
                         
@@ -374,8 +390,22 @@ export default async function handler(req, res) {
                     } catch (emailError) {
                         // Silently fail - email is optional, cancellation already succeeded
                         console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
+                        console.error('❌ [CANCEL] Email error stack:', emailError.stack);
                     }
                 })(); // Execute immediately, don't await
+                
+                // Attach error handler to prevent unhandled rejection
+                emailPromise2.catch(err => {
+                    console.error('❌ [CANCEL] Unhandled email promise rejection:', err.message);
+                });
+                
+                // Store promise globally to prevent garbage collection
+                if (!global.emailPromises) {
+                    global.emailPromises = [];
+                }
+                global.emailPromises.push(emailPromise2);
+                
+                console.log('📧 [CANCEL] Email send process initiated (non-blocking)');
                 
                 // Return success but inform user they need to cancel manually
                 return res.status(200).json({ 
@@ -474,7 +504,8 @@ export default async function handler(req, res) {
         console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
         
         // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
-        (async () => {
+        // Store promise to prevent garbage collection and ensure Vercel keeps function alive
+        const emailPromise = (async () => {
             try {
                 const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
                 
@@ -498,8 +529,23 @@ export default async function handler(req, res) {
             } catch (emailError) {
                 // Silently fail - email is optional, cancellation already succeeded
                 console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
+                console.error('❌ [CANCEL] Email error stack:', emailError.stack);
             }
         })(); // Execute immediately, don't await
+        
+        // Attach error handler to prevent unhandled rejection
+        emailPromise.catch(err => {
+            console.error('❌ [CANCEL] Unhandled email promise rejection:', err.message);
+        });
+        
+        // Store promise globally to prevent garbage collection
+        // This ensures Vercel keeps the function alive long enough for email to send
+        if (!global.emailPromises) {
+            global.emailPromises = [];
+        }
+        global.emailPromises.push(emailPromise);
+        
+        console.log('📧 [CANCEL] Email send process initiated (non-blocking)');
         
         return res.status(200).json({ 
             success: true, 
