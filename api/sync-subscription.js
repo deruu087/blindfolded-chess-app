@@ -616,8 +616,8 @@ export default async function handler(req, res) {
             }
         }
         
-        // Send subscription confirmation email via HTTP endpoint (same as registration emails)
-        // This ensures consistency and reliability since registration emails work
+        // Send subscription confirmation email directly (we're already in serverless function)
+        // Use sendEmailDirect since we're server-to-server, not client-to-server
         console.log('📧 [SYNC] Starting email send process for:', userEmail);
         // Use IIFE to handle async without blocking
         // Store promise to prevent garbage collection
@@ -626,55 +626,30 @@ export default async function handler(req, res) {
                 const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
                 const userName = userEmail.split('@')[0]; // Use email prefix as name
                 
-                // Use HTTP endpoint (same as registration emails) for reliability
-                const emailApiUrl = process.env.VERCEL_URL 
-                    ? `https://${process.env.VERCEL_URL}/api/send-email`
-                    : 'https://memo-chess.com/api/send-email';
-                
-                console.log('📧 [SYNC] Sending subscription confirmation email via HTTP endpoint:', emailApiUrl);
+                console.log('📧 [SYNC] Sending subscription confirmation email via sendEmailDirect');
                 console.log('📧 [SYNC] Email data:', { planName, amount, currency, to: userEmail, userName });
                 
+                if (typeof sendEmailDirect !== 'function') {
+                    console.error('❌ [SYNC] sendEmailDirect is not a function!');
+                    return;
+                }
+                
                 const emailStartTime = Date.now();
-                const response = await fetch(emailApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'subscription_confirmed',
-                        to: userEmail,
-                        name: userName,
-                        data: { planName, amount, currency }
-                    })
+                const result = await sendEmailDirect('subscription_confirmed', userEmail, userName, {
+                    planName,
+                    amount,
+                    currency
                 });
                 
                 const emailDuration = Date.now() - emailStartTime;
-                console.log('📧 [SYNC] Email API response:', { status: response.status, ok: response.ok, duration: emailDuration });
+                console.log('📧 [SYNC] sendEmailDirect returned:', { success: result.success, error: result.error, duration: emailDuration });
                 
-                if (response.ok) {
-                    const result = await response.json();
+                if (result.success) {
                     console.log('✅ [SYNC] Subscription confirmation email sent successfully in', emailDuration, 'ms:', result.messageId);
                 } else {
-                    const errorData = await response.json().catch(() => ({}));
-                    console.error('❌ [SYNC] Email sending failed:', response.status, errorData);
-                    
-                    // Fallback: Try direct call if HTTP endpoint failed
-                    console.log('📧 [SYNC] Attempting fallback via direct call...');
-                    try {
-                        if (typeof sendEmailDirect === 'function') {
-                            const directResult = await sendEmailDirect('subscription_confirmed', userEmail, userName, {
-                                planName,
-                                amount,
-                                currency
-                            });
-                            if (directResult.success) {
-                                console.log('✅ [SYNC] Email sent via direct call fallback:', directResult.messageId);
-                            } else {
-                                console.error('❌ [SYNC] Direct call fallback also failed:', directResult.error);
-                            }
-                        } else {
-                            console.error('❌ [SYNC] sendEmailDirect not available for fallback');
-                        }
-                    } catch (fallbackError) {
-                        console.error('❌ [SYNC] Direct call fallback error:', fallbackError.message);
+                    console.error('❌ [SYNC] Email sending failed:', result.error);
+                    if (result.details) {
+                        console.error('❌ [SYNC] Email error details:', JSON.stringify(result.details, null, 2));
                     }
                 }
             } catch (emailError) {

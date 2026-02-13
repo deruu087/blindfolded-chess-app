@@ -985,9 +985,10 @@ export default async function handler(req, res) {
                     console.log('📧 [WEBHOOK] Customer email:', customerEmail);
                     console.log('📧 [WEBHOOK] Found user:', foundUser?.id, foundUser?.email);
                     
-                    // Send subscription confirmation email via HTTP endpoint (same as registration emails)
-                    // This ensures consistency and reliability since registration emails work
+                    // Send subscription confirmation email directly (we're already in serverless function)
+                    // Use sendEmailDirect since we're server-to-server, not client-to-server
                     console.log('📧 [WEBHOOK] Preparing to send subscription confirmation email...');
+                    console.log('📧 [WEBHOOK] Verifying sendEmailDirect function:', typeof sendEmailDirect);
                     
                     // Use IIFE to handle async without blocking
                     const emailPromise = (async () => {
@@ -1001,55 +1002,30 @@ export default async function handler(req, res) {
                             
                             const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
                             
-                            // Use HTTP endpoint (same as registration emails) for reliability
-                            const emailApiUrl = process.env.VERCEL_URL 
-                                ? `https://${process.env.VERCEL_URL}/api/send-email`
-                                : 'https://memo-chess.com/api/send-email';
-                            
-                            console.log('📧 [WEBHOOK] Sending subscription confirmation email via HTTP endpoint:', emailApiUrl);
+                            console.log('📧 [WEBHOOK] Sending subscription confirmation email via sendEmailDirect');
                             console.log('📧 [WEBHOOK] Email data:', { planName, amount, currency, to: customerEmail, userName });
                             
+                            if (typeof sendEmailDirect !== 'function') {
+                                console.error('❌ [WEBHOOK] sendEmailDirect is not a function!');
+                                return;
+                            }
+                            
                             const emailStartTime = Date.now();
-                            const response = await fetch(emailApiUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    type: 'subscription_confirmed',
-                                    to: customerEmail,
-                                    name: userName,
-                                    data: { planName, amount, currency }
-                                })
+                            const result = await sendEmailDirect('subscription_confirmed', customerEmail, userName, {
+                                planName,
+                                amount,
+                                currency
                             });
                             
                             const emailDuration = Date.now() - emailStartTime;
-                            console.log('📧 [WEBHOOK] Email API response:', { status: response.status, ok: response.ok, duration: emailDuration });
+                            console.log('📧 [WEBHOOK] sendEmailDirect returned:', { success: result.success, error: result.error, duration: emailDuration });
                             
-                            if (response.ok) {
-                                const result = await response.json();
+                            if (result.success) {
                                 console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully in', emailDuration, 'ms:', result.messageId);
                             } else {
-                                const errorData = await response.json().catch(() => ({}));
-                                console.error('❌ [WEBHOOK] Email sending failed:', response.status, errorData);
-                                
-                                // Fallback: Try direct call if HTTP endpoint failed
-                                console.log('📧 [WEBHOOK] Attempting fallback via direct call...');
-                                try {
-                                    if (typeof sendEmailDirect === 'function') {
-                                        const directResult = await sendEmailDirect('subscription_confirmed', customerEmail, userName, {
-                                            planName,
-                                            amount,
-                                            currency
-                                        });
-                                        if (directResult.success) {
-                                            console.log('✅ [WEBHOOK] Email sent via direct call fallback:', directResult.messageId);
-                                        } else {
-                                            console.error('❌ [WEBHOOK] Direct call fallback also failed:', directResult.error);
-                                        }
-                                    } else {
-                                        console.error('❌ [WEBHOOK] sendEmailDirect not available for fallback');
-                                    }
-                                } catch (fallbackError) {
-                                    console.error('❌ [WEBHOOK] Direct call fallback error:', fallbackError.message);
+                                console.error('❌ [WEBHOOK] Email sending failed:', result.error);
+                                if (result.details) {
+                                    console.error('❌ [WEBHOOK] Email error details:', JSON.stringify(result.details, null, 2));
                                 }
                             }
                         } catch (emailError) {
