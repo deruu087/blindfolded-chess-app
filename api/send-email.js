@@ -4,12 +4,20 @@
 import { Resend } from 'resend';
 
 // Check if API key is set
+console.log('📧 [EMAIL API] Module loading...');
 const resendApiKey = process.env.RESEND_API_KEY;
+console.log('📧 [EMAIL API] RESEND_API_KEY check:', { 
+    exists: !!resendApiKey, 
+    length: resendApiKey?.length || 0,
+    startsWith: resendApiKey?.substring(0, 5) || 'N/A'
+});
+
 if (!resendApiKey) {
-    console.error('❌ RESEND_API_KEY is not set in environment variables!');
+    console.error('❌ [EMAIL API] RESEND_API_KEY is not set in environment variables!');
 }
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
+console.log('📧 [EMAIL API] Resend client created:', !!resend);
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -73,20 +81,27 @@ export default async function handler(req, res) {
         }
         
         console.log('📧 [EMAIL API] Attempting to send email via Resend...');
+        console.log('📧 [EMAIL API] Email content prepared, subject:', emailContent.subject);
+        console.log('📧 [EMAIL API] Calling resend.emails.send...');
+        console.log('📧 [EMAIL API] Resend client:', !!resend);
+        
         const { data: emailData, error } = await resend.emails.send({
             from: 'Memo Chess <hello@memo-chess.com>',
             to: [to],
             subject: emailContent.subject,
             html: emailContent.html,
         });
-        
+
+        console.log('📧 [EMAIL API] Resend API response received:', { hasData: !!emailData, hasError: !!error });
+
         if (error) {
             console.error('❌ [EMAIL API] Resend API error:', error);
             console.error('❌ [EMAIL API] Error details:', JSON.stringify(error, null, 2));
             return res.status(500).json({ error: 'Failed to send email', details: error });
         }
-        
+
         console.log('✅ [EMAIL API] Email sent successfully:', emailData);
+        console.log('✅ [EMAIL API] Email message ID:', emailData?.id);
         return res.status(200).json({ success: true, messageId: emailData?.id });
         
     } catch (error) {

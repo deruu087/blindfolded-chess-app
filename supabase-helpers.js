@@ -855,6 +855,7 @@ async function sendEmail(type, to, name, data = {}) {
             : `${window.location.origin}/api/send-email`;
 
         console.log('📧 [EMAIL DEBUG] sendEmail called:', { type, to, name, apiUrl });
+        console.log('📧 [EMAIL DEBUG] Request body:', { type, to, name, hasData: !!data });
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -870,6 +871,7 @@ async function sendEmail(type, to, name, data = {}) {
         });
 
         console.log('📧 [EMAIL DEBUG] Response status:', response.status, response.statusText);
+        console.log('📧 [EMAIL DEBUG] Response ok:', response.ok);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
