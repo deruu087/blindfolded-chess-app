@@ -427,10 +427,21 @@ export default async function handler(req, res) {
                 .limit(5);
             
             if (recentPayments && recentPayments.length > 0) {
-                // Find the most recent one with correct invoice URL or payment_id
-                const bestPayment = recentPayments.find(p => 
-                    (p.payment_id && p.payment_id.startsWith('pay_')) ||
-                    (p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account'))
+                // Prefer payment with invoice_url and correct amount (3.50, not 2.94)
+                // Priority: 1) Has invoice_url (not default), 2) Correct amount (3.50), 3) Has payment_id, 4) Most recent
+                const correctAmounts = [3.49, 3.50, 8.90];
+                const bestPayment = recentPayments.find(p => {
+                    const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
+                    const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
+                    return hasInvoice && hasCorrectAmount;
+                }) || recentPayments.find(p => {
+                    const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
+                    return hasInvoice;
+                }) || recentPayments.find(p => {
+                    const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
+                    return hasCorrectAmount;
+                }) || recentPayments.find(p => 
+                    (p.payment_id && p.payment_id.startsWith('pay_'))
                 ) || recentPayments[0];
                 
                 existingPayment = bestPayment;
