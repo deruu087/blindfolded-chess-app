@@ -336,9 +336,10 @@ function setupAuthListener(callback) {
             const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 500;
             
             // Always allow redirect on OAuth (even if hasRedirected is set, as this is a new OAuth flow)
+            // Also allow if on root/# with session and fresh load (likely OAuth return, tokens already processed)
             // For non-OAuth: only redirect if we haven't redirected before AND it's a fresh page load
-            const shouldRedirect = isOAuthRedirect || 
-                                  (!hasRedirected && !isLikelyTabSwitch && timeSinceLoad < 500);
+            const isLikelyOAuthReturn = (isRootPath || isEmptyHash) && !hasRedirected && !isLikelyTabSwitch && timeSinceLoad < 500;
+            const shouldRedirect = isOAuthRedirect || isLikelyOAuthReturn;
             
             // Only redirect if:
             // 1. We're on root path or empty hash
