@@ -316,37 +316,43 @@ function setupAuthListener(callback) {
             // Only redirect if user is on root path (/) or has empty hash (#)
             // This handles OAuth landing after Google login, but not normal navigation
             const isRootPath = window.location.pathname === '/';
-            const isEmptyHash = window.location.hash === '#';
+            const isEmptyHash = window.location.hash === '#' || window.location.hash === '';
+            
+            // Check if this is an OAuth redirect (has code or access_token in URL)
+            // OAuth redirects can have these in hash or search params
+            const isOAuthRedirect = window.location.search.includes('code=') || 
+                                   window.location.search.includes('access_token') ||
+                                   window.location.hash.includes('access_token') ||
+                                   window.location.hash.includes('code=');
             
             // Check if we've already attempted a redirect for this session
             // This prevents redirects when switching tabs back to the page
             const redirectKey = 'initialRedirectDone_' + data.session.user.id;
             const hasRedirected = sessionStorage.getItem(redirectKey);
             
-            // If we've already redirected for this session, never redirect again
-            if (hasRedirected) {
-                return;
-            }
-            
-            // Check if this is an OAuth redirect (has code or access_token in URL)
-            const isOAuthRedirect = window.location.search.includes('code=') || 
-                                   window.location.hash.includes('access_token') ||
-                                   window.location.hash.includes('code=');
-            
             // Check if page was just loaded (not a tab switch)
             // If page was hidden when this runs, it's likely a tab switch
             const timeSinceLoad = Date.now() - pageLoadTime;
             const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 500;
             
+            // Always allow redirect on OAuth (even if hasRedirected is set, as this is a new OAuth flow)
+            // For non-OAuth: only redirect if we haven't redirected before AND it's a fresh page load
+            const shouldRedirect = isOAuthRedirect || 
+                                  (!hasRedirected && !isLikelyTabSwitch && timeSinceLoad < 500);
+            
             // Only redirect if:
             // 1. We're on root path or empty hash
             // 2. We're not already on profile
-            // 3. This is either an OAuth redirect OR a fresh page load (not a tab switch)
+            // 3. Should redirect based on OAuth or fresh load logic
             if ((isRootPath || isEmptyHash) && 
                 window.location.pathname !== '/profile.html' && 
                 !window.location.pathname.endsWith('profile.html') &&
-                (isOAuthRedirect || (!isLikelyTabSwitch && timeSinceLoad < 500))) {
-                // Mark as redirected BEFORE redirecting
+                shouldRedirect) {
+                // Mark as redirected BEFORE redirecting (unless it's OAuth, then clear old flag for new session)
+                if (isOAuthRedirect) {
+                    // Clear old redirect flag on OAuth to allow fresh redirect
+                    sessionStorage.removeItem(redirectKey);
+                }
                 sessionStorage.setItem(redirectKey, 'true');
                 window.location.replace('profile.html');
                 return;
