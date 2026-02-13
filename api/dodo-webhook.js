@@ -330,6 +330,17 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: 'Invalid amount value' });
             }
             
+            // REJECT payments with amount 2.94 - this is a wrong/duplicate payment
+            if (Math.abs(amountNum - 2.94) < 0.01) {
+                console.warn('⚠️ [WEBHOOK] Rejecting payment with wrong amount 2.94 - this is a duplicate/incorrect payment');
+                return res.status(200).json({ 
+                    success: true, 
+                    message: 'Payment with amount 2.94 rejected - incorrect/duplicate payment',
+                    rejected: true,
+                    reason: 'Incorrect amount 2.94'
+                });
+            }
+            
             let planType = null;
             
             // First, try to get from payment frequency (if available)
@@ -709,6 +720,7 @@ export default async function handler(req, res) {
                     
                     // Also check by order_id/transaction_id if no payment_id
                     if (!existingPayment && subscriptionId) {
+                        // First, check for correct amount
                         const { data: existing } = await supabase
                             .from('payments')
                             .select('*')
@@ -720,6 +732,27 @@ export default async function handler(req, res) {
                         if (existing) {
                             existingPayment = existing;
                             console.log('🔄 [WEBHOOK] Payment with order_id already exists, will update:', existingPayment.id);
+                        } else {
+                            // Check for wrong amount (2.94) - we'll delete it if we have correct payment
+                            const correctAmounts = [3.49, 3.50, 8.90];
+                            if (correctAmounts.includes(amountNum)) {
+                                const { data: wrongPayment } = await supabase
+                                    .from('payments')
+                                    .select('*')
+                                    .eq('order_id', subscriptionId)
+                                    .eq('user_id', userId)
+                                    .eq('amount', 2.94)
+                                    .maybeSingle();
+                                
+                                if (wrongPayment) {
+                                    console.log('⚠️ [WEBHOOK] Found wrong payment (2.94) with same order_id, will delete it:', wrongPayment.id);
+                                    await supabase
+                                        .from('payments')
+                                        .delete()
+                                        .eq('id', wrongPayment.id);
+                                    console.log('✅ [WEBHOOK] Deleted wrong payment (2.94)');
+                                }
+                            }
                         }
                     }
                     
@@ -741,10 +774,21 @@ export default async function handler(req, res) {
                             .limit(5);
                         
                         if (recentPayments && recentPayments.length > 0) {
-                            // Find the most recent one with correct invoice URL or payment_id
-                            const bestPayment = recentPayments.find(p => 
-                                (p.payment_id && p.payment_id.startsWith('pay_')) ||
-                                (p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account'))
+                            // Prefer payment with invoice_url and correct amount (3.50, not 2.94)
+                            // Priority: 1) Has invoice_url (not default), 2) Correct amount (3.50), 3) Has payment_id, 4) Most recent
+                            const correctAmounts = [3.49, 3.50, 8.90];
+                            const bestPayment = recentPayments.find(p => {
+                                const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
+                                const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
+                                return hasInvoice && hasCorrectAmount;
+                            }) || recentPayments.find(p => {
+                                const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
+                                return hasInvoice;
+                            }) || recentPayments.find(p => {
+                                const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
+                                return hasCorrectAmount;
+                            }) || recentPayments.find(p => 
+                                (p.payment_id && p.payment_id.startsWith('pay_'))
                             ) || recentPayments[0];
                             
                             existingPayment = bestPayment;
@@ -782,20 +826,34 @@ export default async function handler(req, res) {
                         
                         let payment;
                         if (existing) {
-                            // Update existing payment
-                            const { data: updated, error: updateError } = await supabase
-                                .from('payments')
-                                .update(upsertData)
-                                .eq('id', existing.id)
-                                .select()
-                                .single();
+                            // Only update if new payment has better data (invoice_url or correct amount)
+                            const correctAmounts = [3.49, 3.50, 8.90];
+                            const newHasInvoice = upsertData.invoice_url && !upsertData.invoice_url.includes('checkout.dodopayments.com/account');
+                            const existingHasInvoice = existing.invoice_url && !existing.invoice_url.includes('checkout.dodopayments.com/account');
+                            const newHasCorrectAmount = correctAmounts.includes(parseFloat(upsertData.amount));
+                            const existingHasCorrectAmount = correctAmounts.includes(parseFloat(existing.amount));
+                            const existingIsWrongAmount = Math.abs(parseFloat(existing.amount) - 2.94) < 0.01;
                             
-                            if (updateError) {
-                                console.error('⚠️ Error updating payment record:', updateError);
-                                payment = existing; // Use existing if update fails
+                            // Update if: new has invoice and existing doesn't, OR new has correct amount and existing is wrong (2.94), OR existing is wrong amount
+                            if ((newHasInvoice && !existingHasInvoice) || (newHasCorrectAmount && existingIsWrongAmount) || existingIsWrongAmount) {
+                                const { data: updated, error: updateError } = await supabase
+                                    .from('payments')
+                                    .update(upsertData)
+                                    .eq('id', existing.id)
+                                    .select()
+                                    .single();
+                                
+                                if (updateError) {
+                                    console.error('⚠️ Error updating payment record:', updateError);
+                                    payment = existing; // Use existing if update fails
+                                } else {
+                                    payment = updated;
+                                    console.log('✅ [WEBHOOK] Payment record updated (better data):', payment);
+                                }
                             } else {
-                                payment = updated;
-                                console.log('✅ [WEBHOOK] Payment record updated:', payment);
+                                // Keep existing if it's better or equal
+                                payment = existing;
+                                console.log('✅ [WEBHOOK] Keeping existing payment (has better/equal data):', payment);
                             }
                         } else {
                             // Insert new payment
@@ -818,15 +876,29 @@ export default async function handler(req, res) {
                                         .single();
                                     
                                     if (existingAfterInsert) {
-                                        // Update existing with better data
-                                        const { data: updated } = await supabase
-                                            .from('payments')
-                                            .update(upsertData)
-                                            .eq('id', existingAfterInsert.id)
-                                            .select()
-                                            .single();
-                                        payment = updated || existingAfterInsert;
-                                        console.log('✅ [WEBHOOK] Payment record updated (duplicate handled):', payment);
+                                        // Only update if new payment has better data (invoice_url or correct amount)
+                                        const correctAmounts = [3.49, 3.50, 8.90];
+                                        const newHasInvoice = upsertData.invoice_url && !upsertData.invoice_url.includes('checkout.dodopayments.com/account');
+                                        const existingHasInvoice = existingAfterInsert.invoice_url && !existingAfterInsert.invoice_url.includes('checkout.dodopayments.com/account');
+                                        const newHasCorrectAmount = correctAmounts.includes(parseFloat(upsertData.amount));
+                                        const existingHasCorrectAmount = correctAmounts.includes(parseFloat(existingAfterInsert.amount));
+                                        const existingIsWrongAmount = Math.abs(parseFloat(existingAfterInsert.amount) - 2.94) < 0.01;
+                                        
+                                        // Update if: new has invoice and existing doesn't, OR new has correct amount and existing is wrong (2.94), OR existing is wrong amount
+                                        if ((newHasInvoice && !existingHasInvoice) || (newHasCorrectAmount && existingIsWrongAmount) || existingIsWrongAmount) {
+                                            const { data: updated } = await supabase
+                                                .from('payments')
+                                                .update(upsertData)
+                                                .eq('id', existingAfterInsert.id)
+                                                .select()
+                                                .single();
+                                            payment = updated || existingAfterInsert;
+                                            console.log('✅ [WEBHOOK] Payment record updated (duplicate handled with better data):', payment);
+                                        } else {
+                                            // Keep existing if it's better or equal
+                                            payment = existingAfterInsert;
+                                            console.log('✅ [WEBHOOK] Keeping existing payment (has better/equal data):', payment);
+                                        }
                                     } else {
                                         console.error('⚠️ Duplicate error but could not find existing payment:', insertError);
                                     }

@@ -45,6 +45,17 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing required fields: amount or planType' });
         }
         
+        // REJECT payments with amount 2.94 - this is a wrong/duplicate payment
+        const amountNum = parseFloat(amount);
+        if (Math.abs(amountNum - 2.94) < 0.01) {
+            console.warn('⚠️ [SYNC] Rejecting payment with wrong amount 2.94 - this is a duplicate/incorrect payment');
+            return res.status(400).json({ 
+                error: 'Payment with amount 2.94 rejected - incorrect/duplicate payment',
+                rejected: true,
+                reason: 'Incorrect amount 2.94'
+            });
+        }
+        
         // Warn if subscription ID looks like a generated ID (but still allow it as fallback)
         if (subscriptionId && subscriptionId.startsWith('sync_')) {
             console.warn('⚠️ [SYNC] WARNING: Subscription ID appears to be generated (starts with "sync_")');
@@ -361,6 +372,7 @@ export default async function handler(req, res) {
         
         // Also check by order_id/transaction_id if no payment_id
         if (!existingPayment && subscriptionId && !subscriptionId.startsWith('sync_')) {
+            // First, check for correct amount
             const { data: existing } = await supabase
                 .from('payments')
                 .select('*')
@@ -372,6 +384,27 @@ export default async function handler(req, res) {
             if (existing) {
                 existingPayment = existing;
                 console.log('🔄 [SYNC] Payment with order_id already exists, will update:', existingPayment.id);
+            } else {
+                // Check for wrong amount (2.94) - we'll delete it if we have correct payment
+                const correctAmounts = [3.49, 3.50, 8.90];
+                if (correctAmounts.includes(amountNum)) {
+                    const { data: wrongPayment } = await supabase
+                        .from('payments')
+                        .select('*')
+                        .eq('order_id', subscriptionId)
+                        .eq('user_id', userId)
+                        .eq('amount', 2.94)
+                        .maybeSingle();
+                    
+                    if (wrongPayment) {
+                        console.log('⚠️ [SYNC] Found wrong payment (2.94) with same order_id, will delete it:', wrongPayment.id);
+                        await supabase
+                            .from('payments')
+                            .delete()
+                            .eq('id', wrongPayment.id);
+                        console.log('✅ [SYNC] Deleted wrong payment (2.94)');
+                    }
+                }
             }
         }
         
