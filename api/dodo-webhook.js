@@ -1020,6 +1020,7 @@ export default async function handler(req, res) {
                     console.log('📦 Plan:', planType);
                     
                     // Send subscription confirmation email (NON-BLOCKING)
+                    // Always send email when payment is successful, regardless of whether subscription is new or updated
                     // Use IIFE to handle async without blocking
                     const emailPromise = (async () => {
                         try {
@@ -1046,22 +1047,22 @@ export default async function handler(req, res) {
                             if (result.success) {
                                 console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully in', emailDuration, 'ms:', result.messageId);
                             } else {
-                                console.warn('⚠️ [WEBHOOK] Email sending failed:', result.error);
+                                console.error('❌ [WEBHOOK] Email sending failed:', result.error);
                                 if (result.details) {
-                                    console.warn('⚠️ [WEBHOOK] Email error details:', result.details);
+                                    console.error('❌ [WEBHOOK] Email error details:', result.details);
                                 }
                             }
                         } catch (emailError) {
                             // Log full error details for debugging
-                            console.warn('⚠️ [WEBHOOK] Could not send subscription email (non-critical):', emailError.message);
-                            console.warn('⚠️ [WEBHOOK] Email error stack:', emailError.stack);
-                            console.warn('⚠️ [WEBHOOK] Email error name:', emailError.name);
+                            console.error('❌ [WEBHOOK] Could not send subscription email:', emailError.message);
+                            console.error('❌ [WEBHOOK] Email error stack:', emailError.stack);
+                            console.error('❌ [WEBHOOK] Email error name:', emailError.name);
                         }
                     })(); // Execute immediately, don't await
                     
                     // Attach error handler to prevent unhandled rejection
                     emailPromise.catch(err => {
-                        console.warn('⚠️ [WEBHOOK] Unhandled email promise rejection:', err.message);
+                        console.error('❌ [WEBHOOK] Unhandled email promise rejection:', err.message);
                     });
                     
                     return res.status(200).json({ 
