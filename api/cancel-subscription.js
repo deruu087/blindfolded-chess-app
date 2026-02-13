@@ -185,6 +185,36 @@ export default async function handler(req, res) {
                     });
                 }
                 
+                console.log('✅ Supabase: status = cancelled (no Dodo subscription ID found)');
+                
+                // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
+                (async () => {
+                    try {
+                        const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+                        
+                        console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
+                        
+                        if (typeof sendEmailDirect !== 'function') {
+                            console.error('❌ [CANCEL] sendEmailDirect is not a function!');
+                            return;
+                        }
+                        
+                        const result = await sendEmailDirect('subscription_cancelled', user.email, userName);
+                        
+                        if (result.success) {
+                            console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
+                        } else {
+                            console.error('❌ [CANCEL] Email sending failed:', result.error);
+                            if (result.details) {
+                                console.error('❌ [CANCEL] Email error details:', JSON.stringify(result.details, null, 2));
+                            }
+                        }
+                    } catch (emailError) {
+                        // Silently fail - email is optional, cancellation already succeeded
+                        console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
+                    }
+                })(); // Execute immediately, don't await
+                
                 return res.status(200).json({ 
                     success: true, 
                     message: 'Subscription status updated in our system. Please cancel your subscription manually in the Dodo Payments dashboard to stop billing.',
@@ -316,6 +346,36 @@ export default async function handler(req, res) {
                         error: 'Failed to update subscription: ' + updateError.message 
                     });
                 }
+                
+                console.log('✅ Supabase: status = cancelled, access until:', accessEndDate.toISOString().split('T')[0]);
+                
+                // Send cancellation email (NON-BLOCKING - wrapped in try-catch)
+                (async () => {
+                    try {
+                        const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Chess Player';
+                        
+                        console.log('📧 [CANCEL] Preparing to send cancellation email to:', user.email);
+                        
+                        if (typeof sendEmailDirect !== 'function') {
+                            console.error('❌ [CANCEL] sendEmailDirect is not a function!');
+                            return;
+                        }
+                        
+                        const result = await sendEmailDirect('subscription_cancelled', user.email, userName);
+                        
+                        if (result.success) {
+                            console.log('✅ [CANCEL] Cancellation email sent successfully:', result.messageId);
+                        } else {
+                            console.error('❌ [CANCEL] Email sending failed:', result.error);
+                            if (result.details) {
+                                console.error('❌ [CANCEL] Email error details:', JSON.stringify(result.details, null, 2));
+                            }
+                        }
+                    } catch (emailError) {
+                        // Silently fail - email is optional, cancellation already succeeded
+                        console.error('❌ [CANCEL] Could not send cancellation email:', emailError.message);
+                    }
+                })(); // Execute immediately, don't await
                 
                 // Return success but inform user they need to cancel manually
                 return res.status(200).json({ 
