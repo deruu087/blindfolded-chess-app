@@ -310,21 +310,20 @@ function setupAuthListener(callback) {
     // Mark as done immediately to prevent re-execution
     initialSessionCheckDone = true;
     
+    // Capture hash IMMEDIATELY before Supabase processes it (for OAuth detection)
+    const initialHash = window.location.hash;
+    const initialSearch = window.location.search;
+    const hasOAuthTokens = initialHash.includes('access_token') || initialHash.includes('code=') || 
+                          initialSearch.includes('code=') || initialSearch.includes('access_token');
+    
     supabase.auth.getSession().then(async ({ data, error }) => {
-        
         if (!error && data.session && data.session.user) {
             // Only redirect if user is on root path (/) or has empty hash (#)
             // This handles OAuth landing after Google login, but not normal navigation
             const isRootPath = window.location.pathname === '/' || window.location.pathname === '/index.html';
-            const isEmptyHash = !window.location.hash || window.location.hash === '#' || window.location.hash === '';
-            const isOnRoot = isRootPath && isEmptyHash;
-            
-            // Check if this is an OAuth redirect (has code or access_token in URL)
-            // OAuth redirects can have these in hash or search params
-            const isOAuthRedirect = window.location.search.includes('code=') || 
-                                   window.location.search.includes('access_token') ||
-                                   window.location.hash.includes('access_token') ||
-                                   window.location.hash.includes('code=');
+            const currentHash = window.location.hash;
+            const isEmptyHash = !currentHash || currentHash === '#' || currentHash === '';
+            const isOnRoot = isRootPath && (isEmptyHash || hasOAuthTokens);
             
             // Check if we've already attempted a redirect for this session
             // This prevents redirects when switching tabs back to the page
@@ -336,27 +335,28 @@ function setupAuthListener(callback) {
             const timeSinceLoad = Date.now() - pageLoadTime;
             const isLikelyTabSwitch = wasPageHidden || timeSinceLoad > 2000;
             
-            // Always allow redirect on OAuth (even if hasRedirected is set, as this is a new OAuth flow)
-            // For OAuth returns: if on root/# with session, allow redirect if not a tab switch
-            // For non-OAuth: only redirect if we haven't redirected before AND it's a fresh page load
-            const shouldRedirect = isOAuthRedirect || 
+            // Always redirect if:
+            // 1. We detected OAuth tokens (captured before Supabase cleared them)
+            // 2. We're on root/# with session and haven't redirected yet (OAuth return, tokens already processed)
+            // 3. We're on root/# with session and it's a fresh load (not a tab switch)
+            const shouldRedirect = hasOAuthTokens || 
                                   (isOnRoot && !hasRedirected && !isLikelyTabSwitch);
             
             // Only redirect if:
-            // 1. We're on root path or empty hash
+            // 1. We're on root path (with or without hash)
             // 2. We're not already on profile
             // 3. Should redirect based on OAuth or fresh load logic
-            if (isOnRoot && 
+            if (isRootPath && 
                 window.location.pathname !== '/profile.html' && 
                 !window.location.pathname.endsWith('profile.html') &&
                 shouldRedirect) {
-                // Mark as redirected BEFORE redirecting (unless it's OAuth, then clear old flag for new session)
-                if (isOAuthRedirect) {
+                // Mark as redirected BEFORE redirecting
+                if (hasOAuthTokens) {
                     // Clear old redirect flag on OAuth to allow fresh redirect
                     sessionStorage.removeItem(redirectKey);
                 }
                 sessionStorage.setItem(redirectKey, 'true');
-                console.log('🔄 Redirecting to profile from root/#');
+                console.log('🔄 Redirecting to profile from root/# (OAuth return detected)');
                 window.location.replace('profile.html');
                 return;
             }
