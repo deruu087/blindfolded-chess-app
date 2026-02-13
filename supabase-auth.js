@@ -290,7 +290,20 @@ function setupAuthListener(callback) {
             const isRootPath = window.location.pathname === '/';
             const isEmptyHash = window.location.hash === '#';
             
-            if ((isRootPath || isEmptyHash) && window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
+            // Check if we've already attempted a redirect for this session
+            // This prevents redirects when switching tabs back to the page
+            const redirectKey = 'initialRedirectDone_' + data.session.user.id;
+            const hasRedirected = sessionStorage.getItem(redirectKey);
+            
+            // Only redirect if:
+            // 1. We're on root path or empty hash
+            // 2. We're not already on profile
+            // 3. We haven't already done this redirect for this session
+            if ((isRootPath || isEmptyHash) && 
+                window.location.pathname !== '/profile.html' && 
+                !window.location.pathname.endsWith('profile.html') &&
+                !hasRedirected) {
+                sessionStorage.setItem(redirectKey, 'true');
                 window.location.replace('profile.html');
                 return;
             }
