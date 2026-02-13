@@ -882,11 +882,12 @@
                 return;
             }
             
-            // Check if user already has an active subscription
-            if (typeof window.hasActiveSubscription === 'function') {
+            // Check if user already has an ACTIVE subscription (not cancelled)
+            // Allow users with cancelled subscriptions to resubscribe
+            if (typeof window.getUserSubscription === 'function') {
                 try {
-                    const hasActive = await window.hasActiveSubscription();
-                    if (hasActive) {
+                    const subscription = await window.getUserSubscription();
+                    if (subscription && subscription.status === 'active') {
                         console.log('User already has an active subscription. Showing warning modal.');
                         showSubscriptionWarningModal();
                         return;
