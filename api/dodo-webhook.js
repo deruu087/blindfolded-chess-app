@@ -1103,13 +1103,15 @@ export default async function handler(req, res) {
                                 // Check if it's a duplicate error (unique constraint violation)
                                 if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
                                     console.log('🔄 [WEBHOOK] Duplicate payment detected, fetching existing...');
-                                    // Fetch existing payment
+                                    console.log('🔍 [WEBHOOK] Searching by constraint fields:', { userId, order_id: subscriptionId, amount: amountNum, payment_date: paymentData.payment_date });
+                                    // Fetch existing payment using constraint fields
                                     const { data: existing } = await supabase
                                         .from('payments')
                                         .select('*')
                                         .eq('order_id', subscriptionId)
                                         .eq('user_id', userId)
                                         .eq('amount', amountNum)
+                                        .eq('payment_date', paymentData.payment_date)
                                         .maybeSingle();
                                     
                                     if (existing) {
