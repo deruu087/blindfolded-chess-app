@@ -280,49 +280,51 @@ function setupAuthListener(callback) {
         return false;
     }
 
-    // Check for existing session on initial load (handles OAuth redirect)
-    // NOTE: We DON'T send welcome email here - only in onAuthStateChange SIGNED_IN event
-    // This prevents duplicate emails when both initial session and SIGNED_IN fire
-    // Only redirect if this is an OAuth callback (has code/access_token in URL) or first page load
-    supabase.auth.getSession().then(async ({ data, error }) => {
-        if (!error && data.session && data.session.user) {
-            // Check if this is an OAuth callback by looking for auth parameters in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const isOAuthCallback = urlParams.has('code') || urlParams.has('access_token') || 
-                                   hashParams.has('access_token') || hashParams.has('code');
-            
-            // Only redirect if:
-            // 1. It's an OAuth callback (user just signed in via OAuth)
-            // 2. OR it's the first page load (no previous navigation state)
-            const isFirstLoad = !sessionStorage.getItem('hasNavigated');
-            
-            const isRootPath = window.location.pathname === '/';
-            const isEmptyHash = window.location.hash === '#';
-            
-            if ((isOAuthCallback || isFirstLoad) && (isRootPath || isEmptyHash) && 
-                window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
-                sessionStorage.setItem('hasNavigated', 'true');
-                window.location.replace('profile.html');
-                return;
+    // Handle OAuth callback ONLY via hash (access_token)
+    // This is the ONLY place that redirects for OAuth
+    // Do NOT redirect on normal page loads (/ or /#)
+    const hash = window.location.hash;
+    const isOAuthCallback = hash && hash.includes('access_token');
+    
+    if (isOAuthCallback) {
+        // Wait for Supabase to process the OAuth hash
+        setTimeout(async () => {
+            const { data, error } = await supabase.auth.getSession();
+            if (!error && data.session && data.session.user) {
+                // Only redirect if we're not already on profile page
+                if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
+                    // Clear the hash to clean up URL
+                    window.history.replaceState(null, '', window.location.pathname);
+                    window.location.replace('profile.html');
+                }
             }
-        }
+        }, 100);
+    }
+    
+    // getSession() does NOT trigger navigation - just checks session
+    // This prevents redirects on tab switch or page focus
+    supabase.auth.getSession().then(async ({ data, error }) => {
+        // No navigation here - just session check
+        // OAuth redirect is handled separately above
     });
 
     // Store the subscription so we can check if it exists
     authStateChangeSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
-        // Redirect to profile on SIGNED_IN event (for email login or future logins)
+        // Handle SIGNED_IN event (for email login or OAuth)
+        // NOTE: This does NOT trigger navigation - redirects handled elsewhere
         if (event === 'SIGNED_IN' && session && session.user) {
             const user = session.user;
             
             // Send welcome email if new user (duplicate prevention is inside the function)
             await sendWelcomeEmailIfNew(user);
             
-            // Only redirect if we're not already on profile page
-            if (window.location.pathname !== '/profile.html' && !window.location.pathname.endsWith('profile.html')) {
-                window.location.replace('profile.html');
-                return;
-            }
+            // Check if this is an OAuth callback (has access_token in hash)
+            const hash = window.location.hash;
+            const isOAuthCallback = hash && hash.includes('access_token');
+            
+            // For email/password login: redirect happens in UI code after signInWithEmail() succeeds
+            // For OAuth: redirect happens in OAuth callback handler above
+            // SIGNED_IN event does NOT trigger navigation
         }
         
         if (callback) {
