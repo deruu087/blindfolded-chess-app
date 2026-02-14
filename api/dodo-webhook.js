@@ -955,13 +955,44 @@ export default async function handler(req, res) {
                                 // Check if it's a duplicate error (unique constraint violation)
                                 if (insertError.code === '23505' || insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
                                     console.log('🔄 [WEBHOOK] Duplicate payment detected, fetching existing...');
-                                    // Fetch existing payment
-                                    const { data: existingAfterInsert } = await supabase
-                                        .from('payments')
-                                        .select('*')
-                                        .eq('payment_id', extractedPaymentId)
-                                        .eq('user_id', userId)
-                                        .single();
+                                    console.log('🔍 [WEBHOOK] Duplicate constraint: (user_id, order_id, amount, payment_date)');
+                                    console.log('🔍 [WEBHOOK] Searching with:', { userId, order_id: subscriptionId, amount: amountNum, payment_date: paymentData.payment_date });
+                                    
+                                    // Fetch existing payment using the duplicate constraint fields
+                                    // The constraint is on (user_id, order_id, amount, payment_date)
+                                    let existingAfterInsert = null;
+                                    
+                                    // First try by payment_id if we have it
+                                    if (extractedPaymentId) {
+                                        const { data: existingByPaymentId } = await supabase
+                                            .from('payments')
+                                            .select('*')
+                                            .eq('payment_id', extractedPaymentId)
+                                            .eq('user_id', userId)
+                                            .maybeSingle();
+                                        
+                                        if (existingByPaymentId) {
+                                            existingAfterInsert = existingByPaymentId;
+                                            console.log('✅ [WEBHOOK] Found existing payment by payment_id:', existingAfterInsert.id);
+                                        }
+                                    }
+                                    
+                                    // If not found by payment_id, try by constraint fields
+                                    if (!existingAfterInsert) {
+                                        const { data: existingByConstraint } = await supabase
+                                            .from('payments')
+                                            .select('*')
+                                            .eq('user_id', userId)
+                                            .eq('order_id', subscriptionId)
+                                            .eq('amount', amountNum)
+                                            .eq('payment_date', paymentData.payment_date)
+                                            .maybeSingle();
+                                        
+                                        if (existingByConstraint) {
+                                            existingAfterInsert = existingByConstraint;
+                                            console.log('✅ [WEBHOOK] Found existing payment by constraint fields:', existingAfterInsert.id);
+                                        }
+                                    }
                                     
                                     if (existingAfterInsert) {
                                         // Only update if new payment has better data (invoice_url or correct amount)
