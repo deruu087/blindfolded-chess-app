@@ -629,12 +629,22 @@ export default async function handler(req, res) {
                     // Extract invoice URL and payment ID from webhook data
                     console.log('🔍 [WEBHOOK] Checking webhook data for invoice URL and payment ID...');
                     console.log('🔍 [WEBHOOK] Webhook data keys:', Object.keys(data));
+                    console.log('🔍 [WEBHOOK] Full webhook data structure:', JSON.stringify(data, null, 2));
                     
-                    // Extract payment ID - Dodo sends this directly in the payload
-                    const paymentId = data.payment_id || 
-                                     data.id || 
-                                     data.transaction_id ||
-                                     orderId;
+                    // Extract payment_id FIRST (same process as EU payments)
+                    // Dodo sends payment_id directly in data.payment_id field
+                    let extractedPaymentId = null;
+                    if (data.payment_id && typeof data.payment_id === 'string' && data.payment_id.startsWith('pay_')) {
+                        extractedPaymentId = data.payment_id;
+                        console.log('✅ [WEBHOOK] Found payment_id in data.payment_id:', extractedPaymentId);
+                    } else if (data.id && typeof data.id === 'string' && data.id.startsWith('pay_')) {
+                        extractedPaymentId = data.id;
+                        console.log('✅ [WEBHOOK] Found payment_id in data.id:', extractedPaymentId);
+                    } else {
+                        console.log('⚠️ [WEBHOOK] No payment_id found in data.payment_id or data.id');
+                        console.log('🔍 [WEBHOOK] data.payment_id:', data.payment_id);
+                        console.log('🔍 [WEBHOOK] data.id:', data.id);
+                    }
                     
                     // Extract invoice URL - Dodo often includes this directly!
                     let invoiceUrl = data.invoice_url || 
@@ -650,71 +660,49 @@ export default async function handler(req, res) {
                     
                     if (invoiceUrl) {
                         console.log('✅ [WEBHOOK] Found invoice URL directly in webhook data:', invoiceUrl);
-                    } else {
-                        // Try to construct invoice URL from payment_id if we have it
-                        // First check if we can extract payment_id before constructing URL
-                        let paymentIdForUrl = null;
-                        const possiblePaymentIdFields = [
-                            data.payment_id,
-                            data.id,
-                            paymentId,
-                            data.transaction_id,
-                            data.payment?.id,
-                            data.payment?.payment_id,
-                            data.invoice?.payment_id
-                        ];
+                    } else if (extractedPaymentId) {
+                        // Construct invoice URL using payment_id (same as EU payments)
+                        const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
+                        const apiBaseUrl = dodoApiKey && dodoApiKey.startsWith('sk_test_') 
+                            ? 'https://test.dodopayments.com'
+                            : 'https://live.dodopayments.com';
                         
-                        for (const field of possiblePaymentIdFields) {
-                            if (field && typeof field === 'string' && field.startsWith('pay_')) {
-                                paymentIdForUrl = field;
-                                break;
+                        invoiceUrl = `${apiBaseUrl}/invoices/payments/${extractedPaymentId}`;
+                        console.log('🔧 [WEBHOOK] Constructed invoice URL from payment_id:', invoiceUrl);
+                    } else {
+                        console.log('⚠️ [WEBHOOK] No invoice URL or payment_id found, attempting to fetch from Dodo API...');
+                        console.log('🔍 [WEBHOOK] IDs to try:', {
+                            payment_id: data.payment_id || data.id,
+                            order_id: data.order_id || orderId,
+                            subscription_id: subscriptionId
+                        });
+                        
+                        // Fetch from Dodo Payments API
+                        const apiResult = await getInvoiceUrlFromDodo(
+                            data.payment_id || data.id,
+                            data.order_id || orderId,
+                            subscriptionId
+                        );
+                        
+                        // getInvoiceUrlFromDodo can return either a string (URL) or an object with url and payment_id
+                        if (typeof apiResult === 'object' && apiResult !== null) {
+                            invoiceUrl = apiResult.url;
+                            if (apiResult.payment_id && !extractedPaymentId) {
+                                extractedPaymentId = apiResult.payment_id;
+                                console.log('✅ [WEBHOOK] Extracted payment_id from API response:', extractedPaymentId);
                             }
+                        } else {
+                            invoiceUrl = apiResult;
                         }
                         
-                        if (paymentIdForUrl) {
-                            // Construct invoice URL using Dodo Payments pattern
-                            const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
-                            const apiBaseUrl = dodoApiKey && dodoApiKey.startsWith('sk_test_') 
-                                ? 'https://test.dodopayments.com'
-                                : 'https://live.dodopayments.com';
-                            
-                            invoiceUrl = `${apiBaseUrl}/invoices/payments/${paymentIdForUrl}`;
-                            console.log('🔧 [WEBHOOK] Constructed invoice URL from payment ID:', invoiceUrl);
-                        } else {
-                            console.log('⚠️ [WEBHOOK] No invoice URL or payment ID found, attempting to fetch from Dodo API...');
-                            console.log('🔍 [WEBHOOK] IDs to try:', {
-                                payment_id: data.payment_id || data.id,
-                                order_id: data.order_id || orderId,
-                                subscription_id: subscriptionId
-                            });
-                            
-                            // Fetch from Dodo Payments API
-                            const apiResult = await getInvoiceUrlFromDodo(
-                                data.payment_id || data.id,
-                                data.order_id || orderId,
-                                subscriptionId
-                            );
-                            
-                            // getInvoiceUrlFromDodo can return either a string (URL) or an object with url and payment_id
-                            if (typeof apiResult === 'object' && apiResult !== null) {
-                                invoiceUrl = apiResult.url;
-                                if (apiResult.payment_id && !extractedPaymentId) {
-                                    extractedPaymentId = apiResult.payment_id;
-                                    console.log('✅ [WEBHOOK] Extracted payment_id from API response:', extractedPaymentId);
-                                }
-                            } else {
-                                invoiceUrl = apiResult;
-                            }
-                            
-                            // If we got invoice URL from API, try to extract payment_id from it
-                            if (invoiceUrl && invoiceUrl.includes('/payments/')) {
-                                const urlMatch = invoiceUrl.match(/\/payments\/(pay_[^\/\?]+)/);
-                                if (urlMatch && urlMatch[1]) {
-                                    // Update extractedPaymentId if we found it in the invoice URL
-                                    if (!extractedPaymentId) {
-                                        extractedPaymentId = urlMatch[1];
-                                        console.log('✅ [WEBHOOK] Extracted payment_id from invoice URL:', extractedPaymentId);
-                                    }
+                        // If we got invoice URL from API, try to extract payment_id from it
+                        if (invoiceUrl && invoiceUrl.includes('/payments/')) {
+                            const urlMatch = invoiceUrl.match(/\/payments\/(pay_[^\/\?]+)/);
+                            if (urlMatch && urlMatch[1]) {
+                                // Update extractedPaymentId if we found it in the invoice URL
+                                if (!extractedPaymentId) {
+                                    extractedPaymentId = urlMatch[1];
+                                    console.log('✅ [WEBHOOK] Extracted payment_id from invoice URL:', extractedPaymentId);
                                 }
                             }
                         }
@@ -729,48 +717,11 @@ export default async function handler(req, res) {
                         console.log('⚠️ [WEBHOOK] Using fallback invoice URL (account page)');
                     }
                     
-                    // Extract payment_id (should be in format pay_XXX)
-                    // Dodo sends payment_id in various locations depending on region/webhook type
-                    // Check multiple possible locations
-                    let extractedPaymentId = null;
-                    
-                    // List of possible fields where payment_id might be located
-                    const possiblePaymentIdFields = [
-                        data.payment_id,
-                        data.id,
-                        paymentId,
-                        data.transaction_id,
-                        data.payment?.id,
-                        data.payment?.payment_id,
-                        data.invoice?.payment_id,
-                        data.invoice_id,
-                        orderId
-                    ];
-                    
-                    // Find the first field that starts with 'pay_'
-                    for (const field of possiblePaymentIdFields) {
-                        if (field && typeof field === 'string' && field.startsWith('pay_')) {
-                            extractedPaymentId = field;
-                            console.log('✅ [WEBHOOK] Found payment_id:', extractedPaymentId);
-                            break;
-                        }
-                    }
-                    
-                    // If still not found, log all available fields for debugging
-                    if (!extractedPaymentId) {
-                        console.log('⚠️ [WEBHOOK] No payment_id found in format pay_XXX');
-                        console.log('🔍 [WEBHOOK] Available fields that might contain payment_id:', {
-                            'data.payment_id': data.payment_id,
-                            'data.id': data.id,
-                            'paymentId (computed)': paymentId,
-                            'data.transaction_id': data.transaction_id,
-                            'data.payment?.id': data.payment?.id,
-                            'data.payment?.payment_id': data.payment?.payment_id,
-                            'data.invoice?.payment_id': data.invoice?.payment_id,
-                            'data.invoice_id': data.invoice_id,
-                            'orderId': orderId
-                        });
-                        console.log('🔍 [WEBHOOK] All data keys:', Object.keys(data));
+                    // Log final payment_id status
+                    if (extractedPaymentId) {
+                        console.log('✅ [WEBHOOK] Final payment_id to store:', extractedPaymentId);
+                    } else {
+                        console.log('⚠️ [WEBHOOK] No payment_id found - payment record will be created without payment_id');
                     }
                     
                     const paymentData = {
