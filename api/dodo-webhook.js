@@ -660,6 +660,21 @@ export default async function handler(req, res) {
                     
                     if (invoiceUrl) {
                         console.log('✅ [WEBHOOK] Found invoice URL directly in webhook data:', invoiceUrl);
+                        
+                        // If we don't have payment_id yet, try to extract it from invoice_url
+                        if (!extractedPaymentId && invoiceUrl.includes('/payments/')) {
+                            const urlMatch = invoiceUrl.match(/\/payments\/(pay_[^\/\?]+)/);
+                            if (urlMatch && urlMatch[1]) {
+                                extractedPaymentId = urlMatch[1];
+                                console.log('✅ [WEBHOOK] Extracted payment_id from invoice_url:', extractedPaymentId);
+                            }
+                        }
+                        
+                        // Also double-check data.payment_id if we still don't have it
+                        if (!extractedPaymentId && data.payment_id && typeof data.payment_id === 'string' && data.payment_id.startsWith('pay_')) {
+                            extractedPaymentId = data.payment_id;
+                            console.log('✅ [WEBHOOK] Found payment_id in data.payment_id (after invoice_url check):', extractedPaymentId);
+                        }
                     } else if (extractedPaymentId) {
                         // Construct invoice URL using payment_id (same as EU payments)
                         const dodoApiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
@@ -877,8 +892,15 @@ export default async function handler(req, res) {
                             const existingHasCorrectAmount = correctAmounts.includes(parseFloat(existing.amount));
                             const existingIsWrongAmount = Math.abs(parseFloat(existing.amount) - 2.94) < 0.01;
                             
-                            // Update if: new has invoice and existing doesn't, OR new has correct amount and existing is wrong (2.94), OR existing is wrong amount
-                            if ((newHasInvoice && !existingHasInvoice) || (newHasCorrectAmount && existingIsWrongAmount) || existingIsWrongAmount) {
+                            // Always update if new payment has payment_id and existing doesn't
+                            const newHasPaymentId = !!upsertData.payment_id;
+                            const existingHasPaymentId = !!existing.payment_id;
+                            
+                            // Update if: new has payment_id and existing doesn't, OR new has invoice and existing doesn't, OR new has correct amount and existing is wrong (2.94), OR existing is wrong amount
+                            if ((newHasPaymentId && !existingHasPaymentId) || 
+                                (newHasInvoice && !existingHasInvoice) || 
+                                (newHasCorrectAmount && existingIsWrongAmount) || 
+                                existingIsWrongAmount) {
                                 const { data: updated, error: updateError } = await supabase
                                     .from('payments')
                                     .update(upsertData)
@@ -892,11 +914,26 @@ export default async function handler(req, res) {
                                 } else {
                                     payment = updated;
                                     console.log('✅ [WEBHOOK] Payment record updated (better data):', payment);
+                                    if (newHasPaymentId && !existingHasPaymentId) {
+                                        console.log('✅ [WEBHOOK] Added missing payment_id to existing payment:', upsertData.payment_id);
+                                    }
                                 }
                             } else {
-                                // Keep existing if it's better or equal
-                                payment = existing;
-                                console.log('✅ [WEBHOOK] Keeping existing payment (has better/equal data):', payment);
+                                // Keep existing if it's better or equal, but ensure payment_id is set if we have it
+                                if (newHasPaymentId && !existingHasPaymentId) {
+                                    // Update just the payment_id
+                                    const { data: updated } = await supabase
+                                        .from('payments')
+                                        .update({ payment_id: upsertData.payment_id })
+                                        .eq('id', existing.id)
+                                        .select()
+                                        .single();
+                                    payment = updated || existing;
+                                    console.log('✅ [WEBHOOK] Added payment_id to existing payment:', upsertData.payment_id);
+                                } else {
+                                    payment = existing;
+                                    console.log('✅ [WEBHOOK] Keeping existing payment (has better/equal data):', payment);
+                                }
                             }
                         } else {
                             // Insert new payment
