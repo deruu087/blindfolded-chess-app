@@ -41,16 +41,15 @@ async function signUpWithEmail(email, password, name) {
         }
     });
 
-    // Supabase may return a warning/error even when signup succeeds
-    // (e.g., email confirmation required, database trigger warnings)
-    // Only treat as failure if user was NOT created
-    if (error && !data?.user) {
-        return { success: false, error: error.message };
-    }
-
-    // If user was created, signup succeeded (even if there's a warning)
+    // If user was created, signup succeeded - ignore any warnings/errors
+    // (Supabase may return database trigger warnings even when signup succeeds)
     if (data?.user) {
         return { success: true, user: data.user, session: data.session };
+    }
+
+    // Only treat as failure if user was NOT created
+    if (error) {
+        return { success: false, error: error.message };
     }
 
     // Fallback: no user and no error (shouldn't happen)
