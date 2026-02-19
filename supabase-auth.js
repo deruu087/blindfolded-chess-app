@@ -48,7 +48,16 @@ async function signUpWithEmail(email, password, name) {
     }
 
     // Only treat as failure if user was NOT created
+    // Filter out database saving errors/warnings that are not actual failures
     if (error) {
+        const errorMessage = error.message || '';
+        // Ignore database saving errors/warnings - these are often just trigger warnings
+        if (errorMessage.toLowerCase().includes('database saving') || 
+            errorMessage.toLowerCase().includes('database trigger') ||
+            errorMessage.toLowerCase().includes('saving error')) {
+            // If we get here and no user, it's still a failure, but don't show the misleading error
+            return { success: false, error: 'Registration failed. Please try again.' };
+        }
         return { success: false, error: error.message };
     }
 
