@@ -496,21 +496,21 @@ export default async function handler(req, res) {
                         
                         // Always update subscription when payment succeeds (to set status to active)
                         console.log('🔄 [WEBHOOK] Subscription exists, updating (ensuring status is active):', existingSubscription.id);
-                        const { data: updated, error: updateError } = await supabase
-                            .from('subscriptions')
+                            const { data: updated, error: updateError } = await supabase
+                                .from('subscriptions')
                             .update(updateData)
-                            .eq('user_id', userId)
-                            .select()
-                            .single();
-                    
-                        if (updateError) {
-                            console.error('❌ Error updating subscription:', updateError);
-                            return res.status(500).json({ 
-                                error: 'Failed to update subscription',
-                                message: updateError.message 
-                            });
-                        }
-                        subscription = updated;
+                                .eq('user_id', userId)
+                                .select()
+                                .single();
+                        
+                            if (updateError) {
+                                console.error('❌ Error updating subscription:', updateError);
+                                return res.status(500).json({ 
+                                    error: 'Failed to update subscription',
+                                    message: updateError.message 
+                                });
+                            }
+                            subscription = updated;
                         console.log('✅ [WEBHOOK] Subscription updated (status set to active):', JSON.stringify(subscription, null, 2));
                     } else {
                         // Insert new subscription
@@ -768,8 +768,77 @@ export default async function handler(req, res) {
                     // Check if payment already exists (deduplication)
                     // CRITICAL: Only keep payments with payment_id - delete any without payment_id
                     let existingPayment = null;
-                    if (extractedPaymentId) {
-                        // If we have payment_id, check for existing payment with same payment_id
+                    
+                    // FIRST: Check for ANY payment with same order_id/user_id (regardless of amount/date)
+                    // This catches duplicates even if amounts or dates differ slightly
+                    if (subscriptionId) {
+                        const { data: allPaymentsForOrder } = await supabase
+                            .from('payments')
+                            .select('*')
+                            .eq('order_id', subscriptionId)
+                            .eq('user_id', userId)
+                            .order('created_at', { ascending: false });
+                        
+                        if (allPaymentsForOrder && allPaymentsForOrder.length > 0) {
+                            console.log('🔍 [WEBHOOK] Found', allPaymentsForOrder.length, 'existing payment(s) for same order_id');
+                            
+                            let filteredPayments = allPaymentsForOrder;
+                            
+                            // If we have payment_id, find and DELETE any payments without payment_id
+                            if (extractedPaymentId) {
+                                const paymentsWithoutId = allPaymentsForOrder.filter(p => !p.payment_id || !p.payment_id.startsWith('pay_'));
+                                if (paymentsWithoutId.length > 0) {
+                                    console.log('⚠️ [WEBHOOK] Found', paymentsWithoutId.length, 'payment(s) without payment_id for same order_id, deleting them...');
+                                    for (const paymentToDelete of paymentsWithoutId) {
+                                        await supabase
+                                            .from('payments')
+                                            .delete()
+                                            .eq('id', paymentToDelete.id);
+                                        console.log('✅ [WEBHOOK] Deleted payment without payment_id:', paymentToDelete.id);
+                                    }
+                                    // Remove deleted payments from array
+                                    filteredPayments = allPaymentsForOrder.filter(p => p.payment_id && p.payment_id.startsWith('pay_'));
+                                }
+                            }
+                            
+                            // If we DON'T have payment_id, check if any existing payment has payment_id
+                            if (!extractedPaymentId) {
+                                const paymentWithId = filteredPayments.find(p => p.payment_id && p.payment_id.startsWith('pay_'));
+                                if (paymentWithId) {
+                                    console.log('⚠️ [WEBHOOK] Payment without payment_id rejected - existing payment with payment_id found:', paymentWithId.payment_id);
+                                    return res.status(200).json({ 
+                                        success: true, 
+                                        message: 'Payment without payment_id rejected - payment with payment_id already exists',
+                                        orderId: orderId,
+                                        existingPaymentId: paymentWithId.payment_id
+                                    });
+                                }
+                            }
+                            
+                            // Select the best existing payment (prefer one with payment_id, then by amount match)
+                            if (extractedPaymentId) {
+                                // Prefer payment with matching payment_id
+                                existingPayment = filteredPayments.find(p => p.payment_id === extractedPaymentId);
+                            }
+                            
+                            if (!existingPayment) {
+                                // Prefer payment with correct amount
+                                const correctAmounts = [3.49, 3.50, 8.90];
+                                existingPayment = filteredPayments.find(p => 
+                                    correctAmounts.includes(parseFloat(p.amount))
+                                ) || filteredPayments.find(p => 
+                                    Math.abs(parseFloat(p.amount) - amountNum) < 0.01
+                                ) || filteredPayments[0]; // Fallback to most recent
+                            }
+                            
+                            if (existingPayment) {
+                                console.log('🔄 [WEBHOOK] Found existing payment for same order_id, will update:', existingPayment.id);
+                            }
+                        }
+                    }
+                    
+                    // Also check by payment_id directly (in case order_id differs)
+                    if (!existingPayment && extractedPaymentId) {
                         const { data: existing } = await supabase
                             .from('payments')
                             .select('*')
@@ -780,102 +849,6 @@ export default async function handler(req, res) {
                         if (existing) {
                             existingPayment = existing;
                             console.log('🔄 [WEBHOOK] Payment with payment_id already exists, will update:', existingPayment.id);
-                        }
-                        
-                        // CRITICAL: If we have payment_id, find and DELETE any payments with same order_id that DON'T have payment_id
-                        if (subscriptionId) {
-                            const { data: paymentsWithoutId } = await supabase
-                                .from('payments')
-                                .select('*')
-                                .eq('order_id', subscriptionId)
-                                .eq('user_id', userId)
-                                .is('payment_id', null);
-                            
-                            if (paymentsWithoutId && paymentsWithoutId.length > 0) {
-                                console.log('⚠️ [WEBHOOK] Found', paymentsWithoutId.length, 'payment(s) without payment_id for same order_id, deleting them...');
-                                for (const paymentToDelete of paymentsWithoutId) {
-                                    await supabase
-                                        .from('payments')
-                                        .delete()
-                                        .eq('id', paymentToDelete.id);
-                                    console.log('✅ [WEBHOOK] Deleted payment without payment_id:', paymentToDelete.id);
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Also check by order_id/transaction_id
-                    if (!existingPayment && subscriptionId) {
-                        // First, check for correct amount
-                        const { data: existing } = await supabase
-                            .from('payments')
-                            .select('*')
-                            .eq('order_id', subscriptionId)
-                            .eq('user_id', userId)
-                            .eq('amount', amountNum)
-                            .maybeSingle();
-                        
-                        if (existing) {
-                            existingPayment = existing;
-                            console.log('🔄 [WEBHOOK] Payment with order_id already exists, will update:', existingPayment.id);
-                            
-                            // If existing payment doesn't have payment_id but we do, we'll update it
-                            // If existing payment has payment_id but we don't, we should NOT create a duplicate
-                            if (existing.payment_id && !extractedPaymentId) {
-                                console.log('⚠️ [WEBHOOK] Existing payment already has payment_id, skipping insert to avoid duplicate');
-                                // Don't set existingPayment so we skip the insert/update
-                                existingPayment = null;
-                                // But we should still return success since payment already exists
-                                return res.status(200).json({ 
-                                    success: true, 
-                                    message: 'Payment already exists with payment_id, skipping duplicate',
-                                    orderId: orderId,
-                                    existingPaymentId: existing.payment_id
-                                });
-                            }
-                        } else {
-                            // Check for wrong amount (2.94) - we'll delete it if we have correct payment
-                            const correctAmounts = [3.49, 3.50, 8.90];
-                            if (correctAmounts.includes(amountNum)) {
-                                const { data: wrongPayment } = await supabase
-                                    .from('payments')
-                                    .select('*')
-                                    .eq('order_id', subscriptionId)
-                                    .eq('user_id', userId)
-                                    .eq('amount', 2.94)
-                                    .maybeSingle();
-                                
-                                if (wrongPayment) {
-                                    console.log('⚠️ [WEBHOOK] Found wrong payment (2.94) with same order_id, will delete it:', wrongPayment.id);
-                                    await supabase
-                                        .from('payments')
-                                        .delete()
-                                        .eq('id', wrongPayment.id);
-                                    console.log('✅ [WEBHOOK] Deleted wrong payment (2.94)');
-                                }
-                            }
-                        }
-                    }
-                    
-                    // CRITICAL: If we DON'T have payment_id, check if there's already a payment WITH payment_id for same order
-                    // If yes, reject this payment to avoid duplicates
-                    if (!extractedPaymentId && subscriptionId) {
-                        const { data: existingWithId } = await supabase
-                            .from('payments')
-                            .select('*')
-                            .eq('order_id', subscriptionId)
-                            .eq('user_id', userId)
-                            .not('payment_id', 'is', null)
-                            .maybeSingle();
-                        
-                        if (existingWithId) {
-                            console.log('⚠️ [WEBHOOK] Payment without payment_id rejected - existing payment with payment_id found:', existingWithId.payment_id);
-                            return res.status(200).json({ 
-                                success: true, 
-                                message: 'Payment without payment_id rejected - payment with payment_id already exists',
-                                orderId: orderId,
-                                existingPaymentId: existingWithId.payment_id
-                            });
                         }
                     }
                     
@@ -932,9 +905,9 @@ export default async function handler(req, res) {
                                     const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
                                     return hasCorrectAmount;
                                 }) || filteredRecentPayments[0];
-                                
-                                existingPayment = bestPayment;
-                                console.log('🔄 [WEBHOOK] Found recent payment with same amount/date, will update:', existingPayment.id);
+                            
+                            existingPayment = bestPayment;
+                            console.log('🔄 [WEBHOOK] Found recent payment with same amount/date, will update:', existingPayment.id);
                                 
                                 // If existing payment doesn't have payment_id but we do, we'll update it
                                 // If existing payment has payment_id but we don't, reject to avoid duplicate
@@ -998,18 +971,18 @@ export default async function handler(req, res) {
                                 (newHasInvoice && !existingHasInvoice) || 
                                 (newHasCorrectAmount && existingIsWrongAmount) || 
                                 existingIsWrongAmount) {
-                                const { data: updated, error: updateError } = await supabase
-                                    .from('payments')
-                                    .update(upsertData)
-                                    .eq('id', existing.id)
-                                    .select()
-                                    .single();
-                                
-                                if (updateError) {
-                                    console.error('⚠️ Error updating payment record:', updateError);
-                                    payment = existing; // Use existing if update fails
-                                } else {
-                                    payment = updated;
+                            const { data: updated, error: updateError } = await supabase
+                                .from('payments')
+                                .update(upsertData)
+                                .eq('id', existing.id)
+                                .select()
+                                .single();
+                            
+                            if (updateError) {
+                                console.error('⚠️ Error updating payment record:', updateError);
+                                payment = existing; // Use existing if update fails
+                            } else {
+                                payment = updated;
                                     console.log('✅ [WEBHOOK] Payment record updated (better data):', payment);
                                     if (newHasPaymentId && !existingHasPaymentId) {
                                         console.log('✅ [WEBHOOK] Added missing payment_id to existing payment:', upsertData.payment_id);
@@ -1062,10 +1035,10 @@ export default async function handler(req, res) {
                                     // First try by payment_id if we have it
                                     if (extractedPaymentId) {
                                         const { data: existingByPaymentId } = await supabase
-                                            .from('payments')
-                                            .select('*')
-                                            .eq('payment_id', extractedPaymentId)
-                                            .eq('user_id', userId)
+                                        .from('payments')
+                                        .select('*')
+                                        .eq('payment_id', extractedPaymentId)
+                                        .eq('user_id', userId)
                                             .maybeSingle();
                                         
                                         if (existingByPaymentId) {
@@ -1077,9 +1050,9 @@ export default async function handler(req, res) {
                                     // If not found by payment_id, try by constraint fields
                                     if (!existingAfterInsert) {
                                         const { data: existingByConstraint } = await supabase
-                                            .from('payments')
-                                            .select('*')
-                                            .eq('user_id', userId)
+                                        .from('payments')
+                                        .select('*')
+                                        .eq('user_id', userId)
                                             .eq('order_id', subscriptionId)
                                             .eq('amount', amountNum)
                                             .eq('payment_date', paymentData.payment_date)
@@ -1115,12 +1088,12 @@ export default async function handler(req, res) {
                                         // Update if: new has invoice and existing doesn't, OR new has payment_id and existing doesn't, OR new has correct amount and existing is wrong (2.94), OR existing is wrong amount
                                         if (Object.keys(needsUpdate).length > 0 || (newHasCorrectAmount && existingIsWrongAmount) || existingIsWrongAmount) {
                                             const updateData = Object.keys(needsUpdate).length > 0 ? { ...upsertData, ...needsUpdate } : upsertData;
-                                            const { data: updated } = await supabase
-                                                .from('payments')
+                                        const { data: updated } = await supabase
+                                            .from('payments')
                                                 .update(updateData)
                                                 .eq('id', existingAfterInsert.id)
-                                                .select()
-                                                .single();
+                                            .select()
+                                            .single();
                                             payment = updated || existingAfterInsert;
                                             console.log('✅ [WEBHOOK] Payment record updated (duplicate handled with better data):', payment);
                                         } else {
@@ -1150,18 +1123,18 @@ export default async function handler(req, res) {
                             
                             // Update if new has better data (invoice_url or payment_id)
                             if ((newHasInvoice && !existingHasInvoice) || (newHasPaymentId && !existingHasPaymentId)) {
-                                const { data: updated, error: updateError } = await supabase
-                                    .from('payments')
-                                    .update(upsertData)
-                                    .eq('id', existingPayment.id)
-                                    .select()
-                                    .single();
-                                
-                                if (updateError) {
-                                    console.error('⚠️ Error updating payment record:', updateError);
+                            const { data: updated, error: updateError } = await supabase
+                                .from('payments')
+                                .update(upsertData)
+                                .eq('id', existingPayment.id)
+                                .select()
+                                .single();
+                            
+                            if (updateError) {
+                                console.error('⚠️ Error updating payment record:', updateError);
                                     payment = existingPayment;
-                                } else {
-                                    payment = updated;
+                            } else {
+                                payment = updated;
                                     console.log('✅ [WEBHOOK] Payment record updated (deduplication with better data):', payment);
                                 }
                             } else {
@@ -1251,18 +1224,18 @@ export default async function handler(req, res) {
                     console.log('📧 [WEBHOOK] Verifying sendEmailDirect function:', typeof sendEmailDirect);
                     
                     // Wait for email with timeout to ensure it completes before Vercel terminates function
-                    try {
-                        // Only use real user data - no fallbacks
-                        const userName = foundUser?.user_metadata?.name || 
-                                       foundUser?.user_metadata?.full_name || 
-                                       customerEmail?.split('@')[0] || 
-                                       'Chess Player';
-                        
-                        const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
-                        
+                        try {
+                            // Only use real user data - no fallbacks
+                            const userName = foundUser?.user_metadata?.name || 
+                                           foundUser?.user_metadata?.full_name || 
+                                           customerEmail?.split('@')[0] || 
+                                           'Chess Player';
+                            
+                            const planName = planType === 'monthly' ? 'Monthly Premium' : 'Quarterly Premium';
+                            
                         console.log('📧 [WEBHOOK] Sending subscription confirmation email via sendEmailDirect');
                         console.log('📧 [WEBHOOK] Email data:', { planName, amount, currency, to: customerEmail, userName });
-                        
+                            
                         if (typeof sendEmailDirect === 'function') {
                             // Wait for email with 8 second timeout (Vercel functions have ~10s limit)
                             const emailPromise = sendEmailDirect('subscription_confirmed', customerEmail, userName, {
@@ -1276,9 +1249,9 @@ export default async function handler(req, res) {
                             
                             try {
                                 const result = await Promise.race([emailPromise, timeoutPromise]);
-                                if (result.success) {
+                            if (result.success) {
                                     console.log('✅ [WEBHOOK] Subscription confirmation email sent successfully:', result.messageId);
-                                } else {
+                            } else {
                                     console.error('❌ [WEBHOOK] Email sending failed:', result.error);
                                 }
                             } catch (emailError) {
@@ -1287,8 +1260,8 @@ export default async function handler(req, res) {
                             }
                         } else {
                             console.error('❌ [WEBHOOK] sendEmailDirect is not a function!');
-                        }
-                    } catch (emailError) {
+                            }
+                        } catch (emailError) {
                         // Log but don't fail the webhook
                         console.error('❌ [WEBHOOK] Could not send subscription email:', emailError.message);
                     }
