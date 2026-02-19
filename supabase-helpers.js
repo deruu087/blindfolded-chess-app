@@ -823,13 +823,46 @@ async function getPaymentHistory() {
 
     if (!paymentsError && paymentsData) {
         payments = paymentsData
-            .map(payment => ({
-                amount: payment.amount || 0,
-                currency: payment.currency || 'EUR',
-                status: payment.status || 'paid',
-                date: payment.payment_date || payment.created_at,
-                invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
-            }));
+            .map(payment => {
+                // Determine plan type from description or amount
+                let planType = null;
+                const description = payment.description || '';
+                const amount = parseFloat(payment.amount) || 0;
+                
+                // Check description for plan type
+                if (description.toLowerCase().includes('monthly')) {
+                    planType = 'monthly';
+                } else if (description.toLowerCase().includes('quarterly')) {
+                    planType = 'quarterly';
+                } else {
+                    // Determine from amount (3.49/3.50 = monthly, 8.90 = quarterly)
+                    if (Math.abs(amount - 3.49) < 0.02 || Math.abs(amount - 3.50) < 0.02) {
+                        planType = 'monthly';
+                    } else if (Math.abs(amount - 8.90) < 0.02) {
+                        planType = 'quarterly';
+                    }
+                }
+                
+                // Use plan-based amount instead of actual payment amount
+                let displayAmount = amount;
+                let displayCurrency = payment.currency || 'USD';
+                
+                if (planType === 'monthly') {
+                    displayAmount = 3.49;
+                    displayCurrency = 'USD';
+                } else if (planType === 'quarterly') {
+                    displayAmount = 8.90;
+                    displayCurrency = 'USD';
+                }
+                
+                return {
+                    amount: displayAmount, // Use plan-based amount
+                    currency: displayCurrency,
+                    status: payment.status || 'paid',
+                    date: payment.payment_date || payment.created_at,
+                    invoice_url: payment.invoice_url || `https://checkout.dodopayments.com/account`
+                };
+            });
     }
 
     // NO FALLBACK - if no payments, return empty array
