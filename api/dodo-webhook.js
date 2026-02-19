@@ -472,7 +472,8 @@ export default async function handler(req, res) {
                     
                     let subscription;
                     if (existingSubscription) {
-                        // Check if we should keep existing or update (prefer correct amount)
+                        // CRITICAL: Always update subscription status to 'active' when payment succeeds
+                        // The amount check only determines whether to update amount_paid, but status must always be 'active'
                         const existingAmount = parseFloat(existingSubscription.amount_paid);
                         const newAmount = parseFloat(subscriptionData.amount_paid);
                         const correctAmounts = [3.49, 3.50, 8.90]; // Allow 3.50 as correct (close to 3.49)
@@ -480,33 +481,37 @@ export default async function handler(req, res) {
                         const existingIsCorrect = correctAmounts.includes(existingAmount);
                         const newIsCorrect = correctAmounts.includes(newAmount);
                         
-                        // If existing has correct amount and new doesn't, keep existing (don't update)
-                        if (existingIsCorrect && !newIsCorrect) {
-                            console.log('✅ [WEBHOOK] Keeping existing subscription with correct amount:', existingAmount);
-                            subscription = existingSubscription;
-                        } else {
-                            // Update existing subscription (new is correct or both are same)
-                            console.log('🔄 [WEBHOOK] Subscription exists, updating:', existingSubscription.id);
-                            const { data: updated, error: updateError } = await supabase
-                                .from('subscriptions')
-                                .update({
-                                    ...subscriptionData,
-                                    updated_at: new Date().toISOString()
-                                })
-                                .eq('user_id', userId)
-                                .select()
-                                .single();
+                        // Prepare update data - always set status to 'active' for successful payments
+                        const updateData = {
+                            ...subscriptionData,
+                            status: 'active', // CRITICAL: Always set to active when payment succeeds
+                            updated_at: new Date().toISOString()
+                        };
                         
-                            if (updateError) {
-                                console.error('❌ Error updating subscription:', updateError);
-                                return res.status(500).json({ 
-                                    error: 'Failed to update subscription',
-                                    message: updateError.message 
-                                });
-                            }
-                            subscription = updated;
-                            console.log('✅ [WEBHOOK] Subscription updated:', JSON.stringify(subscription, null, 2));
+                        // If existing has correct amount and new doesn't, keep existing amount but still update status
+                        if (existingIsCorrect && !newIsCorrect) {
+                            console.log('✅ [WEBHOOK] Keeping existing subscription amount:', existingAmount, 'but updating status to active');
+                            updateData.amount_paid = existingAmount; // Keep existing amount
                         }
+                        
+                        // Always update subscription when payment succeeds (to set status to active)
+                        console.log('🔄 [WEBHOOK] Subscription exists, updating (ensuring status is active):', existingSubscription.id);
+                        const { data: updated, error: updateError } = await supabase
+                            .from('subscriptions')
+                            .update(updateData)
+                            .eq('user_id', userId)
+                            .select()
+                            .single();
+                    
+                        if (updateError) {
+                            console.error('❌ Error updating subscription:', updateError);
+                            return res.status(500).json({ 
+                                error: 'Failed to update subscription',
+                                message: updateError.message 
+                            });
+                        }
+                        subscription = updated;
+                        console.log('✅ [WEBHOOK] Subscription updated (status set to active):', JSON.stringify(subscription, null, 2));
                     } else {
                         // Insert new subscription
                         console.log('💾 [WEBHOOK] Creating new subscription with dodo_subscription_id:', dodoSubscriptionId);
