@@ -761,8 +761,10 @@ export default async function handler(req, res) {
                     }
                     
                     // Check if payment already exists (deduplication)
+                    // CRITICAL: Only keep payments with payment_id - delete any without payment_id
                     let existingPayment = null;
                     if (extractedPaymentId) {
+                        // If we have payment_id, check for existing payment with same payment_id
                         const { data: existing } = await supabase
                             .from('payments')
                             .select('*')
@@ -774,9 +776,30 @@ export default async function handler(req, res) {
                             existingPayment = existing;
                             console.log('🔄 [WEBHOOK] Payment with payment_id already exists, will update:', existingPayment.id);
                         }
+                        
+                        // CRITICAL: If we have payment_id, find and DELETE any payments with same order_id that DON'T have payment_id
+                        if (subscriptionId) {
+                            const { data: paymentsWithoutId } = await supabase
+                                .from('payments')
+                                .select('*')
+                                .eq('order_id', subscriptionId)
+                                .eq('user_id', userId)
+                                .is('payment_id', null);
+                            
+                            if (paymentsWithoutId && paymentsWithoutId.length > 0) {
+                                console.log('⚠️ [WEBHOOK] Found', paymentsWithoutId.length, 'payment(s) without payment_id for same order_id, deleting them...');
+                                for (const paymentToDelete of paymentsWithoutId) {
+                                    await supabase
+                                        .from('payments')
+                                        .delete()
+                                        .eq('id', paymentToDelete.id);
+                                    console.log('✅ [WEBHOOK] Deleted payment without payment_id:', paymentToDelete.id);
+                                }
+                            }
+                        }
                     }
                     
-                    // Also check by order_id/transaction_id if no payment_id
+                    // Also check by order_id/transaction_id
                     if (!existingPayment && subscriptionId) {
                         // First, check for correct amount
                         const { data: existing } = await supabase
@@ -790,6 +813,21 @@ export default async function handler(req, res) {
                         if (existing) {
                             existingPayment = existing;
                             console.log('🔄 [WEBHOOK] Payment with order_id already exists, will update:', existingPayment.id);
+                            
+                            // If existing payment doesn't have payment_id but we do, we'll update it
+                            // If existing payment has payment_id but we don't, we should NOT create a duplicate
+                            if (existing.payment_id && !extractedPaymentId) {
+                                console.log('⚠️ [WEBHOOK] Existing payment already has payment_id, skipping insert to avoid duplicate');
+                                // Don't set existingPayment so we skip the insert/update
+                                existingPayment = null;
+                                // But we should still return success since payment already exists
+                                return res.status(200).json({ 
+                                    success: true, 
+                                    message: 'Payment already exists with payment_id, skipping duplicate',
+                                    orderId: orderId,
+                                    existingPaymentId: existing.payment_id
+                                });
+                            }
                         } else {
                             // Check for wrong amount (2.94) - we'll delete it if we have correct payment
                             const correctAmounts = [3.49, 3.50, 8.90];
@@ -814,6 +852,28 @@ export default async function handler(req, res) {
                         }
                     }
                     
+                    // CRITICAL: If we DON'T have payment_id, check if there's already a payment WITH payment_id for same order
+                    // If yes, reject this payment to avoid duplicates
+                    if (!extractedPaymentId && subscriptionId) {
+                        const { data: existingWithId } = await supabase
+                            .from('payments')
+                            .select('*')
+                            .eq('order_id', subscriptionId)
+                            .eq('user_id', userId)
+                            .not('payment_id', 'is', null)
+                            .maybeSingle();
+                        
+                        if (existingWithId) {
+                            console.log('⚠️ [WEBHOOK] Payment without payment_id rejected - existing payment with payment_id found:', existingWithId.payment_id);
+                            return res.status(200).json({ 
+                                success: true, 
+                                message: 'Payment without payment_id rejected - payment with payment_id already exists',
+                                orderId: orderId,
+                                existingPaymentId: existingWithId.payment_id
+                            });
+                        }
+                    }
+                    
                     // Also check by amount + date (within 5 minutes) to catch duplicates even without payment_id
                     if (!existingPayment) {
                         const paymentDateObj = new Date(paymentData.payment_date);
@@ -832,25 +892,57 @@ export default async function handler(req, res) {
                             .limit(5);
                         
                         if (recentPayments && recentPayments.length > 0) {
-                            // Prefer payment with invoice_url and correct amount (3.50, not 2.94)
-                            // Priority: 1) Has invoice_url (not default), 2) Correct amount (3.50), 3) Has payment_id, 4) Most recent
-                            const correctAmounts = [3.49, 3.50, 8.90];
-                            const bestPayment = recentPayments.find(p => {
-                                const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
-                                const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
-                                return hasInvoice && hasCorrectAmount;
-                            }) || recentPayments.find(p => {
-                                const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
-                                return hasInvoice;
-                            }) || recentPayments.find(p => {
-                                const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
-                                return hasCorrectAmount;
-                            }) || recentPayments.find(p => 
-                                (p.payment_id && p.payment_id.startsWith('pay_'))
-                            ) || recentPayments[0];
+                            // CRITICAL: If we have payment_id, delete any recent payments without payment_id
+                            let filteredRecentPayments = recentPayments;
+                            if (extractedPaymentId) {
+                                const paymentsWithoutId = recentPayments.filter(p => !p.payment_id || !p.payment_id.startsWith('pay_'));
+                                if (paymentsWithoutId.length > 0) {
+                                    console.log('⚠️ [WEBHOOK] Found', paymentsWithoutId.length, 'recent payment(s) without payment_id, deleting them...');
+                                    for (const paymentToDelete of paymentsWithoutId) {
+                                        await supabase
+                                            .from('payments')
+                                            .delete()
+                                            .eq('id', paymentToDelete.id);
+                                        console.log('✅ [WEBHOOK] Deleted recent payment without payment_id:', paymentToDelete.id);
+                                    }
+                                    // Remove deleted payments from array
+                                    filteredRecentPayments = recentPayments.filter(p => p.payment_id && p.payment_id.startsWith('pay_'));
+                                }
+                            }
                             
-                            existingPayment = bestPayment;
-                            console.log('🔄 [WEBHOOK] Found recent payment with same amount/date, will update:', existingPayment.id);
+                            if (filteredRecentPayments.length > 0) {
+                                // Prefer payment with payment_id first, then invoice_url and correct amount
+                                // Priority: 1) Has payment_id, 2) Has invoice_url (not default), 3) Correct amount (3.50), 4) Most recent
+                                const correctAmounts = [3.49, 3.50, 8.90];
+                                const bestPayment = filteredRecentPayments.find(p => 
+                                    (p.payment_id && p.payment_id.startsWith('pay_'))
+                                ) || filteredRecentPayments.find(p => {
+                                    const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
+                                    const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
+                                    return hasInvoice && hasCorrectAmount;
+                                }) || filteredRecentPayments.find(p => {
+                                    const hasInvoice = p.invoice_url && !p.invoice_url.includes('checkout.dodopayments.com/account');
+                                    return hasInvoice;
+                                }) || filteredRecentPayments.find(p => {
+                                    const hasCorrectAmount = correctAmounts.includes(parseFloat(p.amount));
+                                    return hasCorrectAmount;
+                                }) || filteredRecentPayments[0];
+                                
+                                existingPayment = bestPayment;
+                                console.log('🔄 [WEBHOOK] Found recent payment with same amount/date, will update:', existingPayment.id);
+                                
+                                // If existing payment doesn't have payment_id but we do, we'll update it
+                                // If existing payment has payment_id but we don't, reject to avoid duplicate
+                                if (existingPayment.payment_id && !extractedPaymentId) {
+                                    console.log('⚠️ [WEBHOOK] Existing recent payment already has payment_id, skipping insert to avoid duplicate');
+                                    return res.status(200).json({ 
+                                        success: true, 
+                                        message: 'Payment without payment_id rejected - recent payment with payment_id already exists',
+                                        orderId: orderId,
+                                        existingPaymentId: existingPayment.payment_id
+                                    });
+                                }
+                            }
                         }
                     }
                     
