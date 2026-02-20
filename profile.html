@@ -1793,17 +1793,16 @@
                     const statusText = isActive ? 'Active' : 'Not active';
                     const statusColor = isActive ? '#27ae60' : '#9ca3af';
                     
-                    // Format amount with currency - only show if amount_paid exists
+                    // Hardcode billing amount - always show plan-based pricing (tax not included)
                     let amount = '-';
-                    if (subscription.amount_paid) {
-                        const currencySymbol = subscription.currency === 'EUR' ? '€' : 
-                                             subscription.currency === 'USD' ? '$' : 
-                                             subscription.currency || '€';
-                        amount = `${currencySymbol}${subscription.amount_paid.toFixed(2)}`;
+                    if (subscription.plan_type === 'monthly') {
+                        amount = '$3.49 USD';
+                    } else if (subscription.plan_type === 'quarterly') {
+                        amount = '$8.90 USD';
                     }
                     
-                    const billingFrequency = subscription.plan_type === 'monthly' ? 'billed monthly' : 
-                                           subscription.plan_type === 'quarterly' ? 'billed quarterly' : 
+                    const billingFrequency = subscription.plan_type === 'monthly' ? 'billed monthly (tax not included)' : 
+                                           subscription.plan_type === 'quarterly' ? 'billed quarterly (tax not included)' : 
                                            '';
                     const nextBillingDateText = nextPaymentDate ? formatDate(nextPaymentDate) : '-';
                     
