@@ -2454,101 +2454,6 @@
             background-color: #1e40af;
             transform: translateY(-1px);
         }
-
-        /* Games menu toggle button - hidden by default, shown when < 1300px */
-        .games-menu-toggle {
-            display: none;
-            position: fixed;
-            left: 16px;
-            top: 80px;
-            z-index: 1001;
-            width: 44px;
-            height: 44px;
-            border-radius: 8px;
-            border: 2px solid #1e3a8a;
-            background: #ffffff;
-            color: #1e3a8a;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            transition: all 0.2s ease;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
-
-        .games-menu-toggle:hover {
-            background: #1e3a8a;
-            color: white;
-        }
-
-        /* Sidebar overlay - darkens background when menu is open */
-        .games-sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 999;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-
-        .games-sidebar-overlay.active {
-            display: block;
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        /* Games sidebar - contains tabs + game list */
-        .games-sidebar {
-            display: flex;
-            flex-direction: column;
-            flex: 0 0 310px;
-            min-width: 350px;
-            align-self: flex-start;
-        }
-
-        /* Responsive: hide sidebar, show toggle button at < 1300px */
-        @media (max-width: 1300px) {
-            .games-menu-toggle {
-                display: flex;
-            }
-
-
-            .games-sidebar {
-                position: fixed;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                width: 340px;
-                max-width: 85vw;
-                background: #ffffff;
-                box-shadow: 4px 0 20px rgba(0,0,0,0.15);
-                z-index: 1000;
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-                overflow-y: auto;
-                flex: none;
-            }
-
-            .games-sidebar.open {
-                transform: translateX(0);
-            }
-
-            .bottom-section {
-                margin-left: 0;
-            }
-
-            .right-panel {
-                margin-left: 0;
-                flex: 1;
-                min-width: 0;
-            }
-        }
     </style>
 </head>
 <body>
@@ -2569,28 +2474,18 @@
     </nav>
 
     <div class="main-layout">
-        <!-- Menu toggle button - visible when window < 1300px -->
-        <button class="games-menu-toggle" id="gamesMenuToggle" aria-label="Toggle games menu" type="button">
-            <span class="menu-icon">☰</span>
-        </button>
+        <!-- Top Section: Games Tabs -->
+        <div class="top-section">
+                <div class="games-tabs">
+                    <div class="tab active" data-tab="difficulty">By Moves</div>
+                    <div class="tab" data-tab="gm-games">By GMs</div>
+                    <div class="tab" data-tab="opening">Openings</div>
+                    <div class="tab" data-tab="my-games">My Games</div>
+                </div>
+        </div>
 
-        <!-- Overlay - closes menu when clicked -->
-        <div class="games-sidebar-overlay" id="gamesSidebarOverlay"></div>
-
-        <!-- Bottom Section: Sidebar + Board -->
+        <!-- Bottom Section: Left and Right Panels -->
         <div class="bottom-section">
-        <!-- Games Sidebar: tabs + game selection (slides in on small screens) -->
-        <div class="games-sidebar" id="gamesSidebar">
-            <!-- Top Section: Games Tabs -->
-            <div class="top-section">
-                    <div class="games-tabs">
-                        <div class="tab active" data-tab="difficulty">By Moves</div>
-                        <div class="tab" data-tab="gm-games">By GMs</div>
-                        <div class="tab" data-tab="opening">Openings</div>
-                        <div class="tab" data-tab="my-games">My Games</div>
-                    </div>
-            </div>
-
             <!-- Left Side: Game Selection -->
             <div class="left-panel">
                 <!-- Tab Content -->
@@ -2674,7 +2569,6 @@
         </div>
         </div>
         </div>
-        </div><!-- end games-sidebar -->
 
             <!-- Right Side: Board and Moves -->
             <div class="right-panel">
@@ -3633,31 +3527,6 @@
                 initializeTabs();
             } catch (error) {
                 console.error('Error initializing tabs:', error);
-            }
-
-            // Games menu toggle for responsive design (< 1300px)
-            const gamesMenuToggle = document.getElementById('gamesMenuToggle');
-            const gamesSidebar = document.getElementById('gamesSidebar');
-            const gamesSidebarOverlay = document.getElementById('gamesSidebarOverlay');
-            if (gamesMenuToggle && gamesSidebar && gamesSidebarOverlay) {
-                function toggleGamesMenu() {
-                    gamesSidebar.classList.toggle('open');
-                    gamesSidebarOverlay.classList.toggle('active');
-                    document.body.style.overflow = gamesSidebar.classList.contains('open') ? 'hidden' : '';
-                }
-                function closeGamesMenu() {
-                    gamesSidebar.classList.remove('open');
-                    gamesSidebarOverlay.classList.remove('active');
-                    document.body.style.overflow = '';
-                }
-                gamesMenuToggle.addEventListener('click', toggleGamesMenu);
-                gamesSidebarOverlay.addEventListener('click', closeGamesMenu);
-                // Close menu when a game is selected (on small screens)
-                gamesSidebar.addEventListener('click', function(e) {
-                    if (window.innerWidth < 1300 && e.target.closest('.submenu-button, .game-button')) {
-                        closeGamesMenu();
-                    }
-                });
             }
             
             // Profile link click handler - checks auth before navigation
