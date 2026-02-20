@@ -88,8 +88,10 @@ export default async function handler(req, res) {
         const { data: emailData, error } = await resend.emails.send({
             from: 'Memo Chess <hello@memo-chess.com>',
             to: [to],
+            replyTo: 'hello@memo-chess.com',
             subject: emailContent.subject,
             html: emailContent.html,
+            text: emailContent.text || emailContent.html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim(),
         });
 
         console.log('📧 [EMAIL API] Resend API response received:', { hasData: !!emailData, hasError: !!error });

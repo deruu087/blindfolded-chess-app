@@ -89,8 +89,10 @@ export async function sendEmailDirect(type, to, name, data = {}) {
                 resend.emails.send({
                     from: 'Memo Chess <hello@memo-chess.com>',
                     to: [to],
+                    replyTo: 'hello@memo-chess.com',
                     subject: emailContent.subject,
                     html: emailContent.html,
+                    text: emailContent.text || emailContent.html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim(),
                 }),
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('Email send timeout after 10 seconds')), 10000)
