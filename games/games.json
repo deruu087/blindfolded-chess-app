@@ -153,7 +153,7 @@
       "white_player": "R. Reti",
       "black_player": "S. Tartakower",
       "locked": false,
-      "moves_notation": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Nf6", "Qd3", "e5", "dxe5", "Qa5+", "Bd2", "Qxe5", "O-O-O", "Nd7", "Qd8+", "Kxd8", "Bg5+", "Kc7", "Bd8#", "1-0"],
+      "moves_notation": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Nf6", "Qd3", "e5", "dxe5", "Qa5+", "Bd2", "Qxe5", "O-O-O", "Ne5", "Qd8+", "Kxd8", "Bg5+", "Kc7", "Bd8#", "1-0"],
       "moves_detailed": [
         {"move_number": 1, "white": "e4", "black": null, "description": "White opens with e4, controlling the center", "white_from": "e2", "white_to": "e4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
         {"move_number": 1, "white": null, "black": "c6", "description": "Black plays the Caro-Kann Defense", "black_from": "c7", "black_to": "c6", "annotation": "", "evaluation": "0.0", "commentary": ""},
@@ -170,7 +170,7 @@
         {"move_number": 7, "white": "Bd2", "black": null, "description": "White blocks the check with the bishop", "white_from": "c1", "white_to": "d2", "annotation": "", "evaluation": "+0.3", "commentary": ""},
         {"move_number": 7, "white": null, "black": "Qxe5", "description": "Black captures the knight on e4", "black_from": "a5", "black_to": "e5", "annotation": "?", "evaluation": "+2.0", "commentary": "Takes the knight on e4, but this allows White to initiate a mating sequence; the king becomes exposed."},
         {"move_number": 8, "white": "O-O-O", "black": null, "description": "White castles queenside", "white_from": "e1", "white_to": "c1", "annotation": "!!", "evaluation": "+5.0", "commentary": "Ignores the knight and prepares Qd8+; the d-file opens and White threatens an unstoppable mate."},
-        {"move_number": 8, "white": null, "black": "Nd7", "description": "Black develops the knight", "black_from": "b8", "black_to": "d7", "annotation": "", "evaluation": "M2", "commentary": ""},
+        {"move_number": 8, "white": null, "black": "Ne5", "description": "Black's knight moves to e5", "black_from": "c6", "black_to": "e5", "annotation": "", "evaluation": "M2", "commentary": ""},
         {"move_number": 9, "white": "Qd8+", "black": null, "description": "White's queen delivers check", "white_from": "d3", "white_to": "d8", "annotation": "", "evaluation": "M2", "commentary": ""},
         {"move_number": 9, "white": null, "black": "Kxd8", "description": "Black captures the queen with the king", "black_from": "e8", "black_to": "d8", "annotation": "!?", "evaluation": "M1", "commentary": "Capturing the queen seems natural, but the king is drawn into a forced mating net."},
         {"move_number": 9, "white": "Bg5+", "black": null, "description": "White's bishop delivers check", "white_from": "d2", "white_to": "g5", "annotation": "", "evaluation": "M1", "commentary": ""},
