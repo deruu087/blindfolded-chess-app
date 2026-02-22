@@ -51,6 +51,33 @@
       "facts": "Scholar's Mate, also known as the 'Four-Move Checkmate', is one of the most famous quick checkmate patterns in chess. It targets the f7 square, which is only defended by the king in the starting position. This pattern is commonly attempted by beginners but is easily defended against by experienced players. The name 'Scholar's Mate' comes from the fact that it was often used to defeat inexperienced players (scholars) in the 19th century. Despite being easily refuted, this pattern teaches important lessons about piece development, king safety, and the importance of defending weak squares in the opening."
     },
     {
+      "id": "tchinenoff-maillard-1925",
+      "type": "game",
+      "name": "Tchinenoff – Maillard, Paris 1925",
+      "description": "King's Gambit trap – White's fxe5 blunder allows instant checkmate",
+      "moves": 4,
+      "result": "Black wins",
+      "date": "1925",
+      "white_player": "N. Tchinenoff",
+      "black_player": "R. Maillard",
+      "locked": false,
+      "moves_notation": ["e4", "e5", "f4", "Bc5", "fxe5", "Qh4+", "Ke2", "Qxe4#", "0-1"],
+      "moves_detailed": [
+        {"move_number": 1, "white": "e4", "black": null, "description": "White opens with e4, controlling the center", "white_from": "e2", "white_to": "e4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 1, "white": null, "black": "e5", "description": "Black responds with e5, controlling the center", "black_from": "e7", "black_to": "e5", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 2, "white": "f4", "black": null, "description": "White plays the King's Gambit, offering the f-pawn", "white_from": "f2", "white_to": "f4", "annotation": "", "evaluation": "-0.2", "commentary": ""},
+        {"move_number": 2, "white": null, "black": "Bc5", "description": "Black develops the bishop to c5, accepting the gambit", "black_from": "f8", "black_to": "c5", "annotation": "", "evaluation": "-0.2", "commentary": ""},
+        {"move_number": 3, "white": "fxe5", "black": null, "description": "White captures e5 with the f-pawn", "white_from": "f4", "white_to": "e5", "annotation": "??", "evaluation": "-5.0", "commentary": "This is the critical mistake. White thinks they win a free pawn on e5, but this walks right into Black's trap. The typical continuation is 3.Nf3, but after 3.Nf3 Qh4+ 4.Ke2 Qxe4# White is also mated—this is not a good way to play the King's Gambit!"},
+        {"move_number": 3, "white": null, "black": "Qh4+", "description": "Black's queen enters with check", "black_from": "d8", "black_to": "h4", "annotation": "!!", "evaluation": "M1", "commentary": "Black's queen storms in with a devastating check. The diagonal to White's king is now open."},
+        {"move_number": 4, "white": "Ke2", "black": null, "description": "White moves the king to escape check", "white_from": "e1", "white_to": "e2", "annotation": "", "evaluation": "M1", "commentary": ""},
+        {"move_number": 4, "white": null, "black": "Qxe4#", "description": "Black delivers checkmate", "black_from": "h4", "black_to": "e4", "annotation": "!!", "evaluation": "M0", "commentary": "Checkmate! The queen captures on e4 and delivers the final blow. White's king has no escape."}
+      ],
+      "opening": "King's Gambit",
+      "difficulty": "Beginner",
+      "tags": ["checkmate", "quick", "tactical", "beginner", "kings_gambit", "trap"],
+      "facts": "A classic King's Gambit trap from Paris, 1925. White's greedy 3.fxe5 instead of the normal 3.Nf3 allows Black to deliver a swift checkmate with the queen. The game demonstrates why developing pieces (Nf3) is more important than grabbing material in the opening—and that even the 'normal' 3.Nf3 line leads to mate after Qh4+ and Qxe4#, showing the dangers of the King's Gambit when not played precisely."
+    },
+    {
       "id": "legal-trap",
       "type": "game",
       "name": "Légal Trap",
