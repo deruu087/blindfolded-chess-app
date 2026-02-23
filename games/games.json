@@ -173,9 +173,9 @@
         {"move_number": 8, "white": null, "black": "Ne4", "description": "Black's knight moves to e4", "black_from": "f6", "black_to": "e4", "annotation": "", "evaluation": "M2", "commentary": ""},
         {"move_number": 9, "white": "Qd8+", "black": null, "description": "White's queen delivers check", "white_from": "d3", "white_to": "d8", "annotation": "", "evaluation": "M2", "commentary": ""},
         {"move_number": 9, "white": null, "black": "Kxd8", "description": "Black captures the queen with the king", "black_from": "e8", "black_to": "d8", "annotation": "!?", "evaluation": "M1", "commentary": "Capturing the queen seems natural, but the king is drawn into a forced mating net."},
-        {"move_number": 9, "white": "Bg5+", "black": null, "description": "White's bishop delivers check", "white_from": "d2", "white_to": "g5", "annotation": "", "evaluation": "M1", "commentary": ""},
-        {"move_number": 9, "white": null, "black": "Kc7", "description": "Black's king moves to c7", "black_from": "d8", "black_to": "c7", "annotation": "!", "evaluation": "M1", "commentary": "The only legal move; the king is forced to c7 where it will be trapped."},
-        {"move_number": 10, "white": "Bd8#", "black": null, "description": "White delivers checkmate with the bishop", "white_from": "g5", "white_to": "d8", "annotation": "!!", "evaluation": "M0", "commentary": "Checkmate: the king is trapped by its own pieces and has no escape."}
+        {"move_number": 10, "white": "Bg5+", "black": null, "description": "White's bishop delivers check", "white_from": "d2", "white_to": "g5", "annotation": "", "evaluation": "M1", "commentary": ""},
+        {"move_number": 10, "white": null, "black": "Kc7", "description": "Black's king moves to c7", "black_from": "d8", "black_to": "c7", "annotation": "!", "evaluation": "M1", "commentary": "The only legal move; the king is forced to c7 where it will be trapped."},
+        {"move_number": 11, "white": "Bd8#", "black": null, "description": "White delivers checkmate with the bishop", "white_from": "g5", "white_to": "d8", "annotation": "!!", "evaluation": "M0", "commentary": "Checkmate: the king is trapped by its own pieces and has no escape."}
       ],
       "opening": "Caro-Kann Defense",
       "difficulty": "Intermediate",
