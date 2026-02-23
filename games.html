@@ -2575,6 +2575,15 @@
                             <!-- Games will be populated dynamically from JSON -->
                         </div>
                     </div>
+                    <!-- Emanuel Lasker subtab -->
+                    <div class="game-button-container gm-subtab">
+                        <a href="#emanuel-lasker-games" class="game-button" id="gm-games-emanuel-lasker-btn">
+                            <div>Emanuel Lasker</div>
+                        </a>
+                        <div class="submenu" id="gm-games-emanuel-lasker-submenu">
+                            <!-- Games will be populated dynamically from JSON -->
+                        </div>
+                    </div>
                 </div>
             </div>
             </div>
@@ -4217,6 +4226,10 @@
             // Update Wilhelm Steinitz submenu (games with gm: "Wilhelm Steinitz")
             const wilhelmSteinitzGames = validGames.filter(g => g.gm === 'Wilhelm Steinitz');
             updateGameCategory('gm-games-wilhelm-steinitz-submenu', wilhelmSteinitzGames);
+            
+            // Update Emanuel Lasker submenu (games with gm: "Emanuel Lasker")
+            const emanuelLaskerGames = validGames.filter(g => g.gm === 'Emanuel Lasker');
+            updateGameCategory('gm-games-emanuel-lasker-submenu', emanuelLaskerGames);
             
             // Update opening tab
             updateOpeningTab();
@@ -7587,6 +7600,18 @@
                     e.stopPropagation();
                     wilhelmSteinitzSubmenu.classList.toggle('show');
                     wilhelmSteinitzBtn.classList.toggle('active');
+                });
+            }
+
+            // Emanuel Lasker nested subtab toggle (inside Classic Era)
+            const emanuelLaskerBtn = document.getElementById('gm-games-emanuel-lasker-btn');
+            const emanuelLaskerSubmenu = document.getElementById('gm-games-emanuel-lasker-submenu');
+            if (emanuelLaskerBtn && emanuelLaskerSubmenu) {
+                emanuelLaskerBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    emanuelLaskerSubmenu.classList.toggle('show');
+                    emanuelLaskerBtn.classList.toggle('active');
                 });
             }
 
