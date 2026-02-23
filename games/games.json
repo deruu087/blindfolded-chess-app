@@ -391,6 +391,38 @@
       "facts": "A Caro-Kann miniature from St. Louis, 1984. Black's 3...dxe4?! grabs a pawn but opens lines and neglects development. After 5...Ngf6?!, Black develops a piece but leaves the h8–a1 diagonal and back rank fatally weak. White's 6.Nd6# delivers a classic smothered mate—the knight exploits the trapped king with all escape squares blocked by its own pieces."
     },
     {
+      "id": "greco-nn-1620",
+      "type": "game",
+      "name": "G. Greco – NN (1620)",
+      "description": "Giuoco Piano – Black's Bb6?! allows White's dxe5! and Qd5!!, threatening mate on f7",
+      "moves": 7,
+      "result": "White wins",
+      "date": "1620",
+      "white_player": "G. Greco",
+      "black_player": "NN",
+      "locked": false,
+      "moves_notation": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "c3", "Nf6", "d4", "Bb6", "dxe5", "Ne4", "Qd5", "1-0"],
+      "moves_detailed": [
+        {"move_number": 1, "white": "e4", "black": null, "description": "White opens with e4, controlling the center", "white_from": "e2", "white_to": "e4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 1, "white": null, "black": "e5", "description": "Black responds with e5, controlling the center", "black_from": "e7", "black_to": "e5", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 2, "white": "Nf3", "black": null, "description": "White develops the knight", "white_from": "g1", "white_to": "f3", "annotation": "", "evaluation": "+0.3", "commentary": ""},
+        {"move_number": 2, "white": null, "black": "Nc6", "description": "Black develops the knight", "black_from": "b8", "black_to": "c6", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 3, "white": "Bc4", "black": null, "description": "White develops the bishop to c4", "white_from": "f1", "white_to": "c4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 3, "white": null, "black": "Bc5", "description": "Black develops the bishop to c5", "black_from": "f8", "black_to": "c5", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 4, "white": "c3", "black": null, "description": "White prepares d4", "white_from": "c2", "white_to": "c3", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 4, "white": null, "black": "Nf6", "description": "Black develops the knight", "black_from": "g8", "black_to": "f6", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 5, "white": "d4", "black": null, "description": "White strikes in the center", "white_from": "d2", "white_to": "d4", "annotation": "", "evaluation": "+0.3", "commentary": ""},
+        {"move_number": 5, "white": null, "black": "Bb6", "description": "Black retreats the bishop", "black_from": "c5", "black_to": "b6", "annotation": "?!", "evaluation": "+0.8", "commentary": "Retreat allows White to open the center and threatens tactical ideas."},
+        {"move_number": 6, "white": "dxe5", "black": null, "description": "White captures e5, attacking the knight", "white_from": "d4", "white_to": "e5", "annotation": "!", "evaluation": "+2.0", "commentary": "Attacks the knight and threatens mate on f7; classical Greco tactic."},
+        {"move_number": 6, "white": null, "black": "Ne4", "description": "Black moves the knight to e4", "black_from": "f6", "black_to": "e4", "annotation": "", "evaluation": "+2.5", "commentary": ""},
+        {"move_number": 7, "white": "Qd5", "black": null, "description": "White's queen enters with decisive threats", "white_from": "d1", "white_to": "d5", "annotation": "!!", "evaluation": "M0", "commentary": "Threatens mate on f7 and attacks the knight on e4; decisive, Black cannot defend both threats."}
+      ],
+      "opening": "Giuoco Piano",
+      "difficulty": "Beginner",
+      "tags": ["tactical", "famous", "beginner", "giuoco_piano", "greco", "miniature"],
+      "facts": "A classical Greco miniature from 1620. Black's 5...Bb6?! retreats the bishop but allows White to open the center with 6.dxe5!, attacking the knight and threatening mate on f7. After 6...Ne4, White's 7.Qd5!! is decisive—the queen threatens mate on f7 and attacks the knight on e4, and Black cannot defend both threats. A timeless example of Greco's tactical genius."
+    },
+    {
       "id": "scholars-mate-puzzle",
       "type": "game",
       "name": "Scholar's Mate Puzzle",
