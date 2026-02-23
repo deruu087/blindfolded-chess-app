@@ -332,6 +332,35 @@
       "facts": "Test version of the Legal Trap - one of the most famous tactical combinations in chess history, named after Legall de Kermeur who played it in 1750. This duplicate is created for testing purposes."
     },
     {
+      "id": "molinari-bordais-1979",
+      "type": "game",
+      "name": "Molinari – Bordais (1979)",
+      "description": "Rare knight mate – White's Nbc3 blocks the c-pawn and allows Black's knight to invade d3",
+      "moves": 5,
+      "result": "Black wins",
+      "date": "1979",
+      "white_player": "Molinari",
+      "black_player": "Bordais",
+      "locked": false,
+      "moves_notation": ["e4", "c5", "c4", "Nc6", "Ne2", "Nf6", "Nbc3", "Nb4", "g3", "Nd3#", "0-1"],
+      "moves_detailed": [
+        {"move_number": 1, "white": "e4", "black": null, "description": "White opens with e4, controlling the center", "white_from": "e2", "white_to": "e4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 1, "white": null, "black": "c5", "description": "Black plays the Sicilian Defense", "black_from": "c7", "black_to": "c5", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 2, "white": "c4", "black": null, "description": "White plays c4, the English-style setup", "white_from": "c2", "white_to": "c4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 2, "white": null, "black": "Nc6", "description": "Black develops the knight to c6", "black_from": "b8", "black_to": "c6", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 3, "white": "Ne2", "black": null, "description": "White develops the knight to e2", "white_from": "g1", "white_to": "e2", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 3, "white": null, "black": "Nf6", "description": "Black develops the knight to f6", "black_from": "g8", "black_to": "f6", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 4, "white": "Nbc3", "black": null, "description": "White plays Nbc3 – a subtle but decisive mistake", "white_from": "b1", "white_to": "c3", "annotation": "?", "evaluation": "-2.0", "commentary": "Blocks the c-pawn, removes the c2-square, and allows Black's knight to jump into b4 and d3 with no way to chase it away. White's setup looks solid but fatally neglects control of d3."},
+        {"move_number": 4, "white": null, "black": "Nb4", "description": "Black's knight jumps to b4, threatening d3", "black_from": "c6", "black_to": "b4", "annotation": "!", "evaluation": "-3.0", "commentary": "The knight heads for the decisive d3 square. White has no way to prevent or chase it away."},
+        {"move_number": 5, "white": "g3", "black": null, "description": "White plays g3, attempting to fianchetto", "white_from": "g2", "white_to": "g3", "annotation": "", "evaluation": "M1", "commentary": ""},
+        {"move_number": 5, "white": null, "black": "Nd3#", "description": "Black delivers a rare knight mate", "black_from": "b4", "black_to": "d3", "annotation": "!!", "evaluation": "M0", "commentary": "A rare knight mate: the knight is protected, the king has no escape squares, and White's undeveloped pieces and blocked pawns make defense impossible."}
+      ],
+      "opening": "Sicilian Defense",
+      "difficulty": "Beginner",
+      "tags": ["checkmate", "quick", "tactical", "beginner", "sicilian", "knight_mate", "miniature"],
+      "facts": "A rare knight mate from 1979. White's 4.Nbc3? is a subtle but fatal mistake—it blocks the c-pawn, removes the c2-square, and allows Black's knight to invade b4 and then d3 with no way to chase it away. The knight on d3 delivers checkmate, protected and unstoppable, while White's undeveloped pieces and blocked pawns make defense impossible."
+    },
+    {
       "id": "scholars-mate-puzzle",
       "type": "game",
       "name": "Scholar's Mate Puzzle",
