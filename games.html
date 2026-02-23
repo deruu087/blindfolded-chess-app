@@ -2547,14 +2547,14 @@
             </div>
         </div>
 
-        <!-- Classic Era Tab (Games by GM) -->
+        <!-- Games by GM Tab -->
         <div class="tab-panel" id="gm-games-panel">
             <div class="game-buttons">
             <div class="game-button-container">
-                <a href="#steinitz-games" class="game-button active" id="gm-games-steinitz-games-btn">
-                    <div>Wilhelm Steinitz</div>
+                <a href="#fischer-games" class="game-button active" id="gm-games-fischer-games-btn">
+                    <div>Bobby Fischer Games</div>
                 </a>
-                <div class="submenu" id="gm-games-steinitz-games-submenu">
+                <div class="submenu" id="gm-games-fischer-games-submenu">
                     <!-- Games will be populated dynamically -->
                 </div>
             </div>
@@ -4194,15 +4194,6 @@
             
             // Update the My Games tab's custom submenu specifically
             updateGameCategory('my-games-my-games-submenu', customGames);
-            
-            // Update Classic Era tab: Wilhelm Steinitz games (filter by player name)
-            const steinitzGames = validGames.filter(g => {
-                if (!g || g.id.startsWith('custom-game-')) return false;
-                const w = (g.white_player || '').toLowerCase();
-                const b = (g.black_player || '').toLowerCase();
-                return w.includes('steinitz') || b.includes('steinitz');
-            });
-            updateGameCategory('gm-games-steinitz-games-submenu', steinitzGames);
             
             // Update opening tab
             updateOpeningTab();
@@ -7516,7 +7507,7 @@
 
             // Set up submenu toggles for all tabs
             const gameButtonIds = [
-                'short-games-btn', 'my-games-short-games-btn', 'gm-games-steinitz-games-btn',
+                'short-games-btn', 'my-games-short-games-btn', 'gm-games-fischer-games-btn',
                 'medium-games-btn', 'my-games-medium-games-btn',
                 'long-games-btn', 'my-games-long-games-btn',
                 'epic-games-btn', 'my-games-epic-games-btn',
@@ -7524,7 +7515,7 @@
             ];
             
             const submenuIds = [
-                'short-games-submenu', 'my-games-short-games-submenu', 'gm-games-steinitz-games-submenu',
+                'short-games-submenu', 'my-games-short-games-submenu', 'gm-games-fischer-games-submenu',
                 'medium-games-submenu', 'my-games-medium-games-submenu',
                 'long-games-submenu', 'my-games-long-games-submenu',
                 'epic-games-submenu', 'my-games-epic-games-submenu',
