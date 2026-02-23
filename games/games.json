@@ -361,6 +361,36 @@
       "facts": "A rare knight mate from 1979. White's 4.Nbc3? is a subtle but fatal mistake—it blocks the c-pawn, removes the c2-square, and allows Black's knight to invade b4 and then d3 with no way to chase it away. The knight on d3 delivers checkmate, protected and unstoppable, while White's undeveloped pieces and blocked pawns make defense impossible."
     },
     {
+      "id": "gurnhill-banks-1984",
+      "type": "game",
+      "name": "C. Gurnhill – H. Banks (St. Louis, 1984)",
+      "description": "Caro-Kann smothered mate – Black's pawn grab and Ngf6 allow White's knight to deliver Nd6#",
+      "moves": 6,
+      "result": "White wins",
+      "date": "St. Louis, 1984",
+      "white_player": "C. Gurnhill",
+      "black_player": "H. Banks",
+      "locked": false,
+      "moves_notation": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Ne4", "Nd7", "Qe2", "Ngf6", "Nd6#", "1-0"],
+      "moves_detailed": [
+        {"move_number": 1, "white": "e4", "black": null, "description": "White opens with e4, controlling the center", "white_from": "e2", "white_to": "e4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 1, "white": null, "black": "c6", "description": "Black plays the Caro-Kann Defense", "black_from": "c7", "black_to": "c6", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 2, "white": "d4", "black": null, "description": "White claims the center with d4", "white_from": "d2", "white_to": "d4", "annotation": "", "evaluation": "+0.2", "commentary": ""},
+        {"move_number": 2, "white": null, "black": "d5", "description": "Black challenges the center", "black_from": "d7", "black_to": "d5", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 3, "white": "Nc3", "black": null, "description": "White develops the knight", "white_from": "b1", "white_to": "c3", "annotation": "", "evaluation": "+0.3", "commentary": ""},
+        {"move_number": 3, "white": null, "black": "dxe4", "description": "Black grabs a pawn, but this opens lines and neglects development", "black_from": "d5", "black_to": "e4", "annotation": "?!", "evaluation": "+0.5", "commentary": "Black grabs a pawn, but this opens lines and neglects development; the center will be vulnerable."},
+        {"move_number": 4, "white": "Ne4", "black": null, "description": "White recaptures with the knight", "white_from": "c3", "white_to": "e4", "annotation": "", "evaluation": "+0.6", "commentary": ""},
+        {"move_number": 4, "white": null, "black": "Nd7", "description": "Black develops the knight", "black_from": "b8", "black_to": "d7", "annotation": "", "evaluation": "+0.5", "commentary": ""},
+        {"move_number": 5, "white": "Qe2", "black": null, "description": "White develops the queen", "white_from": "d1", "white_to": "e2", "annotation": "", "evaluation": "+1.0", "commentary": ""},
+        {"move_number": 5, "white": null, "black": "Ngf6", "description": "Black develops the knight but leaves the back rank weak", "black_from": "g8", "black_to": "f6", "annotation": "?!", "evaluation": "M1", "commentary": "Develops a piece but leaves h8–a1 diagonal and back rank weak; sets up the smothered mate."},
+        {"move_number": 6, "white": "Nd6#", "black": null, "description": "White delivers smothered mate", "white_from": "e4", "white_to": "d6", "annotation": "!!", "evaluation": "M0", "commentary": "Smothered mate: the knight exploits the trapped king, with all escape squares blocked by its own pieces."}
+      ],
+      "opening": "Caro-Kann Defense",
+      "difficulty": "Beginner",
+      "tags": ["checkmate", "quick", "tactical", "beginner", "caro_kann", "smothered_mate", "miniature"],
+      "facts": "A Caro-Kann miniature from St. Louis, 1984. Black's 3...dxe4?! grabs a pawn but opens lines and neglects development. After 5...Ngf6?!, Black develops a piece but leaves the h8–a1 diagonal and back rank fatally weak. White's 6.Nd6# delivers a classic smothered mate—the knight exploits the trapped king with all escape squares blocked by its own pieces."
+    },
+    {
       "id": "scholars-mate-puzzle",
       "type": "game",
       "name": "Scholar's Mate Puzzle",
