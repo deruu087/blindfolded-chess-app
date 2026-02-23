@@ -955,6 +955,17 @@
             display: flex;
         }
 
+        /* Nested GM subtab (e.g. Wilhelm Steinitz inside Classic Era) */
+        .gm-subtab {
+            margin-bottom: 0.5rem;
+        }
+        .gm-subtab .game-button {
+            font-size: 0.95rem;
+        }
+        .gm-subtab .submenu {
+            margin-left: 0.5rem;
+        }
+
         .submenu-button {
             background-color: #e9ecef;
             border: 1px solid #ced4da;
@@ -2555,7 +2566,15 @@
                     <div>Classic Era</div>
                 </a>
                 <div class="submenu" id="gm-games-fischer-games-submenu">
-                    <!-- Games will be populated dynamically -->
+                    <!-- Wilhelm Steinitz subtab -->
+                    <div class="game-button-container gm-subtab">
+                        <a href="#wilhelm-steinitz-games" class="game-button" id="gm-games-wilhelm-steinitz-btn">
+                            <div>Wilhelm Steinitz</div>
+                        </a>
+                        <div class="submenu" id="gm-games-wilhelm-steinitz-submenu">
+                            <!-- Games will be populated dynamically from JSON -->
+                        </div>
+                    </div>
                 </div>
             </div>
             </div>
@@ -4194,6 +4213,10 @@
             
             // Update the My Games tab's custom submenu specifically
             updateGameCategory('my-games-my-games-submenu', customGames);
+            
+            // Update Wilhelm Steinitz submenu (games with gm: "Wilhelm Steinitz")
+            const wilhelmSteinitzGames = validGames.filter(g => g.gm === 'Wilhelm Steinitz');
+            updateGameCategory('gm-games-wilhelm-steinitz-submenu', wilhelmSteinitzGames);
             
             // Update opening tab
             updateOpeningTab();
@@ -7554,6 +7577,18 @@
                     });
                 }
             });
+
+            // Wilhelm Steinitz nested subtab toggle (inside Classic Era)
+            const wilhelmSteinitzBtn = document.getElementById('gm-games-wilhelm-steinitz-btn');
+            const wilhelmSteinitzSubmenu = document.getElementById('gm-games-wilhelm-steinitz-submenu');
+            if (wilhelmSteinitzBtn && wilhelmSteinitzSubmenu) {
+                wilhelmSteinitzBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    wilhelmSteinitzSubmenu.classList.toggle('show');
+                    wilhelmSteinitzBtn.classList.toggle('active');
+                });
+            }
 
             // Game submenu button clicks
             const submenuButtons = document.querySelectorAll('.submenu-button');
