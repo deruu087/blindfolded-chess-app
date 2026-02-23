@@ -116,6 +116,37 @@
       "facts": "Blackburne Shilling Gambit: a fruitful source of income for Manchester(England)-born Joseph Henry Blackburne (1841-1924) when playing café visitors, the usual stake being one shilling. Black's third move may not be good enough for master chess but it is not an outright error and cannot be refuted by violence."
     },
     {
+      "id": "nn-dumont-1802",
+      "type": "game",
+      "name": "NN – Du Mont, 1802",
+      "description": "Bird's Opening trap – queen sacrifice leads to devastating mate",
+      "moves": 6,
+      "result": "Black wins",
+      "date": "1802",
+      "white_player": "NN",
+      "black_player": "Du Mont",
+      "locked": false,
+      "moves_notation": ["f4", "e5", "fxe5", "d6", "exd6", "Bxd6", "g3", "Qg5", "Nf3", "Qxg3+", "hxg3", "Bxg3#", "0-1"],
+      "moves_detailed": [
+        {"move_number": 1, "white": "f4", "black": null, "description": "White plays Bird's Opening", "white_from": "f2", "white_to": "f4", "annotation": "?!", "evaluation": "-0.3", "commentary": "Weakens the kingside and neglects development."},
+        {"move_number": 1, "white": null, "black": "e5", "description": "Black responds with e5", "black_from": "e7", "black_to": "e5", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 2, "white": "fxe5", "black": null, "description": "White captures the e5 pawn", "white_from": "f4", "white_to": "e5", "annotation": "?!", "evaluation": "-0.5", "commentary": "Pawn grabbing in the opening."},
+        {"move_number": 2, "white": null, "black": "d6", "description": "Black challenges the pawn", "black_from": "d7", "black_to": "d6", "annotation": "", "evaluation": "0.0", "commentary": ""},
+        {"move_number": 3, "white": "exd6", "black": null, "description": "White captures the d6 pawn", "white_from": "e5", "white_to": "d6", "annotation": "??", "evaluation": "-3.0", "commentary": "Opens lines at the cost of king safety."},
+        {"move_number": 3, "white": null, "black": "Bxd6", "description": "Black recaptures with the bishop", "black_from": "f8", "black_to": "d6", "annotation": "!", "evaluation": "-2.0", "commentary": "Develops with tempo and targets the kingside."},
+        {"move_number": 4, "white": "g3", "black": null, "description": "White plays g3", "white_from": "g2", "white_to": "g3", "annotation": "??", "evaluation": "M2", "commentary": "Fatal dark-square weakening."},
+        {"move_number": 4, "white": null, "black": "Qg5", "description": "Black's queen enters the attack", "black_from": "d8", "black_to": "g5", "annotation": "!", "evaluation": "M2", "commentary": "Directly prepares the attack."},
+        {"move_number": 5, "white": "Nf3", "black": null, "description": "White develops the knight", "white_from": "g1", "white_to": "f3", "annotation": "", "evaluation": "M1", "commentary": ""},
+        {"move_number": 5, "white": null, "black": "Qxg3+", "description": "Black sacrifices the queen", "black_from": "g5", "black_to": "g3", "annotation": "!!", "evaluation": "M1", "commentary": "Decisive queen sacrifice."},
+        {"move_number": 6, "white": "hxg3", "black": null, "description": "White captures the queen", "white_from": "h2", "white_to": "g3", "annotation": "", "evaluation": "M1", "commentary": ""},
+        {"move_number": 6, "white": null, "black": "Bxg3#", "description": "Black delivers checkmate", "black_from": "d6", "black_to": "g3", "annotation": "!!", "evaluation": "M0", "commentary": "Mate exploiting the exposed king."}
+      ],
+      "opening": "Bird's Opening",
+      "difficulty": "Beginner",
+      "tags": ["checkmate", "quick", "tactical", "beginner", "birds_opening", "queen_sacrifice", "trap"],
+      "facts": "A classic miniature from 1802 demonstrating the dangers of the Bird's Opening when played carelessly. White's pawn-grabbing and failure to develop allows Black to launch a devastating attack. The queen sacrifice on g3 is one of the most famous tactical patterns in this opening."
+    },
+    {
       "id": "tchinenoff-maillard-1925",
       "type": "game",
       "name": "Tchinenoff – Maillard, 1925",
