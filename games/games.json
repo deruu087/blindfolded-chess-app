@@ -364,7 +364,7 @@
       "id": "gurnhill-banks-1984",
       "type": "game",
       "name": "C. Gurnhill – H. Banks (1984)",
-      "description": "Caro-Kann smothered mate – Black's pawn grab and Ngf6 allow White's knight to deliver Nd6#",
+      "description": "Caro-Kann smothered mate (St. Louis) – Black's pawn grab and Ngf6 allow White's knight to deliver Nd6#",
       "moves": 6,
       "result": "White wins",
       "date": "1984",
@@ -388,7 +388,7 @@
       "opening": "Caro-Kann Defense",
       "difficulty": "Beginner",
       "tags": ["checkmate", "quick", "tactical", "beginner", "caro_kann", "smothered_mate", "miniature"],
-      "facts": "A Caro-Kann miniature from 1984. Black's 3...dxe4?! grabs a pawn but opens lines and neglects development. After 5...Ngf6?!, Black develops a piece but leaves the h8–a1 diagonal and back rank fatally weak. White's 6.Nd6# delivers a classic smothered mate—the knight exploits the trapped king with all escape squares blocked by its own pieces."
+      "facts": "A Caro-Kann miniature from St. Louis, 1984. Black's 3...dxe4?! grabs a pawn but opens lines and neglects development. After 5...Ngf6?!, Black develops a piece but leaves the h8–a1 diagonal and back rank fatally weak. White's 6.Nd6# delivers a classic smothered mate—the knight exploits the trapped king with all escape squares blocked by its own pieces."
     },
     {
       "id": "scholars-mate-puzzle",
