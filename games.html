@@ -5396,9 +5396,11 @@
                 const moveNumber = moveData.move_number;
                 const player = moveData.white ? 'White' : 'Black';
                 const annotation = moveData.annotation || '';
+                const moveNotation = moveData.white || moveData.black || move || '';
+                const isMatingMove = moveNotation.includes('#');
                 
-                // Only show commentary if there's an annotation mark and commentary
-                if (annotation && moveData.commentary) {
+                // Show commentary if there's an annotation mark, OR if it's a mating move (contains #)
+                if ((annotation || isMatingMove) && moveData.commentary) {
                     // Show only the commentary text without move details
                     commentContent.innerHTML = moveData.commentary;
                     // Show the comment section
